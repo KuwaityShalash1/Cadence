@@ -7,7 +7,8 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ThemeSync } from "@/components/theme-sync";
 import { Toaster } from "@/components/ui/sonner";
@@ -15,6 +16,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/stores/app-store";
 import { LanguageProvider } from "@/i18n/context";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { checkDailyHabitReminder } from "@/lib/notifications";
+import { useApp } from "@/stores/app-store";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -79,27 +82,75 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Cadence - Habit Tracker" },
+      { title: "Cadence — Offline Habit Tracker & Daily Routine Planner" },
       {
         name: "description",
         content:
-          "Build daily routines, track habits, and keep your streaks going — a calm, offline-first habit tracker.",
+          "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
+      },
+      {
+        name: "keywords",
+        content:
+          "habit tracker, offline habit tracker, routine planner, daily streaks, productivity, cadence, indexeddb app",
       },
       { name: "author", content: "Cadence" },
-      { property: "og:title", content: "Cadence - Habit Tracker" },
+      { property: "og:title", content: "Cadence — Offline Habit Tracker & Daily Routine Planner" },
       {
         property: "og:description",
-        content: "Build daily routines, track habits, and keep your streaks going.",
+        content:
+          "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://cadence-shalash1.vercel.app/" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Cadence — Offline Habit Tracker & Daily Routine Planner" },
+      {
+        name: "twitter:description",
+        content:
+          "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
+      },
+      { name: "twitter:url", content: "https://cadence-shalash1.vercel.app/" },
       { name: "twitter:site", content: "@Cadence" },
+      { name: "theme-color", content: "#09090b", media: "(prefers-color-scheme: dark)" },
+      { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
+      { name: "google-site-verification", content: "REPLACE_WITH_YOUR_GSC_CODE" },
+    ],
+    scripts: [
+      {
+        attrs: { type: "application/ld+json" },
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": ["WebApplication", "SoftwareApplication"],
+          name: "Cadence",
+          alternateName: "Cadence Habit Tracker",
+          applicationCategory: "ProductivityApplication",
+          operatingSystem: "All",
+          url: "https://cadence-shalash1.vercel.app/",
+          description:
+            "A calm, fast, offline-first habit tracker and routine planner powered by IndexedDB.",
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "USD",
+          },
+          featureList: [
+            "Offline-first habit tracking",
+            "Client-side IndexedDB local persistence",
+            "Streak counter and statistics",
+            "Dark mode support",
+            "Privacy-first with zero tracking",
+          ],
+        }),
+      },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "canonical", href: "https://cadence-shalash1.vercel.app/" },
+      { rel: "manifest", href: "/manifest.json" },
+      { rel: "apple-touch-icon", href: "/favicon.svg" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg?v=2" },
     ],
   }),
@@ -192,6 +243,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AppProvider>
         <LanguageProvider>
+          <NotificationScheduler />
+          <ClientAnalytics />
           <ThemeSync />
           <TooltipProvider delayDuration={200}>
             <ErrorBoundary>
@@ -204,4 +257,38 @@ function RootComponent() {
       </AppProvider>
     </QueryClientProvider>
   );
+}
+
+function ClientAnalytics() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return mounted ? <Analytics /> : null;
+}
+
+function NotificationScheduler() {
+  const { habits, logMap, ready, settings } = useApp();
+  const habitsRef = useRef(habits);
+  const logMapRef = useRef(logMap);
+
+  useEffect(() => {
+    habitsRef.current = habits;
+    logMapRef.current = logMap;
+  }, [habits, logMap]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !ready || !settings.notificationsEnabled) return;
+
+    const check = () => {
+      void checkDailyHabitReminder(habitsRef.current, logMapRef.current);
+    };
+    check();
+    const intervalId = window.setInterval(check, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [ready, settings.notificationsEnabled]);
+
+  return null;
 }

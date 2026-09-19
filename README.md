@@ -1,37 +1,51 @@
-# Cadence - Habit Tracker & Productivity Web App
+# Cadence
 
-Cadence is a modern, responsive, offline-first habit tracker and productivity dashboard designed to help you build daily routines, track habits, maintain streaks, and accomplish your goals.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-cadence--shalash1.vercel.app-09090b?logo=vercel&logoColor=white)](https://cadence-shalash1.vercel.app/)
+
+Cadence is a calm, offline-first habit tracker for building daily routines, maintaining streaks, and making steady progress. Your data stays available locally through IndexedDB, even when you are offline.
 
 ## Features
 
-- **Habit Tracking**: Daily check-ins, custom frequencies, streak counters, and rich statistics.
-- **Routines & Goals**: Group habits into routines and set long-term goals.
-- **Offline-First PWA**: Fully functional offline with local persistence and installable PWA support.
-- **Responsive Design**: Tailored experiences for both desktop (sidebar navigation) and mobile (bottom navigation and touch-friendly controls).
-- **Dark/Light Mode**: Automatic theme sync and preference persistence.
+- **Offline-first tracking** with local IndexedDB persistence.
+- **Routine management** for organizing daily habits into repeatable flows.
+- **Habit streaks** with daily check-ins and progress statistics.
+- **Goals and calendar views** for a broader view of progress.
+- **Dark mode** with responsive desktop and mobile layouts.
+- **Installable PWA** for a focused standalone experience.
 
-## Getting Started
+## Tech Stack
 
-### Prerequisites
+- TanStack Start
+- React 19
+- Tailwind CSS
+- Vite
+- Nitro
+- Vercel
 
-- Node.js & npm installed.
+## Quick Start
 
-### Installation & Development
+Requirements: Node.js and npm.
 
 ```sh
-# Install dependencies
+git clone <repository-url>
+cd cadence
 npm install
-
-# Start development server
 npm run dev
 ```
 
-### Building for Production
+Open the local URL printed by Vite. For a production build:
 
 ```sh
 npm run build
+npm run preview
 ```
 
-## License
+Run the project checks with:
 
-MIT
+```sh
+npm run lint
+```
+
+## Live Demo
+
+Visit [cadence-shalash1.vercel.app](https://cadence-shalash1.vercel.app/) to use Cadence in the browser.

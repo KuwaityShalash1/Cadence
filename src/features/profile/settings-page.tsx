@@ -1,6 +1,9 @@
 import {
+  Bell,
   Camera,
+  CheckCircle2,
   Download,
+  ExternalLink,
   Monitor,
   Moon,
   Sun,
@@ -10,7 +13,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,6 +39,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendTestNotification,
+  type NotificationPermissionState,
+} from "@/lib/notifications";
 import { useApp } from "@/stores/app-store";
 import { useTranslation } from "@/i18n/context";
 import type { ThemeMode } from "@/types";
@@ -85,8 +94,14 @@ export function SettingsPage() {
     useApp();
   const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermissionState>("unsupported");
   const fileRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setNotificationPermission(getNotificationPermission());
+  }, []);
 
   if (!ready) {
     return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
@@ -309,6 +324,103 @@ export function SettingsPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           Enable or disable audio feedback and chimes across the app.
         </p>
+      </section>
+
+      {/* Notifications and reminders */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Bell className="h-4 w-4 text-muted-foreground" />
+            Notifications &amp; Reminders
+          </div>
+          <Switch
+            checked={settings.notificationsEnabled}
+            onCheckedChange={async (checked) => {
+              if (!checked) {
+                updateSettings({ notificationsEnabled: false, remindersEnabled: false });
+                return;
+              }
+
+              const permission = await requestNotificationPermission();
+              setNotificationPermission(permission);
+              if (permission === "granted") {
+                updateSettings({ notificationsEnabled: true, remindersEnabled: true });
+                toast.success("Notifications enabled");
+              } else if (permission === "denied") {
+                updateSettings({ notificationsEnabled: false, remindersEnabled: false });
+                toast.error("Notifications are blocked in your browser settings");
+              } else {
+                updateSettings({ notificationsEnabled: false, remindersEnabled: false });
+                toast.error("Notifications are not supported in this browser");
+              }
+            }}
+            aria-label="Toggle notifications and reminders"
+          />
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Control all scheduled habit reminders from one place.
+        </p>
+        <div className="mt-4 rounded-xl border border-border/70 bg-background/60 p-3">
+          <div className="flex items-start gap-3">
+            {notificationPermission === "granted" ? (
+              <CheckCircle2
+                className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600"
+                aria-hidden="true"
+              />
+            ) : (
+              <Bell className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">
+                Browser permission:{" "}
+                {notificationPermission === "unsupported"
+                  ? "Not supported"
+                  : notificationPermission}
+              </p>
+              {notificationPermission === "default" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={async () => {
+                    const permission = await requestNotificationPermission();
+                    setNotificationPermission(permission);
+                    if (permission === "granted") toast.success("Browser permission granted");
+                  }}
+                >
+                  <Bell className="mr-2 h-4 w-4" /> Request Browser Permission
+                </Button>
+              ) : notificationPermission === "denied" ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Notifications are blocked. Allow them for Cadence in your browser or device
+                  settings, then reload the app.
+                </p>
+              ) : notificationPermission === "granted" ? (
+                <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                  Notifications are ready to use.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  This browser does not provide web notifications.
+                </p>
+              )}
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-4 w-full sm:w-auto"
+            disabled={notificationPermission !== "granted"}
+            onClick={async () => {
+              const sent = await sendTestNotification();
+              if (sent) toast.success("Test notification sent");
+              else toast.error("Test notification could not be sent");
+            }}
+          >
+            <ExternalLink className="mr-2 h-4 w-4" /> Send Test Notification
+          </Button>
+        </div>
       </section>
 
       {/* Data */}

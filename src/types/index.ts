@@ -25,6 +25,7 @@ export interface Habit {
   schedule: Schedule;
   startDate: string; // YYYY-MM-DD
   endDate?: string | undefined;
+  reminderTimes: string[]; // HH:mm slots; an empty array disables reminders
   reminder?: string | undefined; // HH:mm
   archived: boolean;
   order: number;
@@ -109,6 +110,7 @@ export interface AppSettings {
   theme: ThemeMode;
   language: LanguageCode;
   weekStartsOn: 0 | 1;
+  notificationsEnabled: boolean;
   remindersEnabled: boolean;
   onboarded: boolean;
   displayName?: string | undefined;

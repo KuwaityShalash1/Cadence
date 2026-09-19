@@ -1,3 +1,7 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cadence-shalash1.vercel.app/sitemap.xml
 User-agent: Googlebot
 Allow: /
 

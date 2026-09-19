@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   Clock,
+  Info,
   Search,
   Timer,
   Trash2,
@@ -29,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { todayKey, WEEKDAY_LABELS } from "@/services/dates";
 import { normalizeQuickDecrements } from "@/services/quick-steps";
@@ -137,7 +139,13 @@ export function HabitForm({ habit, onDone }: Props) {
   );
   const [startDate, setStartDate] = useState(habit?.startDate ?? todayKey());
   const [endDate, setEndDate] = useState(habit?.endDate ?? "");
-  const [reminder, setReminder] = useState(habit?.reminder ?? "");
+  const [reminderEnabled, setReminderEnabled] = useState(
+    Boolean(habit?.reminderTimes?.length || habit?.reminder),
+  );
+  const [reminderTimes, setReminderTimes] = useState<string[]>(
+    habit?.reminderTimes?.length ? habit.reminderTimes : habit?.reminder ? [habit.reminder] : [],
+  );
+  const [newReminderTime, setNewReminderTime] = useState("");
   const [quickIncrements, setQuickIncrements] = useState<number[]>(habit?.quickIncrements ?? []);
   const [quickDecrements, setQuickDecrements] = useState<number[]>(
     normalizeQuickDecrements(habit?.quickDecrement),
@@ -207,6 +215,10 @@ export function HabitForm({ habit, onDone }: Props) {
       toast.error("Select at least one day of the month");
       return;
     }
+    if (reminderEnabled && reminderTimes.length === 0) {
+      toast.error("Add at least one reminder time or turn reminders off");
+      return;
+    }
     const payload = {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -220,7 +232,8 @@ export function HabitForm({ habit, onDone }: Props) {
       schedule,
       startDate,
       endDate: endDate || undefined,
-      reminder: reminder || undefined,
+      reminderTimes: reminderEnabled ? reminderTimes : [],
+      reminder: reminderEnabled ? reminderTimes[0] : undefined,
       quickIncrements,
       quickDecrement: quickDecrements,
       freezesAllowedPerMonth: 3,
@@ -689,7 +702,7 @@ export function HabitForm({ habit, onDone }: Props) {
         </div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="habit-start">Start date</Label>
           <Input
@@ -708,16 +721,77 @@ export function HabitForm({ habit, onDone }: Props) {
             onChange={(e) => setEndDate(e.target.value)}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="habit-reminder">Reminder</Label>
-          <Input
-            id="habit-reminder"
-            type="time"
-            value={reminder}
-            onChange={(e) => setReminder(e.target.value)}
+      </div>
+
+      <fieldset className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <legend className="text-sm font-medium">Reminders</legend>
+            <p className="text-xs text-muted-foreground">Choose when Cadence should remind you.</p>
+          </div>
+          <Switch
+            checked={reminderEnabled}
+            onCheckedChange={setReminderEnabled}
+            aria-label="Toggle reminders for this habit"
           />
         </div>
-      </div>
+
+        {reminderEnabled ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {reminderTimes.map((time) => (
+                <div
+                  key={time}
+                  className="flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-sm text-primary"
+                >
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>{time}</span>
+                  <button
+                    type="button"
+                    onClick={() => setReminderTimes((prev) => prev.filter((item) => item !== time))}
+                    className="ml-1 rounded-full p-0.5 hover:bg-primary/20"
+                    aria-label={`Remove ${time} reminder`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
+                <Input
+                  id="habit-reminder-time"
+                  type="time"
+                  value={newReminderTime}
+                  onChange={(event) => setNewReminderTime(event.target.value)}
+                  aria-label="Reminder time"
+                  className="h-9 w-32"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9"
+                  disabled={!newReminderTime || reminderTimes.includes(newReminderTime)}
+                  onClick={() => {
+                    setReminderTimes((prev) =>
+                      [...prev, newReminderTime].sort((left, right) => left.localeCompare(right)),
+                    );
+                    setNewReminderTime("");
+                  }}
+                >
+                  Add time
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-background/60 p-3 text-xs text-muted-foreground">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <p>
+                Cadence is offline-first. To ensure reminders arrive on time, keep your browser open
+                in the background or install Cadence as an app (Add to Home Screen).
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </fieldset>
 
       <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-between">
         {habit ? (

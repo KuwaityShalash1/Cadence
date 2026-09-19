@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: "system",
   language: "en",
   weekStartsOn: 1,
+  notificationsEnabled: false,
   remindersEnabled: false,
   onboarded: false,
   isSoundEnabled: true,
@@ -68,6 +69,12 @@ export async function loadSnapshot(): Promise<Snapshot> {
 
   const habits = habitsRaw.map((h) => ({
     ...h,
+    reminderTimes:
+      Array.isArray(h.reminderTimes) && h.reminderTimes.length > 0
+        ? h.reminderTimes
+        : h.reminder
+          ? [h.reminder]
+          : [],
     // Monthly freeze budget — defaults to 3 when a habit predates the feature
     // or was created without an explicit limit.
     freezesAllowedPerMonth: h.freezesAllowedPerMonth ?? 3,
@@ -84,6 +91,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
     unit: goal.unit ?? "completions",
   }));
 
+  const storedSettings = settings ?? {};
   return {
     habits,
     habitLogs,
@@ -92,7 +100,12 @@ export async function loadSnapshot(): Promise<Snapshot> {
     routines,
     routineLogs,
     badHabits,
-    settings: { ...DEFAULT_SETTINGS, ...(settings ?? {}) },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      ...storedSettings,
+      notificationsEnabled:
+        storedSettings.notificationsEnabled ?? storedSettings.remindersEnabled ?? false,
+    },
     timer: timer ?? null,
     customColors: Array.isArray(customColors?.customColors) ? customColors.customColors : [],
     customIcons: Array.isArray(customIcons?.customIcons) ? customIcons.customIcons : [],

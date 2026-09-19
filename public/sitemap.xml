@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://cadence-shalash1.vercel.app/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://cadence-shalash1.vercel.app/calendar</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://cadence-shalash1.vercel.app/goals</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://cadence-shalash1.vercel.app/quit-tracker</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://cadence-shalash1.vercel.app/routines</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://cadence-shalash1.vercel.app/settings</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://cadence-shalash1.vercel.app/stats</loc>
+    <priority>1.0</priority>
+  </url>
+</urlset>
