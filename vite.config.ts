@@ -1,8 +1,7 @@
 import { defineConfig } from "vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-// Note: If you use TanStack Router for file-based routing, import it here:
-// import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
 export default defineConfig({
   resolve: {
@@ -10,7 +9,9 @@ export default defineConfig({
   },
   plugins: [
     tailwindcss(),
-    // TanStackRouterVite(), // Uncomment if you are using TanStack Router
+    tanstackStart({
+      server: { entry: "server" },
+    }),
     viteReact(),
   ],
-});
+})ك
