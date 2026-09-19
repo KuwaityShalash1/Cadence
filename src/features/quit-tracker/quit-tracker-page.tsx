@@ -131,10 +131,10 @@ export function QuitTrackerPage() {
 
       {/* Mobile Floating / Bottom Action Button */}
       <div
-        className={cn(
-          "fixed right-6 z-20 md:hidden transition-all",
-          activeTimer ? "bottom-36" : "bottom-20",
-        )}
+        className="fixed right-6 z-20 md:hidden transition-all"
+        style={{
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9rem" : "5rem"})`,
+        }}
       >
         <Button
           onClick={() => setEditorOpen(true)}

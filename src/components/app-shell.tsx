@@ -310,7 +310,10 @@ function Shell({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <div className="block md:hidden border-t border-border bg-background fixed bottom-0 left-0 right-0 z-50">
-        <div className="safe-bottom flex items-stretch justify-around px-2 pt-1 pb-2">
+        <div
+          className="flex items-stretch justify-around px-2 pt-1"
+          style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))" }}
+        >
           {MOBILE_NAV.map((item) => (
             <Link
               key={item.label}
