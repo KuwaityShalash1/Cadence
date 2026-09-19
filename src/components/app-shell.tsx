@@ -284,7 +284,8 @@ function Shell({ children }: { children: ReactNode }) {
 
       <main className="flex-1 h-full overflow-y-auto min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Top bar header with profile in top-right corner */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 py-3 backdrop-blur md:justify-end">
+        {/* Safe area top padding ensures the header sits below the iOS status bar / dynamic island */}
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur md:justify-end">
           <div className="md:hidden">
             <Link to="/" className="flex items-center">
               <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-xl">
