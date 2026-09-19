@@ -13,6 +13,17 @@ Cadence is a calm, offline-first habit tracker for building daily routines, main
 - **Dark mode** with responsive desktop and mobile layouts.
 - **Installable PWA** for a focused standalone experience.
 
+## App Icons
+
+The PWA icon set lives in `public/`:
+
+- `favicon-light.svg` and `favicon-dark.svg`: theme-aware browser favicons.
+- `favicon-16.png` and `favicon-32.png`: standard browser fallbacks.
+- `apple-touch-icon.png`: 180x180 high-contrast iOS home screen icon.
+- `icon-192.png` and `icon-512.png`: 192x192 and 512x512 PNG icons used for standard and maskable manifest entries.
+
+Keep the PNG assets opaque and preserve generous padding around the mark so Android maskable icon safe areas and iOS home screen cropping remain clear.
+
 ## Tech Stack
 
 - TanStack Start
