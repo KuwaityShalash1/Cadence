@@ -22,23 +22,22 @@ function canSendNotification(): boolean {
   return hasNotificationSupport() && window.Notification.permission === "granted";
 }
 
-async function dispatchNotification(title: string, options: NotificationOptions): Promise<void> {
-  if (typeof navigator !== "undefined" && navigator.serviceWorker) {
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      await registration.showNotification(title, options);
-      console.log("[NotificationScheduler] Dispatched via Service Worker", { title });
-      return;
-    } catch (error) {
-      console.warn(
-        "[NotificationScheduler] Service Worker dispatch failed; using window notification",
-        error,
-      );
-    }
+function dispatchNotification(title: string, options: NotificationOptions): void {
+  if (
+    typeof window === "undefined" ||
+    !("Notification" in window) ||
+    Notification.permission !== "granted"
+  ) {
+    return;
   }
 
-  new window.Notification(title, options);
-  console.log("[NotificationScheduler] Dispatched via window.Notification", { title });
+  try {
+    new Notification(title, options);
+    console.log("[NotificationScheduler] Dispatched via window.Notification", { title });
+  } catch (error) {
+    console.warn("[NotificationScheduler] Window notification failed", error);
+    throw error;
+  }
 }
 
 function getDateKey(date: Date): string {
@@ -103,7 +102,7 @@ export async function checkDailyHabitReminder(
           currentTime,
         });
         const currentStreak = streaks(habit, logs).current;
-        await dispatchNotification(habit.name, {
+        dispatchNotification(habit.name, {
           body: `Your current streak is ${currentStreak} day${currentStreak === 1 ? "" : "s"}. Keep it going!`,
           icon: "/favicon.svg",
           tag: `cadence-reminder-${habit.id}-${dateKey}-${reminderTime}`,
@@ -128,7 +127,7 @@ export async function sendTestNotification(): Promise<boolean> {
   }
 
   try {
-    await dispatchNotification("Cadence test notification", {
+    dispatchNotification("Cadence test notification", {
       body: "Notifications are working. Your reminders can reach you here.",
       icon: "/favicon.svg",
       tag: "cadence-test-notification",
