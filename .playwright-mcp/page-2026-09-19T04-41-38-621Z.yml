@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]: Cadence
+        - button "Collapse Sidebar" [ref=e12]
+      - navigation [ref=e18]:
+        - link "Today" [ref=e19] [cursor=pointer]:
+          - /url: /
+        - link "Calendar" [ref=e27] [cursor=pointer]:
+          - /url: /calendar
+        - link "Analytics" [ref=e31] [cursor=pointer]:
+          - /url: /stats
+        - link "Goals" [ref=e35] [cursor=pointer]:
+          - /url: /goals
+        - link "Routines" [ref=e41] [cursor=pointer]:
+          - /url: /routines
+        - link "Quit Tracker" [ref=e46] [cursor=pointer]:
+          - /url: /quit-tracker
+        - link "Settings" [ref=e51] [cursor=pointer]:
+          - /url: /settings
+    - main [ref=e56]:
+      - link "User" [ref=e58] [cursor=pointer]:
+        - /url: /settings
+      - generic [ref=e65]: Loading…
+  - region "Notifications alt+T"

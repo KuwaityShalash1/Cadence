@@ -1,0 +1,180 @@
+- generic:
+  - generic [aria-hidden]:
+    - complementary:
+      - generic:
+        - generic:
+          - generic: Cadence
+          - button
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Today
+        - link:
+          - /url: /calendar
+          - generic: Calendar
+        - link:
+          - /url: /stats
+          - generic: Analytics
+        - link:
+          - /url: /goals
+          - generic: Goals
+        - link:
+          - /url: /routines
+          - generic: Routines
+        - link:
+          - /url: /quit-tracker
+          - generic: Quit Tracker
+        - generic:
+          - link:
+            - /url: /settings
+            - generic: Settings
+    - main:
+      - generic:
+        - link:
+          - /url: /settings
+          - generic: User
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - paragraph: Saturday, September 19, 2026
+                - heading [level=1]: Good morning, User
+              - generic:
+                - button:
+                  - generic: Archived Habits
+                - button: New habit
+            - generic:
+              - generic:
+                - generic: 0 of 0 done
+                - generic: 0%
+              - progressbar
+          - generic:
+            - heading [level=2]: Welcome to Cadence
+            - paragraph: Start by creating your first habit — pick a target and a schedule, and it will show up here every day it's due.
+            - button: Create your first habit
+  - region "Notifications alt+T"
+  - dialog [ref=e87]:
+    - generic [ref=e88]:
+      - heading "New habit" [level=2] [ref=e89]
+      - paragraph [ref=e90]: Set the target and schedule — you can change it later.
+    - generic [ref=e92]:
+      - group [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95] [cursor=pointer]:
+            - generic [ref=e96]:
+              - generic [ref=e97]: ✨
+              - generic [ref=e98]: Quick Suggestions
+            - paragraph [ref=e99]: Tap a template to prefill the form — you can still edit everything below.
+          - button "Expand suggestions" [active] [ref=e100] [cursor=pointer]
+        - generic [ref=e103]:
+          - 'button "Use template: Morning Workout" [ref=e104] [cursor=pointer]':
+            - generic [ref=e105]: Morning Workout
+            - generic [ref=e114]: 30 reps
+          - 'button "Use template: Stay Hydrated" [ref=e118] [cursor=pointer]':
+            - generic [ref=e119]: Stay Hydrated
+            - generic [ref=e125]: 8 glasses
+      - generic [ref=e129]:
+        - text: Name
+        - textbox "Name" [ref=e130]:
+          - /placeholder: Deep study session
+      - generic [ref=e131]:
+        - text: Description
+        - textbox "Description" [ref=e132]:
+          - /placeholder: Optional detail
+      - group "Icon" [ref=e133]:
+        - generic [ref=e141]:
+          - paragraph [ref=e142]: Habit preview
+          - paragraph [ref=e143]: How your habit will look
+        - generic [ref=e144]:
+          - button "Add custom SVG icon" [ref=e145]
+          - button "Activity" [ref=e147]
+          - button "Apple" [ref=e150]
+          - button "Book" [ref=e154]
+          - button "BookOpen" [ref=e157]
+          - button "Brain" [ref=e160]
+          - button "Briefcase" [ref=e169]
+          - button "CalendarCheck" [ref=e173]
+          - button "Clock" [ref=e177]
+          - button "Code2" [ref=e181]
+          - button "Coffee" [ref=e186]
+          - button "Droplets" [ref=e189]
+          - button "Dumbbell" [ref=e193]
+          - button "Flame" [ref=e200]
+          - button "Footprints" [ref=e203]
+          - button "Globe" [ref=e207]
+          - button "Hand" [ref=e211]
+          - button "Heart" [ref=e217]
+          - button "HeartPulse" [ref=e220]
+          - button "Languages" [ref=e224]
+          - button "Leaf" [ref=e229]
+          - button "Moon" [ref=e233]
+          - button "Music" [ref=e236]
+          - button "NotebookPen" [ref=e241]
+          - button "PenTool" [ref=e245]
+          - button "PhoneOff" [ref=e251]
+          - button "Pizza" [ref=e256]
+          - button "Pill" [ref=e263]
+          - button "RefreshCw" [ref=e267]
+          - button "Sparkles" [ref=e273]
+          - button "Sun" [ref=e277]
+          - button "Target" [pressed] [ref=e284]
+          - button "Timer" [ref=e289]
+          - button "Tv" [ref=e293]
+          - button "Wallet" [ref=e297]
+          - button "ShieldAlert" [ref=e301]
+          - button "Ban" [ref=e304]
+          - button "Smartphone" [ref=e308]
+          - button "Utensils" [ref=e311]
+          - button "Lock" [ref=e315]
+      - group "Color" [ref=e319]:
+        - generic [ref=e321]:
+          - button [ref=e322]
+          - button [ref=e325]
+          - button [ref=e326]
+          - button [ref=e327]
+          - button [ref=e328]
+          - button [ref=e329]
+          - button [ref=e330]
+          - button [ref=e331]
+          - button [ref=e332]
+          - button [ref=e333]
+          - button [ref=e334]
+          - button [ref=e335]
+          - button [ref=e336]
+          - button "Add custom color" [ref=e339]
+      - generic [ref=e341]:
+        - generic [ref=e342]:
+          - text: Group
+          - combobox "Group" [ref=e343] [cursor=pointer]:
+            - generic: No group
+          - combobox [aria-hidden] [ref=e346]
+        - generic [ref=e347]:
+          - text: Goal
+          - combobox "Goal" [ref=e348] [cursor=pointer]:
+            - generic: No goal
+          - combobox [aria-hidden] [ref=e351]
+      - generic [ref=e352]:
+        - text: Type
+        - combobox "Type" [ref=e353] [cursor=pointer]:
+          - generic: Done / not done
+        - combobox [aria-hidden] [ref=e356]
+      - generic [ref=e357]:
+        - text: Schedule
+        - combobox "Schedule" [ref=e358] [cursor=pointer]:
+          - generic: Every day
+        - combobox [aria-hidden] [ref=e361]
+      - generic [ref=e362]:
+        - generic [ref=e363]:
+          - text: Start date
+          - textbox "Start date" [ref=e364]: 2026-09-19
+        - generic [ref=e365]:
+          - text: End date
+          - textbox "End date" [ref=e366]
+        - generic [ref=e367]:
+          - text: Reminder
+          - textbox "Reminder" [ref=e368]
+      - generic [ref=e370]:
+        - button "Cancel" [ref=e371] [cursor=pointer]
+        - button "Create habit" [ref=e372] [cursor=pointer]
+    - button "Close" [ref=e373] [cursor=pointer]

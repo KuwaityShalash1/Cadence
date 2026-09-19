@@ -1,0 +1,33 @@
+html[data-sidebar-collapsed="true"] aside {
+  width: 4rem !important;
+}
+
+html[data-sidebar-collapsed="true"] .sidebar-label,
+aside[data-collapsed="true"] .sidebar-label {
+  display: none !important;
+}
+
+/* Prevent any text overflow during initial render */
+aside {
+  overflow: hidden !important;
+}
+
+/* Instantly hide sidebar text spans when html or aside is collapsed */
+html[data-sidebar-collapsed="true"] .sidebar-label,
+aside[data-collapsed="true"] .sidebar-label {
+  display: none !important;
+  width: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Force hide ALL text spans inside aside when html or aside is collapsed, or when aside has w-16 */
+html[data-sidebar-collapsed="true"] aside span,
+aside[data-collapsed="true"] span,
+aside.w-16 span {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  opacity: 0 !important;
+}

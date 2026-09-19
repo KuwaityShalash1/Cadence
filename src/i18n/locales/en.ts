@@ -1,0 +1,77 @@
+export const en = {
+  // Navigation
+  "nav.today": "Today",
+  "nav.calendar": "Calendar",
+  "nav.stats": "Stats",
+  "nav.goals": "Goals",
+  "nav.routines": "Routines",
+  "nav.quitTracker": "Quit Tracker",
+  "nav.settings": "Settings",
+  "nav.more": "More",
+  "nav.add": "Add",
+  "nav.user": "User",
+
+  // Settings
+  "settings.title": "Settings",
+  "settings.language": "Language",
+  "settings.languageDesc": "Select your preferred application language.",
+  "settings.theme": "Theme",
+  "settings.themeLight": "Light",
+  "settings.themeDark": "Dark",
+  "settings.themeSystem": "System",
+  "settings.data": "Data",
+  "settings.dataDescription":
+    "Export your data as a JSON file, import a previous backup, or clear everything to start fresh.",
+  "settings.export": "Export data",
+  "settings.import": "Import data",
+  "settings.clear": "Clear all data",
+  "settings.clearConfirmTitle": "Clear all data?",
+  "settings.clearConfirmDesc":
+    "This permanently deletes all habits, logs, goals, routines, and settings. This cannot be undone. Consider exporting a backup first.",
+  "settings.cancel": "Cancel",
+  "settings.clearConfirmYes": "Yes, clear everything",
+
+  // Quit Tracker
+  "quitTracker.title": "Quit Trackers",
+  "quitTracker.subtitle": "Abstinence tracking and willpower building.",
+  "quitTracker.new": "New Quit Tracker",
+  "quitTracker.edit": "Edit Quit Tracker",
+  "quitTracker.currentStreak": "Current Streak",
+  "quitTracker.longestStreak": "Longest Streak",
+  "quitTracker.iRelapsed": "I Relapsed",
+  "quitTracker.relapseHistory": "Relapse History",
+  "quitTracker.quitDate": "Quit Date",
+  "quitTracker.saveChanges": "Save Changes",
+  "quitTracker.startTracking": "Start Tracking",
+  "quitTracker.habitTitle": "Habit / Addiction Title",
+  "quitTracker.habitTitlePlaceholder": "e.g., Smoking, Junk Food, Social Media",
+  "quitTracker.quitStartTime": "Quit Start Time",
+  "quitTracker.icon": "Icon",
+  "quitTracker.colorTheme": "Color Theme",
+  "quitTracker.presets": "Common Bad Habit Presets",
+  "quitTracker.deleteConfirm": "Delete tracker?",
+  "quitTracker.deletedToast": "Quit tracker deleted",
+
+  // Relapse Modal
+  "relapseModal.title": "Record Relapse & Analyze Trigger",
+  "relapseModal.description": "Acknowledge what happened. Reflecting helps build iron will.",
+  "relapseModal.banner":
+    "Relapsing is part of the journey. The key is understanding why it happened so you can prevent it next time.",
+  "relapseModal.triggerPrompt": "1. Real Contextual Trigger",
+  "relapseModal.reasonPrompt": "2. Detailed Notes / Specific Context (Optional)",
+  "relapseModal.reasonPlaceholder":
+    "What exactly were you doing or feeling right before? E.g., working late on project X...",
+  "relapseModal.submit": "Reset Timer & Log",
+
+  // Triggers
+  "trigger.social": "Social Environment / Peer Pressure",
+  "trigger.socialDesc": "Was around people doing it or in a social gathering",
+  "trigger.stress": "Stress / Work & Study Pressure",
+  "trigger.stressDesc": "High anxiety, deadlines, or stressful workload",
+  "trigger.boredom": "Late-night Isolation / Boredom",
+  "trigger.boredomDesc": "Alone, unstructured time, or late night fatigue",
+  "trigger.digital": "Digital Triggers / Social Media",
+  "trigger.digitalDesc": "Saw ads, scrolling feeds, or digital cues",
+  "trigger.custom": "Custom Specific Reason",
+  "trigger.customDesc": "Detailed notes or specific triggers not listed above",
+};

@@ -1,0 +1,77 @@
+export const ar = {
+  // Navigation
+  "nav.today": "اليوم",
+  "nav.calendar": "التقويم",
+  "nav.stats": "الإحصائيات",
+  "nav.goals": "الأهداف",
+  "nav.routines": "الروتينات",
+  "nav.quitTracker": "متتبع الإقلاع",
+  "nav.settings": "الإعدادات",
+  "nav.more": "المزيد",
+  "nav.add": "إضافة",
+  "nav.user": "المستخدم",
+
+  // Settings
+  "settings.title": "الإعدادات",
+  "settings.language": "اللغة",
+  "settings.languageDesc": "اختر لغة التطبيق المفضلة لديك.",
+  "settings.theme": "المظهر",
+  "settings.themeLight": "فاتح",
+  "settings.themeDark": "داكن",
+  "settings.themeSystem": "النظام",
+  "settings.data": "البيانات",
+  "settings.dataDescription":
+    "قم بتصدير بياناتك كملف JSON أو استيراد نسخة سابقة أو مسح كل شيء للبدء من جديد.",
+  "settings.export": "تصدير البيانات",
+  "settings.import": "استيراد البيانات",
+  "settings.clear": "مسح جميع البيانات",
+  "settings.clearConfirmTitle": "مسح جميع البيانات؟",
+  "settings.clearConfirmDesc":
+    "سيؤدي هذا إلى حذف جميع العادات والسجلات والأهداف والروتينات والإعدادات بشكل دائم. لا يمكن التراجع عن ذلك.",
+  "settings.cancel": "إلغاء",
+  "settings.clearConfirmYes": "نعم، مسح كل شيء",
+
+  // Quit Tracker
+  "quitTracker.title": "متتعبات الإقلاع",
+  "quitTracker.subtitle": "تتبع الامتناع وبناء الإرادة القوية.",
+  "quitTracker.new": "متتبع إقلاع جديد",
+  "quitTracker.edit": "تعديل متتبع الإقلاع",
+  "quitTracker.currentStreak": "السلسلة الحالية",
+  "quitTracker.longestStreak": "أطول سلسلة",
+  "quitTracker.iRelapsed": "حدثت انتكاسة",
+  "quitTracker.relapseHistory": "سجل الانتكاسات",
+  "quitTracker.quitDate": "تاريخ الإقلاع",
+  "quitTracker.saveChanges": "حفظ التغييرات",
+  "quitTracker.startTracking": "بدء التتبع",
+  "quitTracker.habitTitle": "عنوان العادة / الإدمان",
+  "quitTracker.habitTitlePlaceholder": "مثل: التدخين، الوجبات السريعة، وسائل التواصل",
+  "quitTracker.quitStartTime": "وقت بدء الإقلاع",
+  "quitTracker.icon": "الأيقونة",
+  "quitTracker.colorTheme": "لون المظهر",
+  "quitTracker.presets": "العادات الشائعة الجاهزة",
+  "quitTracker.deleteConfirm": "حذف المتتبع؟",
+  "quitTracker.deletedToast": "تم حذف متتبع الإقلاع",
+
+  // Relapse Modal
+  "relapseModal.title": "تسجيل الانتكاسة وتحليل المسبب",
+  "relapseModal.description": "تقبل ما حدث. التأمل يساعد في بناء إرادة من حديد.",
+  "relapseModal.banner":
+    "الانتكاسة جزء من الرحلة. المفتاح هو فهم سبب حدوثها لتجنبها في المرة القادمة.",
+  "relapseModal.triggerPrompt": "1. المسبب السياقي الحقيقي",
+  "relapseModal.reasonPrompt": "2. ملاحظات تفصيلية / سياق محدد (اختياري)",
+  "relapseModal.reasonPlaceholder":
+    "ماذا كنت تفعل أو تشعر قبله مباشرة؟ مثل: العمل حتى وقت متأخر...",
+  "relapseModal.submit": "إعادة ضبط المؤقت والتسجيل",
+
+  // Triggers
+  "trigger.social": "البيئة الاجتماعية / ضغط الأقران",
+  "trigger.socialDesc": "كنت حول أشخاص يفعلون ذلك أو في تجمع اجتماعي",
+  "trigger.stress": "التوتر / ضغط العمل والدراسة",
+  "trigger.stressDesc": "قلق شديد، مواعيد نهائية، أو ضغط عمل",
+  "trigger.boredom": "العزلة في وقت متأخر / الملل",
+  "trigger.boredomDesc": "وقت وحدة بدون تنظيم أو إرهاق ليلي",
+  "trigger.digital": "المثيرات الرقمية / وسائل التواصل",
+  "trigger.digitalDesc": "رؤية إعلانات أو تصفح المحتوى الرقمي",
+  "trigger.custom": "سبب مخصص محدد",
+  "trigger.customDesc": "ملاحظات تفصيلية أو مسببات غير مدرجة أعلاه",
+};
