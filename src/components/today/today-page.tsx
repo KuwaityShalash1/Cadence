@@ -171,7 +171,13 @@ export function TodayPage() {
   }
 
   return (
-    <div className="space-y-8 w-full max-w-6xl mx-auto px-6">
+    /**
+     * No horizontal padding, auto margins or max-width here on purpose: the
+     * AppShell page container already owns the page gutter (px-4 on mobile,
+     * px-6 from md up) and the max width. Repeating them would compound the
+     * mobile gutter to 48px and squeeze the habit cards.
+     */
+    <div className="mx-0 w-full space-y-8">
       <header className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

@@ -3,25 +3,17 @@ import { Plus, ShieldAlert, Flame } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
   closestCenter,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  rectSortingStrategy,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 
 import { Button } from "@/components/ui/button";
-import { useApp } from "@/stores/app-store";
+import { useSortableSensors } from "@/hooks/use-sortable-sensors";
+import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { useApp } from "@/stores/app-store";
 import { BadHabitCard } from "./bad-habit-card";
 import { TriggerInsightsCard } from "./trigger-insights-card";
 import { BadHabitEditor } from "./bad-habit-editor";
@@ -36,13 +28,16 @@ export function QuitTrackerPage() {
     (a, b) => (a.order ?? -a.createdAt) - (b.order ?? -b.createdAt),
   );
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  /**
+   * Mobile-first reorder activation shared by every card list: a 400ms hold
+   * with 8px of drift tolerance, so quick vertical swipes keep scrolling the
+   * page and only a deliberate long-press picks a card up.
+   */
+  const sensors = useSortableSensors();
 
   function handleDragStart(event: DragStartEvent) {
+    /* Reached only once the hold threshold is met — confirm the pickup. */
+    triggerHaptic();
     setActiveId(String(event.active.id));
   }
 

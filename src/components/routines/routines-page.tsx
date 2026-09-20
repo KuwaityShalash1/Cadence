@@ -4,25 +4,17 @@ import { toast } from "sonner";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
   closestCenter,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import { HabitIcon, colorStyles, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
+import { useSortableSensors } from "@/hooks/use-sortable-sensors";
+import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { describeSchedule } from "@/services/schedule";
 import { todayKey } from "@/services/dates";
@@ -65,13 +57,16 @@ export function RoutinesPage() {
     [routines],
   );
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  /**
+   * Mobile-first reorder activation shared by every card list: a 400ms hold
+   * with 8px of drift tolerance, so quick vertical swipes keep scrolling the
+   * page and only a deliberate long-press picks a card up.
+   */
+  const sensors = useSortableSensors();
 
   function handleDragStart(event: DragStartEvent) {
+    /* Reached only once the hold threshold is met — confirm the pickup. */
+    triggerHaptic();
     setActiveId(String(event.active.id));
   }
 

@@ -285,7 +285,8 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="flex-1 h-full overflow-y-auto min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Top bar header with profile in top-right corner */}
         {/* Safe area top padding ensures the header sits below the iOS status bar / dynamic island */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur md:justify-end">
+        {/* Horizontal gutter matches the page container so header and feed stay aligned: 16px on mobile, 24px from md up */}
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 md:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur md:justify-end">
           <div className="md:hidden">
             <Link to="/" className="flex items-center">
               <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-xl">
@@ -302,7 +303,14 @@ function Shell({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <div className="w-full max-w-6xl mx-auto px-6 py-6 pb-40 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+        {/*
+          Single source of truth for the page gutter and max width: a strict
+          16px (px-4) horizontal gutter on mobile, widening to 24px (px-6) from
+          the md breakpoint up. Page roots inside must NOT add their own
+          horizontal padding or mx-auto, otherwise the mobile gutter compounds.
+          `pb-40` keeps the last card clear of the fixed bottom navigation bar.
+        */}
+        <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-6 pb-40 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
           {children}
         </div>
       </main>

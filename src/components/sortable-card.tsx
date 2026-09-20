@@ -14,6 +14,13 @@ export function SortableCard({ id, children, className }: SortableCardProps) {
     id,
   });
 
+  /**
+   * `touch-pan-y` (`touch-action: pan-y`) keeps native vertical page scrolling
+   * completely unblocked on mobile: the browser owns the vertical gesture and
+   * the touch sensor above only claims it once the 400ms hold completes.
+   * Never switch this back to `touch-none`, which freezes the page while the
+   * user drags a finger across a card.
+   */
   return (
     <div
       ref={setNodeRef}
@@ -24,7 +31,7 @@ export function SortableCard({ id, children, className }: SortableCardProps) {
       }}
       {...attributes}
       {...listeners}
-      className={cn("touch-none select-none", isDragging && "opacity-30", className)}
+      className={cn("touch-pan-y select-none", isDragging && "opacity-30", className)}
     >
       {children}
     </div>

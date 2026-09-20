@@ -157,6 +157,12 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   const longPressTimer = useRef<number | null>(null);
   /** Stays true for a beat after a reorder drag so the trailing touch end can see it. */
   const dragActive = useRef(false);
+  /**
+   * Pointer type of the latest interaction ("mouse" / "touch" / "pen"). A long
+   * press emits a synthetic `contextmenu` event, exactly like a physical right
+   * click, so this ref is what tells the two gestures apart.
+   */
+  const lastPointerType = useRef<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const toggleExpanded = () => setIsExpanded((prev) => !prev);
@@ -240,6 +246,16 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     isDragging && "border-dashed border-primary/50 opacity-60 hover:border-primary/50",
     isOverlay && "border-primary/50 shadow-2xl",
   );
+  /**
+   * A long press on a reorderable card belongs to dnd-kit's touch sensor, so the
+   * native iOS text-selection UI must never appear: `select-none` covers
+   * `user-select: none`, and `no-callout` (styles.css) drives WebKit's
+   * vendor-prefixed `-webkit-touch-callout: none`, which kills the magnifier
+   * bubble / callout that would otherwise hijack the drag. Cards that cannot be
+   * dragged keep native text selection, because their long press opens the
+   * action list instead of a drag.
+   */
+  const dragSurfaceClass = draggable && !isOverlay ? "select-none no-callout" : undefined;
   /**
    * Elevated glass surface (Linear / Things 3 inspired) — crisp white with a
    * soft shadow in light mode; a translucent, blurred slate panel with a
@@ -388,6 +404,13 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   }
 
   function handleTouchStart(e: React.TouchEvent) {
+    /**
+     * Fallback pointer-type tracking for engines that deliver the long-press
+     * `contextmenu` without a preceding Pointer Event. On touch devices
+     * `touchstart` always arrives before that synthetic event.
+     */
+    lastPointerType.current = "touch";
+
     const t = e.touches[0];
     if (!t) return;
     touchStartPos.current = { x: t.clientX, y: t.clientY };
@@ -444,6 +467,50 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     cancelLongPress();
     touchStart.current = null;
     touchStartPos.current = null;
+  }
+
+  /**
+   * Remembers how the interaction started. A `pointerdown` always precedes the
+   * synthetic `contextmenu` that a long press produces, so by the time the menu
+   * event arrives the ref already knows whether this was a finger or a mouse.
+   * Radix composes its own `onPointerDown` AFTER this handler, so the trigger's
+   * built-in long-press timer keeps working untouched.
+   */
+  function handlePointerDown(e: React.PointerEvent<HTMLLIElement>) {
+    lastPointerType.current = e.pointerType;
+  }
+
+  /**
+   * Desktop right-click and mobile long-press both surface a `contextmenu`
+   * event, but only the mouse may open the custom menu:
+   *
+   * - Touch (long press): the native iOS / Android menu is suppressed with
+   *   `preventDefault()` and the custom menu is deliberately NOT opened. Radix
+   *   composes its trigger handler after this one and skips it once the event is
+   *   default-prevented, so the gesture stays available to dnd-kit's touch
+   *   sensor, which needs the hold to pick the card up for reordering.
+   * - Mouse (physical right click) and pen: nothing is prevented, so Radix opens
+   *   the custom menu exactly as it always did.
+   */
+  function handleContextMenu(e: React.MouseEvent<HTMLLIElement>) {
+    const nativePointerType = (e.nativeEvent as PointerEvent).pointerType;
+    const isTouch = lastPointerType.current === "touch" || nativePointerType === "touch";
+    if (!isTouch) return;
+
+    e.preventDefault();
+  }
+
+  /**
+   * Single gate for every open request Radix raises on its own (the
+   * `contextmenu` event and its built-in 700ms touch long-press timer). A touch
+   * hold must never raise the custom menu — the drag sensor owns it while
+   * reordering, and the quick-actions sheet for non-draggable cards is opened
+   * explicitly through `setMenuOpen` further down, which is untouched by this
+   * gate. Closing and every mouse interaction stay completely unaffected.
+   */
+  function handleMenuOpenChange(nextOpen: boolean) {
+    if (nextOpen && lastPointerType.current === "touch") return;
+    setMenuOpen(nextOpen);
   }
 
   /**
@@ -706,12 +773,19 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       style={accentStyle}
       className={cn(
         cardSurfaceClass,
-        "hidden md:flex md:flex-col gap-5 p-6",
+        /**
+         * Desktop row: fills the container column edge-to-edge (`w-full mx-0`)
+         * so the responsive grid never inherits stray outer margins. `p-6`
+         * keeps the desktop inner padding exactly as before.
+         */
+        "hidden md:flex md:flex-col w-full mx-0 gap-5 p-6",
         done && !skipped && accentBorderClass,
         /** Icy frost overlay — frozen day, visually distinct in both themes. */
         isFrozen && "bg-sky-50/60 border-sky-200 dark:bg-sky-900/10 dark:border-sky-800/50",
         isFrozen && frozenDimClass,
         cardChrome,
+        /** Long-press suppression on the drag surface — no native selection UI. */
+        dragSurfaceClass,
         draggable && !isOverlay && "cursor-grab active:cursor-grabbing",
       )}
     >
@@ -935,12 +1009,19 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         style={accentStyle}
         className={cn(
           cardSurfaceClass,
-          "block p-4 mb-3 md:hidden",
+          /**
+           * Mobile card: stretches edge-to-edge inside the 16px page gutter.
+           * `w-full mx-0` guarantees the card never adds its own outer spacing,
+           * while `p-4` keeps the inner content comfortable.
+           */
+          "block w-full mx-0 p-4 mb-3 md:hidden",
           done && !skipped && accentBorderClass,
           /** Icy frost overlay — frozen day, visually distinct in both themes. */
           isFrozen && "bg-sky-50/60 border-sky-200 dark:bg-sky-900/10 dark:border-sky-800/50",
           isFrozen && frozenDimClass,
           cardChrome,
+          /** Long-press suppression on the drag surface — no native selection UI. */
+          dragSurfaceClass,
         )}
         {...(canDragFromCard ? mobileDragListeners : {})}
       >
@@ -1080,7 +1161,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   };
 
   return (
-    <ContextMenu open={menuOpen} onOpenChange={setMenuOpen}>
+    <ContextMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
       <ContextMenuTrigger asChild>
         <li
           ref={ref}
@@ -1089,12 +1170,21 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           onDragEnter={onDragEnter}
           onDragEnd={onDragEnd}
           onDragOver={onDragStart ? (e) => e.preventDefault() : undefined}
+          onPointerDown={handlePointerDown}
+          onContextMenu={handleContextMenu}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
           className={cn(
-            "list-none transition-all",
+            /**
+             * The sortable wrapper spans the full container width and carries no
+             * outer horizontal margin, so the card inside is the only thing that
+             * defines the visible edge (16px page gutter on mobile).
+             */
+            "w-full mx-0 list-none transition-all",
+            /** Long-press suppression on the drag surface — no native selection UI. */
+            dragSurfaceClass,
             isDragging && "opacity-40",
             isOverlay && "z-50 scale-[1.01] pointer-events-none",
           )}

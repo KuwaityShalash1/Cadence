@@ -178,6 +178,17 @@
 }
 
 /* ---------------------------------------------------------------------------
+ * Drag surfaces — iOS Safari treats a long press on a card as text selection,
+ * raising the magnifier bubble / callout that fights the touch drag sensor.
+ * `select-none` covers `user-select: none`; the vendor-prefixed callout
+ * suppression needs its own utility because WebKit has no unprefixed property
+ * for it. Apply both to every reorderable card.
+ * ------------------------------------------------------------------------- */
+@utility no-callout {
+  -webkit-touch-callout: none;
+}
+
+/* ---------------------------------------------------------------------------
  * Freeze toast — premium streak-freeze notification (sonner custom toast).
  * Bottom-right on desktop; bottom-center / full-width on mobile. The custom
  * toast element is themed entirely with Tailwind's dark: variants, so the only
