@@ -17,6 +17,8 @@ import { AppProvider } from "@/stores/app-store";
 import { LanguageProvider } from "@/i18n/context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { checkDailyHabitReminder } from "@/lib/notifications";
+import { registerServiceWorker } from "@/lib/service-worker";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useApp } from "@/stores/app-store";
 import appCss from "../styles.css?url";
 
@@ -263,6 +265,7 @@ function RootComponent() {
       <AppProvider>
         <LanguageProvider>
           <NotificationScheduler />
+          <ServiceWorkerBootstrap />
           <ClientAnalytics />
           <ThemeSync />
           <TooltipProvider delayDuration={200}>
@@ -280,12 +283,29 @@ function RootComponent() {
 
 function ClientAnalytics() {
   const [mounted, setMounted] = useState(false);
+  const isOnline = useOnlineStatus();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  return mounted ? <Analytics /> : null;
+  // Analytics is the only network-bound feature in the app. Skipping it while
+  // offline keeps the console clean without touching any local feature.
+  return mounted && isOnline ? <Analytics /> : null;
+}
+
+/**
+ * Registers the offline service worker from a post-mount effect, so nothing
+ * runs during server rendering or hydration (`registerServiceWorker` is a no-op
+ * when `navigator.serviceWorker` is missing). It resolves once the window has
+ * loaded and never throws into React.
+ */
+function ServiceWorkerBootstrap() {
+  useEffect(() => {
+    void registerServiceWorker();
+  }, []);
+
+  return null;
 }
 
 function NotificationScheduler() {

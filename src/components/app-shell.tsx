@@ -33,6 +33,7 @@ import { useAppStore } from "@/stores/app-store";
 import { useTranslation } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
+import { OfflineIndicator } from "@/components/offline-indicator";
 import { playClickSound, playToggleSound } from "@/lib/sound";
 
 const NAV_ITEMS = [
@@ -294,13 +295,21 @@ function Shell({ children }: { children: ReactNode }) {
               </div>
             </Link>
           </div>
-          <Link
-            to="/settings"
-            className="flex items-center gap-3 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
-          >
-            <UserAvatar avatar={settings.avatar} name={settings.displayName} className="h-7 w-7" />
-            <span className="max-w-32 truncate text-sm font-medium">{displayName}</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Connectivity hint only; every feature keeps working offline. */}
+            <OfflineIndicator />
+            <Link
+              to="/settings"
+              className="flex items-center gap-3 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
+            >
+              <UserAvatar
+                avatar={settings.avatar}
+                name={settings.displayName}
+                className="h-7 w-7"
+              />
+              <span className="max-w-32 truncate text-sm font-medium">{displayName}</span>
+            </Link>
+          </div>
         </div>
 
         {/*

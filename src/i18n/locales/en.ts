@@ -11,6 +11,11 @@ export const en = {
   "nav.add": "Add",
   "nav.user": "User",
 
+  // Offline indicator
+  "offline.offline": "Offline",
+  "offline.backOnline": "Back online",
+  "offline.hint": "Your data is saved on this device — Cadence keeps working offline.",
+
   // Settings
   "settings.title": "Settings",
   "settings.language": "Language",
