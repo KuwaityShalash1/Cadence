@@ -243,7 +243,7 @@ export function HabitForm({ habit, onDone }: Props) {
     };
 
     if (habit) {
-      updateHabit({ ...habit, ...payload });
+      updateHabit({ ...habit, ...payload, /** ISO timestamp refreshed on every save. */ updatedAt: new Date().toISOString() });
       toast.success("Habit updated — past records kept as they were");
     } else {
       createHabit(payload);

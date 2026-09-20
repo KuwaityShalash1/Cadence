@@ -268,6 +268,8 @@ export function GoalForm({
       unit: unit.trim(),
       targetDate: targetDate || undefined,
       createdAt: goal?.createdAt ?? Date.now(),
+      /** ISO timestamp initialized on creation for sync metadata. */
+      updatedAt: new Date().toISOString(),
     };
     habitIds.forEach((hid) => onLinkHabit(hid, id));
     onSave(next);

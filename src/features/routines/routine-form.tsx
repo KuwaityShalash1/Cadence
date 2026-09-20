@@ -109,7 +109,7 @@ export function RoutineForm({
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
   function addStep() {
-    setSteps((prev) => [...prev, { id: uid(), title: "" }]);
+    setSteps((prev) => [...prev, { id: uid(), title: "", /** ISO timestamp initialized on creation. */ updatedAt: new Date().toISOString() }]);
   }
   function removeStep(id: string) {
     setSteps((prev) => prev.filter((s) => s.id !== id));
@@ -141,6 +141,8 @@ export function RoutineForm({
           ? { type: "weekdays", days: weekdays.length ? weekdays : [1] }
           : { type: "daily" },
       createdAt: routine?.createdAt ?? Date.now(),
+      /** ISO timestamp initialized on creation for sync metadata. */
+      updatedAt: new Date().toISOString(),
     };
     onSave(next);
   }

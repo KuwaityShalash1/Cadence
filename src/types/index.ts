@@ -30,6 +30,8 @@ export interface Habit {
   archived: boolean;
   order: number;
   createdAt: number;
+  /** ISO timestamp of the last modification (undefined for legacy habits). */
+  updatedAt?: string | undefined;
   freezesAllowedPerMonth: number;
   freezesUsedThisMonth: number;
   frozenDates: string[]; // YYYY-MM-DD
@@ -56,6 +58,8 @@ export interface Group {
   name: string;
   icon: string;
   color: string;
+  /** ISO timestamp of the last modification (undefined for default groups). */
+  updatedAt?: string | undefined;
 }
 
 export interface Goal {
@@ -74,12 +78,16 @@ export interface Goal {
   color?: string | undefined;
   targetDate?: string | undefined;
   createdAt: number;
+  /** ISO timestamp of the last modification (undefined for legacy goals). */
+  updatedAt?: string | undefined;
 }
 
 export interface RoutineStep {
   id: string;
   title: string;
   habitId?: string | undefined;
+  /** ISO timestamp of the last modification. */
+  updatedAt?: string | undefined;
 }
 
 export interface Routine {
@@ -92,6 +100,8 @@ export interface Routine {
   steps: RoutineStep[];
   schedule: Schedule;
   createdAt: number;
+  /** ISO timestamp of the last modification (undefined for legacy routines). */
+  updatedAt?: string | undefined;
 }
 
 export interface RoutineLog {
@@ -126,6 +136,8 @@ export interface RelapseRecord {
   triggerCategory: string;
   detailedReason?: string | undefined;
   streakDurationHours: number;
+  /** ISO timestamp of when this relapse record was created. */
+  updatedAt?: string | undefined;
 }
 
 export interface BadHabit {
@@ -135,6 +147,8 @@ export interface BadHabit {
   quitDate: number; // timestamp
   history: RelapseRecord[];
   createdAt: number;
+  /** ISO timestamp of the last modification. */
+  updatedAt?: string | undefined;
   icon?: string;
   color?: string;
 }

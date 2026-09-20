@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ThemeSync } from "@/components/theme-sync";
@@ -267,6 +268,7 @@ function RootComponent() {
           <NotificationScheduler />
           <ServiceWorkerBootstrap />
           <ClientAnalytics />
+          <ClientSpeedInsights />
           <ThemeSync />
           <TooltipProvider delayDuration={200}>
             <ErrorBoundary>
@@ -292,6 +294,27 @@ function ClientAnalytics() {
   // Analytics is the only network-bound feature in the app. Skipping it while
   // offline keeps the console clean without touching any local feature.
   return mounted && isOnline ? <Analytics /> : null;
+}
+
+/**
+ * Renders Vercel Speed Insights only after the app has mounted on the client
+ * and the browser reports being online. The Web Vitals beacons that
+ * Speed Insights sends are network-bound, so rendering it while offline or
+ * during SSR would only produce failed requests or hydration mismatches.
+ * This mirrors the ClientAnalytics guard so the console stays clean without
+ * affecting any local functionality.
+ */
+function ClientSpeedInsights() {
+  const [mounted, setMounted] = useState(false);
+  const isOnline = useOnlineStatus();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Skip while offline: the performance metrics would never reach Vercel and
+  // could throw or log errors during the beacon send attempt.
+  return mounted && isOnline ? <SpeedInsights /> : null;
 }
 
 /**

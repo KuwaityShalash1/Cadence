@@ -117,6 +117,8 @@ export function QuitTrackerForm({
       quitDate: isNaN(parsedQuitDate) ? now : parsedQuitDate,
       history: habit?.history ?? [],
       createdAt: habit?.createdAt ?? now,
+      /** ISO timestamp initialized on creation for sync metadata. */
+      updatedAt: new Date().toISOString(),
       icon,
       color,
     };

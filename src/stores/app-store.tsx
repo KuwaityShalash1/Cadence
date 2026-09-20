@@ -26,7 +26,17 @@ import type {
   TimerState,
 } from "@/types";
 
+/**
+ * Generate a UUID v4 using the native crypto API.
+ * Used as the canonical ID generator for all Cadence entities so that
+ * future fullstack sync / offline-first work can rely on universally
+ * unique identifiers instead of sequential integers.
+ */
 export function uid(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments where crypto.randomUUID is unavailable.
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
@@ -658,6 +668,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           archived: false,
           order: Date.now(),
           createdAt: Date.now(),
+          /** ISO timestamp initialized on creation for sync metadata. */
+          updatedAt: new Date().toISOString(),
           freezesAllowedPerMonth: input.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT,
           freezesUsedThisMonth: input.freezesUsedThisMonth ?? 0,
           frozenDates: input.frozenDates ?? [],
@@ -1196,6 +1208,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             triggerCategory,
             detailedReason: detailedReason?.trim() || undefined,
             streakDurationHours,
+            /** ISO timestamp of when this relapse record was created. */
+            updatedAt: new Date().toISOString(),
           };
           const updated: BadHabit = {
             ...habit,
