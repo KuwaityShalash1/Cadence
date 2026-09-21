@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Monitor,
   Moon,
+  Share2,
   Sun,
   Trash2,
   Upload,
@@ -45,6 +46,7 @@ import {
   sendTestNotification,
   type NotificationPermissionState,
 } from "@/lib/notifications";
+import { usePWA } from "@/hooks/use-pwa";
 import { useApp } from "@/stores/app-store";
 import { useTranslation } from "@/i18n/context";
 import type { ThemeMode } from "@/types";
@@ -92,6 +94,7 @@ function fileToCompressedDataURL(file: File): Promise<string> {
 export function SettingsPage() {
   const { settings, ready, updateSettings, toggleSoundSettings, exportData, importData, resetAll } =
     useApp();
+  const { shareApp, isInstallAvailable, triggerInstall } = usePWA();
   const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
   const [notificationPermission, setNotificationPermission] =
@@ -157,6 +160,18 @@ export function SettingsPage() {
     await resetAll();
     setDisplayName("");
     toast.success("All data cleared");
+  }
+
+  async function handleShareApp() {
+    const outcome = await shareApp();
+    if (outcome === "copied") toast.success("Share link copied to clipboard");
+    else if (outcome === "failed") toast.error("Could not share Cadence");
+  }
+
+  async function handleInstallApp() {
+    const outcome = await triggerInstall();
+    if (outcome === "accepted") toast.success("Installing Cadence — check your home screen");
+    else if (outcome === "unavailable") toast.error("The install prompt is no longer available");
   }
 
   return (
@@ -417,6 +432,27 @@ export function SettingsPage() {
           >
             <ExternalLink className="mr-2 h-4 w-4" /> Send Test Notification
           </Button>
+        </div>
+      </section>
+
+      {/* App */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Monitor className="h-4 w-4 text-muted-foreground" />
+          App
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Share Cadence with friends, or install it as a standalone app on your device.
+        </p>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" className="h-11 flex-1" onClick={handleShareApp}>
+            <Share2 className="mr-2 h-4 w-4" /> Share Cadence
+          </Button>
+          {isInstallAvailable ? (
+            <Button variant="outline" className="h-11 flex-1" onClick={handleInstallApp}>
+              <Download className="mr-2 h-4 w-4" /> Install App
+            </Button>
+          ) : null}
         </div>
       </section>
 

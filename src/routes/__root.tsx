@@ -240,6 +240,29 @@ function RootShell({ children }: { children: ReactNode }) {
             `,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Chromium can fire "beforeinstallprompt" before React has
+                  // mounted. Stashing the event on the window lets the Settings
+                  // screen offer "Install App" whenever the user gets there.
+                  // src/hooks/use-pwa.ts reads and clears this slot.
+                  window.__cadenceDeferredInstallPrompt = null;
+                  window.addEventListener('beforeinstallprompt', function (event) {
+                    event.preventDefault();
+                    window.__cadenceDeferredInstallPrompt = event;
+                  });
+                  window.addEventListener('appinstalled', function () {
+                    window.__cadenceDeferredInstallPrompt = null;
+                  });
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+
         <style
           dangerouslySetInnerHTML={{
             __html: `
