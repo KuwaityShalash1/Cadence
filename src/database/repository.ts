@@ -36,7 +36,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   remindersEnabled: false,
   onboarded: false,
   isSoundEnabled: true,
-  soundEnabled: true,
   isMuted: false,
 };
 

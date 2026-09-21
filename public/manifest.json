@@ -3,6 +3,7 @@
   "short_name": "Cadence",
   "description": "Calm, offline-first habit and routine tracker.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#090d16",
   "theme_color": "#090d16",

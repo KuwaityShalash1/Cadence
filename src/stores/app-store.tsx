@@ -501,9 +501,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
 
           // Always update localStorage and cadence-storage with latest settings
-          const soundVal =
-            settings.soundEnabled ?? settings.isSoundEnabled ?? !(settings.isMuted ?? false);
-          localStorage.setItem("soundEnabled", String(soundVal));
+          const soundVal = settings.isSoundEnabled ?? !(settings.isMuted ?? false);
           localStorage.setItem("isSoundEnabled", String(soundVal));
           localStorage.setItem("isMuted", String(!soundVal));
           localStorage.setItem("cadence_sound_enabled", String(soundVal));
@@ -1038,12 +1036,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       },
       toggleSoundSettings() {
-        const current =
-          state.settings.soundEnabled ??
-          state.settings.isSoundEnabled ??
-          !(state.settings.isMuted ?? false);
+        const current = state.settings.isSoundEnabled ?? !(state.settings.isMuted ?? false);
         applySettings({
-          soundEnabled: !current,
           isSoundEnabled: !current,
           isMuted: !!current,
         });

@@ -1,0 +1,23 @@
+# Cadence Project Guidelines & Architecture Rules
+
+## Core Tech Stack
+- Framework: TanStack Start with React 19 (Strictly NOT Next.js).
+- Runtime & Package Manager: Bun (Use `bun` commands, avoid `npm` where possible).
+- Styling: Tailwind CSS & Lucide React icons.
+- Data Storage: Local-first architecture using IndexedDB and LocalStorage.
+
+## Code Standards & Language
+- ALL code comments and technical documentation must strictly be written in English.
+- Use explicit TypeScript types. Avoid using `any`.
+- Strictly use `crypto.randomUUID()` for all newly generated entity IDs (habits, routines, goals, quit items). Never use sequential integers.
+- Always include an ISO string `updatedAt` timestamp when modifying or creating data models.
+
+## UI & Layout Integrity
+- Do NOT alter, displace, or remove the Bottom Navigation bar or the Top Header layout.
+- Preserve all existing touch gesture handlers, long-press behaviors, and drag-and-drop sensors.
+- Maintain responsive padding and mobile Safe-Area insets (`pb-safe`).
+
+## PWA & Offline Safety
+- Keep the service worker registration SSR-safe (only in client mounts / `useEffect`).
+- Never introduce network calls that break offline functionality.
+- Ensure all deep-link routes remain navigable offline.

@@ -300,7 +300,7 @@ export function SettingsPage() {
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-medium">
-            {(settings.soundEnabled ?? settings.isSoundEnabled ?? !(settings.isMuted ?? false)) ? (
+            {settings.isSoundEnabled && !settings.isMuted ? (
               <Volume2 className="h-4 w-4 text-muted-foreground" />
             ) : (
               <VolumeX className="h-4 w-4 text-muted-foreground" />
@@ -308,12 +308,9 @@ export function SettingsPage() {
             Sound Effects
           </div>
           <Switch
-            checked={Boolean(
-              settings.soundEnabled ?? settings.isSoundEnabled ?? !(settings.isMuted ?? false),
-            )}
+            checked={Boolean(settings.isSoundEnabled && !settings.isMuted)}
             onCheckedChange={(checked) => {
               updateSettings({
-                soundEnabled: checked,
                 isSoundEnabled: checked,
                 isMuted: !checked,
               });

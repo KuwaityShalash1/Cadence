@@ -474,9 +474,11 @@ export function RenderIcon({
  * @returns inline `style`, the `rawColor` for glyph/text colour, and the `tint`
  */
 export function getColorStyle(
-  color: string,
+  color: string | undefined | null,
   opacity = 0.14,
 ): { style: React.CSSProperties; rawColor: string; tint: string } {
+  // Guard against nullish/undefined color values to prevent TypeError
+  if (!color) color = "teal";
   const isHexColor = typeof color === "string" && color.startsWith("#");
   const rawColor = isHexColor ? color : colorStyles(color).raw;
   const percentage = Math.round(opacity * 100);

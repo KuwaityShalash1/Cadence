@@ -232,6 +232,7 @@ export function HabitForm({ habit, onDone }: Props) {
       schedule,
       startDate,
       endDate: endDate || undefined,
+      reminderEnabled,
       reminderTimes: reminderEnabled ? reminderTimes : [],
       reminder: reminderEnabled ? reminderTimes[0] : undefined,
       quickIncrements,

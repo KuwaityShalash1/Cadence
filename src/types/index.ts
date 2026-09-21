@@ -27,6 +27,7 @@ export interface Habit {
   endDate?: string | undefined;
   reminderTimes: string[]; // HH:mm slots; an empty array disables reminders
   reminder?: string | undefined; // HH:mm
+  reminderEnabled: boolean; // explicit on/off toggle (for UI consistency)
   archived: boolean;
   order: number;
   createdAt: number;
@@ -126,7 +127,6 @@ export interface AppSettings {
   displayName?: string | undefined;
   avatar?: string | undefined; // data URL or emoji
   isSoundEnabled: boolean;
-  soundEnabled?: boolean;
   isMuted?: boolean;
 }
 

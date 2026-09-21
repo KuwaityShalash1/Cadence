@@ -1,6 +1,6 @@
 # Cadence
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-cadence--shalash1.vercel.app-09090b?logo=vercel&logoColor=white)](https://cadence-shalash1.vercel.app/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-cadencepwa.vercel.app-09090b?logo=vercel&logoColor=white)](https://cadencepwa.vercel.app/)
 
 Cadence is a calm, offline-first habit tracker for building daily routines, maintaining streaks, and making steady progress. Your data stays available locally through IndexedDB, even when you are offline.
 
@@ -59,4 +59,4 @@ npm run lint
 
 ## Live Demo
 
-Visit [cadence-shalash1.vercel.app](https://cadence-shalash1.vercel.app/) to use Cadence in the browser.
+Visit [cadencepwa.vercel.app](https://cadencepwa.vercel.app/) to use Cadence in the browser.

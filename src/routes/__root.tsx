@@ -107,7 +107,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://cadence-shalash1.vercel.app/" },
+      { property: "og:url", content: "https://cadencepwa.vercel.app/" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Cadence — Offline Habit Tracker & Daily Routine Planner" },
       {
@@ -115,7 +115,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
       },
-      { name: "twitter:url", content: "https://cadence-shalash1.vercel.app/" },
+      { name: "twitter:url", content: "https://cadencepwa.vercel.app/" },
       { name: "twitter:site", content: "@Cadence" },
       { name: "theme-color", content: "#090d16", media: "(prefers-color-scheme: dark)" },
       { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
@@ -134,7 +134,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           alternateName: "Cadence Habit Tracker",
           applicationCategory: "ProductivityApplication",
           operatingSystem: "All",
-          url: "https://cadence-shalash1.vercel.app/",
+          url: "https://cadencepwa.vercel.app/",
           description:
             "A calm, fast, offline-first habit tracker and routine planner powered by IndexedDB.",
           offers: {
@@ -157,7 +157,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "canonical", href: "https://cadence-shalash1.vercel.app/" },
+      { rel: "canonical", href: "https://cadencepwa.vercel.app/" },
       { rel: "manifest", href: "/manifest.json" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=3" },
       {

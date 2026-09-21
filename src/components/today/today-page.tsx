@@ -1,4 +1,4 @@
-import { Archive, ListFilter as Filter, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
+import { Archive, ListFilter as Filter, Plus, RotateCcw, Search, Trash2, X, Globe } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -61,6 +61,9 @@ function greeting(name?: string): string {
   if (h < 18) return `Good afternoon, ${displayName}`;
   return `Good evening, ${displayName}`;
 }
+
+/** User's actual timezone detected via Intl — used for the header timezone label. */
+const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export function TodayPage() {
   const {
@@ -216,6 +219,11 @@ export function TodayPage() {
           </div>
           <Progress value={completion} className="mt-3 h-2" />
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          <Globe className="inline h-3 w-3 mr-1 -mt-0.5" aria-hidden="true" />
+          Times in <span className="font-medium">{USER_TIMEZONE}</span>
+        </p>
       </header>
 
       {!hasAnyHabits ? (
