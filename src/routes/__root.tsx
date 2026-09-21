@@ -129,6 +129,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         attrs: { type: "application/ld+json" },
         children: JSON.stringify({
           "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Cadence",
+          url: "https://cadencepwa.vercel.app/",
+        }),
+      },
+      {
+        attrs: { type: "application/ld+json" },
+        children: JSON.stringify({
+          "@context": "https://schema.org",
           "@type": ["WebApplication", "SoftwareApplication"],
           name: "Cadence",
           alternateName: "Cadence Habit Tracker",
