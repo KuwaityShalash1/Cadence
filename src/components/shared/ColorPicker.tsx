@@ -48,11 +48,81 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
   const [customHexInput, setCustomHexInput] = useState("#FFFFFF");
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
+  // Track which custom color is in "reveal to delete" mode (touch long-press)
+  const [showDeleteForId, setShowDeleteForId] = useState<string | null>(null);
+  // Ref to store the long-press timeout ID for cleanup
+  const longPressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref to store touch start timestamp for long-press detection
+  const touchStartTimeRef = useRef<number>(0);
+
   // Colors array for the picker UI (predefined colors)
   const colors = COLOR_NAMES.map((c) => ({
     id: c,
     value: colorStyles(c).dot, // Tailwind class for the dot background
   }));
+
+  // Hide the revealed delete button when user taps anywhere else on the screen
+  useEffect(() => {
+    if (showDeleteForId === null) return;
+
+    function handleGlobalClick() {
+      setShowDeleteForId(null);
+    }
+
+    document.addEventListener("click", handleGlobalClick);
+    return () => {
+      document.removeEventListener("click", handleGlobalClick);
+    };
+  }, [showDeleteForId]);
+
+  // Cleanup long-press timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  /**
+   * Handles the touch start event for long-press gesture detection.
+   * Starts a ~500ms timer; if the touch is held long enough, reveals the
+   * delete button for the specific color without deleting it.
+   */
+  function handleTouchStart(customHex: string, e: React.TouchEvent<HTMLDivElement>) {
+    // Only handle single-finger touches
+    if (e.touches.length !== 1) return;
+
+    touchStartTimeRef.current = Date.now();
+
+    // Set timeout to reveal delete button after ~500ms (long press)
+    longPressTimeoutRef.current = setTimeout(() => {
+      setShowDeleteForId(customHex);
+    }, 500);
+  }
+
+  /**
+   * Handles touch end/cancel events.
+   * Clears the long-press timeout if the user lifts their finger before
+   * the long-press threshold is reached.
+   */
+  function handleTouchEnd(customHex: string) {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    // Reset touch start time
+    touchStartTimeRef.current = 0;
+  }
+
+  /**
+   * Prevents the default context menu from appearing on long press.
+   * This is essential for mobile devices where long-press typically
+   * triggers a browser menu (copy, paste, etc.).
+   */
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+  }
 
   // One-time migration from the legacy localStorage palette into the store.
   useEffect(() => {
@@ -121,7 +191,7 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
   return (
     <fieldset className="space-y-2">
       <legend className="mb-2 text-sm font-medium">Color</legend>
-      <div className="flex flex-wrap items-center gap-2.5 pb-2">
+      <div className="flex flex-wrap items-center gap-3 pb-2">
         {/* 1. Predefined Colors */}
         {colors.map((c) => (
           <button
@@ -134,12 +204,18 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
           </button>
         ))}
 
-        {/* Separator */}
-        <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 rounded-full shrink-0"></div>
-
-        {/* 2. Saved Custom Colors (with Hover Delete Badge) */}
+        {/* 2. Saved Custom Colors (with Hover Delete Badge for Desktop, Long-Press Reveal for Touch) */}
         {savedCustomColors.map((customHex) => (
-          <div key={customHex} className="relative group shrink-0">
+          <div
+            key={customHex}
+            className="relative group shrink-0"
+            // Prevent iOS Safari's default callout menu on long press
+            style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
+            onContextMenu={handleContextMenu}
+            onTouchStart={(e) => handleTouchStart(customHex, e)}
+            onTouchEnd={() => handleTouchEnd(customHex)}
+            onTouchCancel={() => handleTouchEnd(customHex)}
+          >
             <button
               type="button"
               onClick={() => setColor(customHex)}
@@ -148,15 +224,20 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
             >
               {color === customHex && <Check className="w-4 h-4 text-white drop-shadow-md" />}
             </button>
-            {/* Delete Button */}
+            {/* Delete Button - Visible on Desktop via group-hover, Visible on Touch via showDeleteForId state */}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                // Clear the reveal state when explicitly deleting
+                setShowDeleteForId(null);
                 setCustomColors(savedCustomColors.filter((c) => c !== customHex));
                 if (color === customHex) setColor(colors[0]?.id ?? "teal"); // Reset if deleting active color
               }}
-              className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 hover:scale-110"
+              // Show delete button when: (1) desktop hover OR (2) touch long-press revealed it
+              className={`absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 hover:scale-110 ${
+                showDeleteForId === customHex ? "opacity-100" : ""
+              }`}
               title="Delete color"
             >
               <X className="w-2.5 h-2.5" />

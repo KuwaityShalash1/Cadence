@@ -56,6 +56,17 @@ export const en = {
   "quitTracker.presets": "Common Bad Habit Presets",
   "quitTracker.deleteConfirm": "Delete tracker?",
   "quitTracker.deletedToast": "Quit tracker deleted",
+  "quitTracker.dailyProgress": "Daily Progress",
+  "quitTracker.logUsage": "Log Usage",
+  "quitTracker.logUsageTimeDesc": "How many minutes did you use today?",
+  "quitTracker.logUsageCountDesc": "How many units did you use today?",
+  "quitTracker.limitExceeded": "Limit exceeded — streak reset!",
+  "quitTracker.limitAlreadyReached": "You've already reached your daily limit.",
+  "quitTracker.invalidUsageValue": "Please enter a valid number.",
+  "quitTracker.usageLoggedTime": "Logged {value} minutes",
+  "quitTracker.usageLoggedCount": "Logged {value} units",
+  "quitTracker.unitSingular": "unit",
+  "quitTracker.unitPlural": "units",
 
   // Relapse Modal
   "relapseModal.title": "Record Relapse & Analyze Trigger",

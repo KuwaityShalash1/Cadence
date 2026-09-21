@@ -51,6 +51,17 @@ export const ar = {
   "quitTracker.presets": "العادات الشائعة الجاهزة",
   "quitTracker.deleteConfirm": "حذف المتتبع؟",
   "quitTracker.deletedToast": "تم حذف متتبع الإقلاع",
+  "quitTracker.dailyProgress": "التقدم اليومي",
+  "quitTracker.logUsage": "تسجيل الاستخدام",
+  "quitTracker.logUsageTimeDesc": "كم دقيقة استخدمتها اليوم؟",
+  "quitTracker.logUsageCountDesc": "كم وحدة استخدمتها اليوم؟",
+  "quitTracker.limitExceeded": "تجاوز الحد - تم إعادة تعيين السلسلة!",
+  "quitTracker.limitAlreadyReached": "لقد وصلت بالفعل إلى حدك اليومي.",
+  "quitTracker.invalidUsageValue": "يرجى إدخال رقم صالح.",
+  "quitTracker.usageLoggedTime": "تم تسجيل {value} دقائق",
+  "quitTracker.usageLoggedCount": "تم تسجيل {value} وحدات",
+  "quitTracker.unitSingular": "وحدة",
+  "quitTracker.unitPlural": "وحدات",
 
   // Relapse Modal
   "relapseModal.title": "تسجيل الانتكاسة وتحليل المسبب",

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Code, Plus, Upload, X } from "lucide-react";
 
@@ -48,6 +48,48 @@ export function IconPicker({
   const [svgCodeInput, setSvgCodeInput] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const iconUploadRef = useRef<HTMLInputElement>(null);
+
+  // Track which custom icon is in reveal-to-delete mode on touch devices.
+  const [showDeleteForId, setShowDeleteForId] = useState<string | null>(null);
+  const longPressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hide the revealed delete button when the user taps elsewhere.
+  useEffect(() => {
+    if (showDeleteForId === null) return;
+
+    function handleGlobalClick() {
+      setShowDeleteForId(null);
+    }
+
+    document.addEventListener("click", handleGlobalClick);
+    return () => document.removeEventListener("click", handleGlobalClick);
+  }, [showDeleteForId]);
+
+  // Clean up a pending long-press timer when the picker unmounts.
+  useEffect(() => {
+    return () => {
+      if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+    };
+  }, []);
+
+  function handleTouchStart(customIconId: string, e: React.TouchEvent<HTMLDivElement>) {
+    if (e.touches.length !== 1) return;
+
+    longPressTimeoutRef.current = setTimeout(() => {
+      setShowDeleteForId(customIconId);
+    }, 500);
+  }
+
+  function handleTouchEnd() {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }
+
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault();
+  }
 
   /** Tile classes for the selected state — inline tint when provided. */
   const selectedTileClass = activeTileStyle
@@ -240,9 +282,17 @@ export function IconPicker({
         </DialogContent>
       </Dialog>
 
-      {/* Custom SVG Icons with Hover Delete */}
+      {/* Custom SVG Icons with hover delete and touch long-press reveal */}
       {customIcons.map((customIcon) => (
-        <div key={customIcon.id} className="relative group shrink-0">
+        <div
+          key={customIcon.id}
+          className="relative group shrink-0"
+          style={{ WebkitTouchCallout: "none" } as React.CSSProperties}
+          onContextMenu={handleContextMenu}
+          onTouchStart={(e) => handleTouchStart(customIcon.id, e)}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+        >
           <button
             type="button"
             aria-label={`Custom icon ${customIcon.id}`}
@@ -258,24 +308,24 @@ export function IconPicker({
           >
             <HabitIcon name={customIcon.id} customIcons={customIcons} className="h-5 w-5" />
           </button>
-          {/* Delete Button - Shows on hover */}
-          {icon !== customIcon.id && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeCustomIcon(customIcon.id);
-                if (icon === customIcon.id) {
-                  setIcon(ICON_NAMES[0] ?? "Target");
-                }
-                toast.success("Custom icon deleted");
-              }}
-              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:scale-110 shadow-sm"
-              aria-label={`Delete custom icon ${customIcon.id}`}
-            >
-              <X className="h-2.5 w-2.5" />
-            </button>
-          )}
+          {/* Delete button is revealed by hover on desktop or long press on touch. */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteForId(null);
+              removeCustomIcon(customIcon.id);
+              if (icon === customIcon.id) setIcon(ICON_NAMES[0] ?? "Target");
+              toast.success("Custom icon deleted");
+            }}
+            className={cn(
+              "absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:scale-110",
+              showDeleteForId === customIcon.id && "opacity-100",
+            )}
+            aria-label={`Delete custom icon ${customIcon.id}`}
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
         </div>
       ))}
 

@@ -98,7 +98,15 @@ export async function loadSnapshot(): Promise<Snapshot> {
     goals,
     routines,
     routineLogs,
-    badHabits,
+    badHabits: badHabits.map((h) => ({
+      ...h,
+      // Backward compatibility: older bad habits that predate the strategy
+      // feature default to "cold-turkey" without crashing.
+      strategy: h.strategy ?? "cold-turkey",
+      ...(h.limitType !== undefined && { limitType: h.limitType }),
+      ...(h.limitValue !== undefined && { limitValue: h.limitValue }),
+      usageLogs: h.usageLogs ?? [],
+    })),
     settings: {
       ...DEFAULT_SETTINGS,
       ...storedSettings,

@@ -140,6 +140,18 @@ export interface RelapseRecord {
   updatedAt?: string | undefined;
 }
 
+/**
+ * A single daily usage entry for a "limit" strategy bad habit.
+ * E.g., "I used 45 minutes of social media today" or "I had 2 cigarettes."
+ */
+export interface UsageLog {
+  id: string;
+  date: string; // YYYY-MM-DD (local day)
+  value: number; // amount used (minutes or count)
+  /** ISO timestamp of when this usage log was created. */
+  updatedAt: number;
+}
+
 export interface BadHabit {
   id: string;
   order?: number | undefined;
@@ -151,6 +163,32 @@ export interface BadHabit {
   updatedAt?: string | undefined;
   icon?: string;
   color?: string;
+  /**
+   * The cessation strategy for this bad habit.
+   * - "cold-turkey": Complete Cessation (full abstinence, traditional approach).
+   * - "limit": Moderation / Limit (moderate usage within a daily limit).
+   * Defaults to "cold-turkey" for backward compatibility with existing items.
+   */
+  strategy?: "cold-turkey" | "limit";
+  /**
+   * The type of limit when strategy is "limit".
+   * - "time": Time-based limit (e.g., minutes per day).
+   * - "count": Count-based limit (e.g., number of cigarettes).
+   * Only applicable when strategy is "limit".
+   */
+  limitType?: "time" | "count";
+  /**
+   * The maximum allowed daily value when strategy is "limit".
+   * E.g., 120 for 120 minutes of social media, or 5 for 5 cigarettes.
+   * Only applicable when strategy is "limit".
+   */
+  limitValue?: number;
+  /**
+   * Daily usage logs for "limit" strategy habits.
+   * Each entry records how much was used on a given day.
+   * A relapse occurs only when the daily total exceeds limitValue.
+   */
+  usageLogs?: UsageLog[];
 }
 
 export interface TimerState {

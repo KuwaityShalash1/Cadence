@@ -9,6 +9,14 @@ import { IconPicker } from "@/components/shared/IconPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { useApp, uid } from "@/stores/app-store";
 import type { BadHabit } from "@/types";
 
@@ -20,33 +28,55 @@ interface QuitSuggestion {
   color: string;
   /** Metadata badge shown on the right side of each template card. */
   badge: string;
+  /**
+   * Preconfigured strategy for this suggestion.
+   * - "cold-turkey": Complete Cessation (full abstinence).
+   * - "limit": Moderation / Limit (moderate usage with a daily limit).
+   * When "limit", limitType and limitValue are also preconfigured.
+   */
+  strategy?: "cold-turkey" | "limit";
+  /** The type of limit (time or count). Only used when strategy is "limit". */
+  limitType?: "time" | "count";
+  /** The daily limit value. Only used when strategy is "limit". */
+  limitValue?: number;
 }
 
 /** Ready-made quit-tracker templates for the collapsible Quick Suggestions card list. */
 const QUIT_SUGGESTIONS: QuitSuggestion[] = [
-  { name: "Smoking / Vaping", icon: "flame", color: "#EF4444", badge: "Health" },
-  { name: "Junk Food & Sugar", icon: "pizza", color: "#F97316", badge: "Diet" },
-  { name: "Social Media Doomscrolling", icon: "smartphone", color: "#3B82F6", badge: "Focus" },
-  { name: "Procrastination", icon: "clock", color: "#64748B", badge: "Productivity" },
-  { name: "Nail Biting", icon: "hand", color: "#EC4899", badge: "Habit" },
-  { name: "Late-Night Scrolling", icon: "moon", color: "#6366F1", badge: "Sleep" },
-  { name: "Impulse Shopping", icon: "wallet", color: "#10B981", badge: "Finance" },
-  { name: "Sugary Drinks", icon: "droplets", color: "#0EA5E9", badge: "Health" },
-  { name: "Energy Drink Dependence", icon: "flame", color: "#EAB308", badge: "Health" },
-  { name: "Excessive Gaming", icon: "tv", color: "#8B5CF6", badge: "Digital" },
-  { name: "Constant News Checking", icon: "globe", color: "#3B82F6", badge: "Mental health" },
-  { name: "Negative Self-Talk", icon: "heart", color: "#EC4899", badge: "Wellbeing" },
-  { name: "Skipping Meals", icon: "utensils", color: "#F97316", badge: "Health" },
-  { name: "Work After Hours", icon: "briefcase", color: "#64748B", badge: "Boundaries" },
+  { name: "Smoking / Vaping", icon: "flame", color: "#EF4444", badge: "Health", strategy: "cold-turkey" },
+  { name: "Junk Food & Sugar", icon: "pizza", color: "#F97316", badge: "Diet", strategy: "cold-turkey" },
+  {
+    name: "Social Media Doomscrolling",
+    icon: "smartphone",
+    color: "#3B82F6",
+    badge: "Focus",
+    strategy: "limit",
+    limitType: "time",
+    limitValue: 120,
+  },
+  { name: "Procrastination", icon: "clock", color: "#64748B", badge: "Productivity", strategy: "cold-turkey" },
+  { name: "Nail Biting", icon: "hand", color: "#EC4899", badge: "Habit", strategy: "cold-turkey" },
+  { name: "Late-Night Scrolling", icon: "moon", color: "#6366F1", badge: "Sleep", strategy: "cold-turkey" },
+  { name: "Impulse Shopping", icon: "wallet", color: "#10B981", badge: "Finance", strategy: "cold-turkey" },
+  { name: "Sugary Drinks", icon: "droplets", color: "#0EA5E9", badge: "Health", strategy: "limit", limitType: "count", limitValue: 1 },
+  { name: "Energy Drink Dependence", icon: "flame", color: "#EAB308", badge: "Health", strategy: "limit", limitType: "count", limitValue: 1 },
+  { name: "Excessive Gaming", icon: "tv", color: "#8B5CF6", badge: "Digital", strategy: "limit", limitType: "time", limitValue: 60 },
+  { name: "Constant News Checking", icon: "globe", color: "#3B82F6", badge: "Mental health", strategy: "limit", limitType: "time", limitValue: 30 },
+  { name: "Negative Self-Talk", icon: "heart", color: "#EC4899", badge: "Wellbeing", strategy: "cold-turkey" },
+  { name: "Skipping Meals", icon: "utensils", color: "#F97316", badge: "Health", strategy: "cold-turkey" },
+  { name: "Work After Hours", icon: "briefcase", color: "#64748B", badge: "Boundaries", strategy: "cold-turkey" },
   {
     name: "Checking Messages Constantly",
     icon: "smartphone",
     color: "#0EA5E9",
     badge: "Productivity",
+    strategy: "limit",
+    limitType: "time",
+    limitValue: 60,
   },
-  { name: "Alcohol", icon: "ban", color: "#DC2626", badge: "Health" },
-  { name: "Compulsive Snacking", icon: "apple", color: "#EF4444", badge: "Nutrition" },
-  { name: "Avoiding Difficult Tasks", icon: "lock", color: "#7C3AED", badge: "Growth" },
+  { name: "Alcohol", icon: "ban", color: "#DC2626", badge: "Health", strategy: "cold-turkey" },
+  { name: "Compulsive Snacking", icon: "apple", color: "#EF4444", badge: "Nutrition", strategy: "limit", limitType: "count", limitValue: 3 },
+  { name: "Avoiding Difficult Tasks", icon: "lock", color: "#7C3AED", badge: "Growth", strategy: "cold-turkey" },
 ];
 
 function toLocalDateTimeString(ts: number): string {
@@ -72,6 +102,15 @@ export function QuitTrackerForm({
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(true);
   const [suggestionSearch, setSuggestionSearch] = useState("");
 
+  // Strategy configuration (new feature)
+  const [strategy, setStrategy] = useState<"cold-turkey" | "limit">(
+    habit?.strategy ?? "cold-turkey",
+  );
+  const [limitType, setLimitType] = useState<"time" | "count">(
+    habit?.limitType ?? "time",
+  );
+  const [limitValue, setLimitValue] = useState(habit?.limitValue ?? 120);
+
   // Accent + tint for the selected picker tile — works for palette names and
   // custom HEX values, so the picker highlight always matches the live card.
   const activeTint = getColorStyle(color, 0.14);
@@ -81,11 +120,20 @@ export function QuitTrackerForm({
     color: activeTint.rawColor,
   };
 
-  /** One-click template: fills the title, icon and colour in a single tap. */
+  /** One-click template: fills the title, icon, colour, and strategy in a single tap. */
   function applySuggestion(suggestion: QuitSuggestion) {
     setTitle(suggestion.name);
     setIcon(resolveIconName(suggestion.icon));
     setColor(suggestion.color);
+    if (suggestion.strategy) {
+      setStrategy(suggestion.strategy);
+    }
+    if (suggestion.limitType) {
+      setLimitType(suggestion.limitType);
+    }
+    if (suggestion.limitValue !== undefined) {
+      setLimitValue(suggestion.limitValue);
+    }
   }
 
   /** Filter quit suggestions by the current search query (case-insensitive,
@@ -121,6 +169,10 @@ export function QuitTrackerForm({
       updatedAt: new Date().toISOString(),
       icon,
       color,
+      // Strategy fields (new feature)
+      strategy,
+      ...(strategy === "limit" && { limitType, limitValue }),
+      usageLogs: habit?.usageLogs ?? [],
     };
 
     upsertBadHabit(updated);
@@ -296,6 +348,75 @@ export function QuitTrackerForm({
           className="h-11"
         />
       </div>
+
+      {/* Strategy Selection — Complete Cessation vs Moderation / Limit */}
+      <fieldset className="space-y-2">
+        <legend className="mb-2 text-sm font-medium">Cessation Strategy</legend>
+        <Select
+          value={strategy}
+          onValueChange={(v) => setStrategy(v as "cold-turkey" | "limit")}
+        >
+          <SelectTrigger className="h-11">
+            <SelectValue placeholder="Select strategy" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="cold-turkey">Complete Cessation</SelectItem>
+            <SelectItem value="limit">Moderation / Limit</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground mt-2">
+          {strategy === "cold-turkey"
+            ? "Stop completely. Any occurrence will reset your streak."
+            : "Set a daily budget. Staying under your limit preserves your streak."}
+        </p>
+      </fieldset>
+
+      {/* Limit Configuration — shown only when "limit" strategy is selected */}
+      {strategy === "limit" && (
+        <div className="space-y-4">
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm font-medium">Limit Type</legend>
+            <Select
+              value={limitType}
+              onValueChange={(v) => setLimitType(v as "time" | "count")}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Select limit type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="time">Time (minutes/day)</SelectItem>
+                <SelectItem value="count">Count (units/day)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground mt-2">
+              {limitType === "time"
+                ? "Limit your daily usage by time (e.g., 120 minutes of social media)."
+                : "Limit your daily usage by quantity (e.g., 1 sugary drink)."}
+            </p>
+          </fieldset>
+
+          <div className="space-y-2">
+            <Label htmlFor="limit-value">
+              Daily Limit ({limitType === "time" ? "minutes" : "units"})
+            </Label>
+            <Input
+              id="limit-value"
+              type="number"
+              min={1}
+              value={limitValue}
+              onChange={(e) => setLimitValue(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              placeholder="e.g., 120"
+              autoComplete="off"
+              className="h-11"
+            />
+            <p className="text-xs text-muted-foreground">
+              {limitType === "time"
+                ? "You can use up to this many minutes per day without breaking your streak."
+                : "You can consume up to this many units per day without breaking your streak."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Unified shared pickers — IconPicker adds custom SVG upload/paste
           (saved to the global store) and ColorPicker adds a custom HEX
