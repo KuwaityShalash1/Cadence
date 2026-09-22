@@ -25,6 +25,14 @@ export function CadenceLogo({
       className={cn("shrink-0 h-8 w-8", iconClassName, !showText ? className : undefined)}
       width={size}
       height={size}
+      /**
+       * The wordmark "Cadence" is always rendered next to the glyph (or the
+       * glyph sits inside a link that carries its own `aria-label`), so the
+       * mark itself is purely decorative: hide it from assistive tech and take
+       * it out of the tab order.
+       */
+      aria-hidden="true"
+      focusable="false"
       {...(!showText ? (props as React.SVGProps<SVGSVGElement>) : undefined)}
     >
       <rect

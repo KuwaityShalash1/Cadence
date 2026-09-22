@@ -11,6 +11,12 @@ export const Route = createFileRoute("/calendar")({
         name: "description",
         content: "Browse your habit history day by day and edit any past day.",
       },
+      { property: "og:title", content: "Calendar — Cadence Habit Tracker" },
+      {
+        property: "og:description",
+        content: "Browse your habit history day by day and edit any past day.",
+      },
+      { property: "og:url", content: "https://cadencepwa.vercel.app/calendar" },
     ],
   }),
   component: CalendarRoute,

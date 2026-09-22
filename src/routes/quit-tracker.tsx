@@ -11,6 +11,12 @@ export const Route = createFileRoute("/quit-tracker")({
         name: "description",
         content: "Track abstinences, monitor live clean streaks, and analyze relapse triggers.",
       },
+      { property: "og:title", content: "Quit Tracker — Cadence Habit Tracker" },
+      {
+        property: "og:description",
+        content: "Track abstinences, monitor live clean streaks, and analyze relapse triggers.",
+      },
+      { property: "og:url", content: "https://cadencepwa.vercel.app/quit-tracker" },
     ],
   }),
   component: QuitTrackerRoute,

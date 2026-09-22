@@ -185,8 +185,18 @@ export function TodayPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">{formatLongDay(date)}</p>
+            {/*
+              Single <h1> of the landing view. The visible greeting keeps the
+              dashboard header untouched, while the visually hidden suffix states
+              the purpose of the app so screen readers and crawlers get an
+              unambiguous topic heading for the page.
+            */}
             <h1 className="font-sans text-3xl font-bold tracking-tight sm:text-4xl">
               {greeting(settings.displayName)}
+              <span className="sr-only">
+                {" "}
+                — Cadence, a free offline habit tracker and daily routine planner
+              </span>
             </h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">

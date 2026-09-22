@@ -11,6 +11,12 @@ export const Route = createFileRoute("/routines")({
         name: "description",
         content: "Group habits into daily or weekly routines.",
       },
+      { property: "og:title", content: "Routines — Cadence Habit Tracker" },
+      {
+        property: "og:description",
+        content: "Group habits into daily or weekly routines.",
+      },
+      { property: "og:url", content: "https://cadencepwa.vercel.app/routines" },
     ],
   }),
   component: RoutinesRoute,

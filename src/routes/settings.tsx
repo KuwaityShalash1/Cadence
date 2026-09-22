@@ -9,8 +9,16 @@ export const Route = createFileRoute("/settings")({
       { title: "Settings — Cadence Habit Tracker" },
       {
         name: "description",
-        content: "Manage your profile, theme, and data.",
+        content:
+          "Manage your profile, theme, notifications, and local Cadence data — everything stays on your device.",
       },
+      { property: "og:title", content: "Settings — Cadence Habit Tracker" },
+      {
+        property: "og:description",
+        content:
+          "Manage your profile, theme, notifications, and local Cadence data — everything stays on your device.",
+      },
+      { property: "og:url", content: "https://cadencepwa.vercel.app/settings" },
     ],
   }),
   component: SettingsRoute,

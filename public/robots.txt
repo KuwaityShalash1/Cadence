@@ -1,18 +1,54 @@
+# Cadence is a public, privacy-first PWA: every crawler (search and AI) may read it.
 User-agent: *
 Allow: /
 
-Sitemap: https://cadencepwa.vercel.app/sitemap.xml
+# Search engines
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
+User-agent: DuckDuckBot
+Allow: /
+
+# AI / answer engines (AI Overviews, Perplexity, ChatGPT, Claude, Copilot)
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Social preview fetchers
 User-agent: Twitterbot
 Allow: /
 
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
+User-agent: LinkedInBot
 Allow: /
+
+Sitemap: https://cadencepwa.vercel.app/sitemap.xml
+

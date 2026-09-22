@@ -133,11 +133,30 @@ export function CalendarPage() {
             const isFrozen = hasFrozenHabitOnDay(habits, dateKey);
             const fill = dayFillClass(habits, logMap, dateKey);
             const hasData = fill !== "";
+            /**
+             * The cell only paints a day number, which is ambiguous out of
+             * context ("22" of which month?). A full sentence name keeps the
+             * calendar usable with a screen reader.
+             */
+            const dayState = !inMonth
+              ? "outside this month"
+              : isFrozen && !hasData
+                ? "frozen, nothing logged"
+                : hasData
+                  ? "habits logged"
+                  : "nothing logged";
             return (
               <button
                 key={dateKey}
                 type="button"
                 onClick={() => setSelected(dateKey)}
+                aria-label={`${d.toLocaleDateString(undefined, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })} — ${dayState}`}
+                aria-pressed={isSelected}
                 className={cn(
                   "relative flex aspect-square items-center justify-center bg-card text-sm transition-all duration-150",
                   inMonth ? "text-foreground" : "text-muted-foreground/30",

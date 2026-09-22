@@ -177,6 +177,9 @@ function Shell({ children }: { children: ReactNode }) {
               type="button"
               className="group relative flex h-10 w-10 items-center justify-center rounded-xl text-primary hover:bg-accent/60 transition-all duration-200 overflow-hidden"
               title="Expand Sidebar"
+              /// Icon-only control: the accessible name must not depend on `title`.
+              aria-label="Expand sidebar"
+              aria-expanded={false}
             >
               {/* Static Default Logo */}
               <div className="absolute inset-0 flex items-center justify-center transition-all duration-200 group-hover:opacity-0 group-hover:scale-75 pointer-events-none">
@@ -199,6 +202,9 @@ function Shell({ children }: { children: ReactNode }) {
                 type="button"
                 className="group relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200"
                 title="Collapse Sidebar"
+                /// Icon-only control: mirrors the collapsed header button above.
+                aria-label="Collapse sidebar"
+                aria-expanded={true}
               >
                 <PanelLeft className="h-5 w-5 transition-all duration-200 group-hover:opacity-0 group-hover:scale-90 absolute" />
                 <PanelLeftClose className="h-5 w-5 opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 absolute" />
@@ -219,6 +225,9 @@ function Shell({ children }: { children: ReactNode }) {
                 key={item.label}
                 to={item.to}
                 activeOptions={{ exact: item.exact }}
+                /// Collapsed rails render the icon alone, so the label doubles as
+                /// the accessible name of the link.
+                aria-label={item.label}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
@@ -250,6 +259,8 @@ function Shell({ children }: { children: ReactNode }) {
             const settingsLink = (
               <Link
                 to="/settings"
+                /// Collapsed rails render the gear alone — keep a text name.
+                aria-label="Settings"
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",

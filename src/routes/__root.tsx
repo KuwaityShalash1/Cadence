@@ -80,111 +80,197 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+/** Canonical, absolute origin of the deployed app — used by canonical + social URLs. */
+const SITE_ORIGIN = "https://cadencepwa.vercel.app";
+
+/** Homepage copy: keyword-rich but still an accurate description of the app. */
+const HOME_TITLE = "Cadence — Free Offline Habit Tracker & Daily Routine Planner";
+const HOME_DESCRIPTION =
+  "Track habits and build discipline with Cadence. A 100% offline-first PWA featuring unique moderation goals, daily routines, and zero tracking or ads.";
+const HOME_KEYWORDS =
+  "habit tracker, offline habit tracker, moderation habits, daily routine planner, privacy-first pwa, habit tracker no ads";
+
+/** Social preview artwork (1200x630) served from /public along with the app. */
+const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/og-image.png`;
+const SOCIAL_IMAGE_ALT = "Cadence — free offline habit tracker and daily routine planner";
+
+/** Features advertised to search engines and AI answer engines. */
+const APP_FEATURE_LIST = [
+  "100% Offline Storage via IndexedDB",
+  "Moderation Strategy for Screen Time & Habits",
+  "Custom Routines and Goal Tracking",
+  "Installable PWA",
+];
+
+/**
+ * JSON-LD graph describing Cadence.
+ *
+ * `WebApplication` and `SoftwareApplication` intentionally share a single
+ * `@id`, so crawlers merge them into one entity: a free, installable,
+ * offline-first productivity application. `WebSite` describes the public site.
+ * One script carrying an `@graph` keeps the relations between those nodes
+ * explicit, which is what answer engines (Perplexity, ChatGPT, AI Overviews)
+ * read when they summarise an app.
+ */
+function buildStructuredData(canonicalUrl: string) {
+  const applicationId = `${SITE_ORIGIN}/#software-application`;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_ORIGIN}/#website`,
+        name: "Cadence",
+        alternateName: "Cadence Habit Tracker",
+        url: `${SITE_ORIGIN}/`,
+        description: HOME_DESCRIPTION,
+        inLanguage: "en",
+        publisher: { "@id": applicationId },
+      },
+      {
+        "@type": "WebApplication",
+        "@id": applicationId,
+        name: "Cadence Habit Tracker",
+        alternateName: "Cadence",
+        url: canonicalUrl,
+        applicationCategory: "ProductivityApplication",
+        applicationSubCategory: "Habit Tracker",
+        operatingSystem: "Web, iOS, Android, Windows, macOS",
+        browserRequirements: "Requires JavaScript, IndexedDB, and HTTPS (or localhost)",
+        isAccessibleForFree: true,
+        inLanguage: "en",
+        offers: {
+          "@type": "Offer",
+          price: "0.00",
+          priceCurrency: "USD",
+          availability: "https://schema.org/InStock",
+        },
+        featureList: APP_FEATURE_LIST,
+        keywords: HOME_KEYWORDS,
+        image: SOCIAL_IMAGE_URL,
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": applicationId,
+        name: "Cadence Habit Tracker",
+        url: canonicalUrl,
+        applicationCategory: "ProductivityApplication",
+        operatingSystem: "Web, iOS, Android, Windows, macOS",
+        isAccessibleForFree: true,
+        offers: {
+          "@type": "Offer",
+          price: "0.00",
+          priceCurrency: "USD",
+          availability: "https://schema.org/InStock",
+        },
+        featureList: APP_FEATURE_LIST,
+      },
+    ],
+  };
+}
+
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1, viewport-fit=cover",
-      },
-      { title: "Cadence — Offline Habit Tracker & Daily Routine Planner" },
-      {
-        name: "description",
-        content:
-          "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
-      },
-      {
-        name: "keywords",
-        content:
-          "habit tracker, offline habit tracker, routine planner, daily streaks, productivity, cadence, indexeddb app",
-      },
-      { name: "author", content: "Cadence" },
-      { property: "og:title", content: "Cadence — Offline Habit Tracker & Daily Routine Planner" },
-      {
-        property: "og:description",
-        content:
-          "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://cadencepwa.vercel.app/" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Cadence — Offline Habit Tracker & Daily Routine Planner" },
-      {
-        name: "twitter:description",
-        content:
-          "Build daily routines, track habits, and maintain streaks with Cadence. A calm, fast, offline-first habit tracker powered by IndexedDB.",
-      },
-      { name: "twitter:url", content: "https://cadencepwa.vercel.app/" },
-      { name: "twitter:site", content: "@Cadence" },
-      { name: "theme-color", content: "#090d16", media: "(prefers-color-scheme: dark)" },
-      { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "Cadence" },
-      { name: "google-site-verification", content: "REPLACE_WITH_YOUR_GSC_CODE" },
-    ],
-    scripts: [
-      {
-        attrs: { type: "application/ld+json" },
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "Cadence",
-          url: "https://cadencepwa.vercel.app/",
-        }),
-      },
-      {
-        attrs: { type: "application/ld+json" },
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": ["WebApplication", "SoftwareApplication"],
-          name: "Cadence",
-          alternateName: "Cadence Habit Tracker",
-          applicationCategory: "ProductivityApplication",
-          operatingSystem: "All",
-          url: "https://cadencepwa.vercel.app/",
-          description:
-            "A calm, fast, offline-first habit tracker and routine planner powered by IndexedDB.",
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
-          featureList: [
-            "Offline-first habit tracking",
-            "Client-side IndexedDB local persistence",
-            "Streak counter and statistics",
-            "Dark mode support",
-            "Privacy-first with zero tracking",
-          ],
-        }),
-      },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "canonical", href: "https://cadencepwa.vercel.app/" },
-      { rel: "manifest", href: "/manifest.json" },
-      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=3" },
-      {
-        rel: "icon",
-        href: "/favicon-light.svg",
-        media: "(prefers-color-scheme: light)",
-        type: "image/svg+xml",
-      },
-      {
-        rel: "icon",
-        href: "/favicon-dark.svg",
-        media: "(prefers-color-scheme: dark)",
-        type: "image/svg+xml",
-      },
-      { rel: "icon", href: "/favicon-32.png", sizes: "32x32", type: "image/png" },
-      { rel: "icon", href: "/favicon-16.png", sizes: "16x16", type: "image/png" },
-    ],
-  }),
+  /**
+   * Per-page metadata. TanStack Router keeps only the deepest match for every
+   * `title` / `name` / `property`, so anything defined here is the default that
+   * child routes override, while `canonical` and `og:url` always mirror the page
+   * actually being rendered (exactly one canonical tag per document).
+   */
+  head: ({ matches }) => {
+    const deepestMatch = matches[matches.length - 1];
+    const routeId = deepestMatch?.routeId;
+    /**
+     * TanStack Router's fuzzy not-found mode serves the root route as a successful
+     * match for unknown paths, so `pathname` is "/" even for `/does-not-exist`.
+     * We use `routeId` to decide the canonical: real page routes (anything other
+     * than __root__) get a canonical of their own path, the root route gets "/",
+     * and we suppress the canonical entirely when the root route is the only match
+     * (which is the 404 fallback case).
+     */
+    const isRootOnlyMatch = matches.length === 1 && routeId === "__root__";
+    const canonicalPath = isRootOnlyMatch ? "/" : routeId ? deepestMatch?.fullPath : "/";
+    const pathname = canonicalPath === "/" ? "/" : canonicalPath;
+    const canonicalUrl =
+      pathname === "/"
+        ? `${SITE_ORIGIN}/`
+        : `${SITE_ORIGIN}${pathname.replace(/\/$/, "")}`;
+    const robotsDirective =
+      "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        },
+        { title: HOME_TITLE },
+        { name: "description", content: HOME_DESCRIPTION },
+        { name: "keywords", content: HOME_KEYWORDS },
+        { name: "author", content: "Cadence" },
+        { name: "application-name", content: "Cadence Habit Tracker" },
+        { name: "robots", content: robotsDirective },
+        { name: "googlebot", content: robotsDirective },
+        { property: "og:site_name", content: "Cadence" },
+        { property: "og:locale", content: "en_US" },
+        { property: "og:type", content: "website" },
+        { property: "og:title", content: HOME_TITLE },
+        { property: "og:description", content: HOME_DESCRIPTION },
+        { property: "og:url", content: canonicalUrl },
+        { property: "og:image", content: SOCIAL_IMAGE_URL },
+        { property: "og:image:type", content: "image/png" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: SOCIAL_IMAGE_ALT },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: HOME_TITLE },
+        { name: "twitter:description", content: HOME_DESCRIPTION },
+        { name: "twitter:url", content: canonicalUrl },
+        { name: "twitter:image", content: SOCIAL_IMAGE_URL },
+        { name: "twitter:image:alt", content: SOCIAL_IMAGE_ALT },
+        // Only one theme-color on purpose: browsers and crawlers honour the last
+        // occurrence, and the brand surface of the app is the dark shell.
+        { name: "theme-color", content: "#090d16" },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+        { name: "apple-mobile-web-app-title", content: "Cadence" },
+        // Search Console ownership is proven by /google2b0885a7999327aa.html, so
+        // the legacy placeholder verification meta tag is intentionally absent.
+        // Structured data for search engines and AI answer engines. TanStack
+        // converts this key into `<script type="application/ld+json">` and escapes
+        // the payload, which a hand-written `scripts` entry cannot do safely.
+        { "script:ld+json": buildStructuredData(canonicalUrl) },
+      ],
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        // Emitted for every route except the 404 page so each document has
+        // exactly one canonical URL pointing at its own address.
+        ...(isRootOnlyMatch ? [] : [{ rel: "canonical" as const, href: canonicalUrl }]),
+        { rel: "manifest", href: "/manifest.json" },
+        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=3" },
+        {
+          rel: "icon",
+          href: "/favicon-light.svg",
+          media: "(prefers-color-scheme: light)",
+          type: "image/svg+xml",
+        },
+        {
+          rel: "icon",
+          href: "/favicon-dark.svg",
+          media: "(prefers-color-scheme: dark)",
+          type: "image/svg+xml",
+        },
+        { rel: "icon", href: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+        { rel: "icon", href: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+      ],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

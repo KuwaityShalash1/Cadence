@@ -198,6 +198,9 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
             key={c.id}
             type="button"
             onClick={() => setColor(c.id)}
+            /// Colour-only swatch: the palette name is the accessible label.
+            aria-label={`Use ${c.id} color`}
+            aria-pressed={color === c.id}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition hover:scale-110 active:scale-95 shrink-0 ${c.value}`}
           >
             {color === c.id && <Check className="w-4 h-4 text-white drop-shadow-md" />}
@@ -220,6 +223,9 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
               type="button"
               onClick={() => setColor(customHex)}
               style={{ backgroundColor: customHex }}
+              /// Swatch has no text, so the saved HEX value names the button.
+              aria-label={`Use saved color ${customHex}`}
+              aria-pressed={color === customHex}
               className="w-8 h-8 rounded-full flex items-center justify-center transition hover:scale-110 active:scale-95 shadow-sm border border-slate-200 dark:border-slate-700"
             >
               {color === customHex && <Check className="w-4 h-4 text-white drop-shadow-md" />}
@@ -239,6 +245,7 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
                 showDeleteForId === customHex ? "opacity-100" : ""
               }`}
               title="Delete color"
+              aria-label={`Delete saved color ${customHex}`}
             >
               <X className="w-2.5 h-2.5" />
             </button>
