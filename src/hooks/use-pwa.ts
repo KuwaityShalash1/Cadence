@@ -116,7 +116,7 @@ export function usePWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
-  useEffect(() => {
+   useEffect(() => {
     if (typeof window === "undefined") return;
 
     // Hydration-safe: the first client render mirrors the server markup and the
@@ -139,6 +139,33 @@ export function usePWA() {
       window.removeEventListener("appinstalled", syncFromStash);
       displayModeQuery.removeEventListener("change", handleDisplayModeChange);
     };
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Storage persistence (navigator.storage.persist)
+  // ---------------------------------------------------------------------------
+  //
+  // Requests persistent storage so the browser / mobile OS does not evict
+  // IndexedDB (and our Dexie tables) when the device is under storage pressure.
+  // Models the same SSR-safe pattern used elsewhere in this hook: only touches
+  // `navigator` inside the effect.
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    if (typeof navigator.storage === "undefined") return;
+    if (typeof navigator.storage.persist !== "function") return;
+
+    navigator.storage
+      .persist()
+      .then((granted) => {
+        if (granted) {
+          console.log("[Cadence] Storage persistence granted — IndexedDB will not be cleared under storage pressure.");
+        } else {
+          console.warn("[Cadence] Storage persistence denied — IndexedDB may be cleared if the device runs low on storage.");
+        }
+      })
+      .catch((err) => {
+        console.warn("[Cadence] navigator.storage.persist() rejected", err);
+      });
   }, []);
 
   /**

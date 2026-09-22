@@ -39,6 +39,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import {
   getNotificationPermission,
@@ -466,6 +471,15 @@ export function SettingsPage() {
           Export your data as a JSON file, import a previous backup, or clear everything to start
           fresh.
         </p>
+
+        <Alert className="mt-4 border-amber-200/50 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800/40">
+          <AlertTitle className="text-amber-800 dark:text-amber-300">
+            Your data lives only on this device
+          </AlertTitle>
+          <AlertDescription className="text-amber-700 dark:text-amber-400">
+            Cadence is a 100% offline-first application. Your data is stored locally on this device and is not synced to the cloud. To prevent data loss if your browser cache is cleared, please export a backup of your data regularly.
+          </AlertDescription>
+        </Alert>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" className="h-11 flex-1" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" /> Export data
