@@ -118,10 +118,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function Shell({ children }: { children: ReactNode }) {
   const editor = useHabitEditor();
-  const { settings, ready, isSidebarCollapsed, toggleSidebar } = useAppStore();
+  const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [enableSidebarTransition, setEnableSidebarTransition] = useState(false);
+  // During SSR, use a static default (sidebar open) to avoid hydration mismatch.
+  // The persisted collapsed state is applied after mount via useEffect.
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const displayName = settings.displayName?.trim() || "User";
   const isRtl = false;
 
@@ -132,7 +135,26 @@ function Shell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    // After mounting, sync the sidebar state from the store (which reads from localStorage).
+    // This ensures the first render uses a static default, avoiding hydration mismatch.
+    setIsSidebarCollapsed(isCollapsed);
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    if (!ready) return;
+    // Enable transitions one render after hydration so the first settled
+    // sidebar state is painted without animating from the SSR placeholder.
+    const frame = window.requestAnimationFrame(() => setEnableSidebarTransition(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [ready]);
+
+  useEffect(() => {
+    if (isSidebarCollapsed) {
+      document.documentElement.setAttribute("data-sidebar-collapsed", "true");
+    } else {
+      document.documentElement.removeAttribute("data-sidebar-collapsed");
+    }
+  }, [isSidebarCollapsed]);
 
   useEffect(() => {
     if (!ready) return;
