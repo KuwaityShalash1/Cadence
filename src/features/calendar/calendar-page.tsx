@@ -70,6 +70,10 @@ export function CalendarPage() {
   const selectedDone = selectedHabits.filter((h) => isCompleteOn(h, logMap, selected)).length;
   const selectedPct = Math.round(dayCompletion(habits, logMap, selected) * 100);
 
+  // Future dates are preview-only: date keys are ISO yyyy-MM-dd strings, so a
+  // lexicographic comparison matches chronological order.
+  const isFutureDate = selected > today;
+
   const weekdayLabels = useMemo(() => {
     if (weekStartsOn === 0) return WEEKDAY_LABELS;
     return [...WEEKDAY_LABELS.slice(1), WEEKDAY_LABELS[0]];
@@ -210,7 +214,7 @@ export function CalendarPage() {
 
       {/* Selected day detail */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-lg">
             {fromDateKey(selected).toLocaleDateString(undefined, {
               weekday: "long",
@@ -223,6 +227,17 @@ export function CalendarPage() {
           </span>
         </div>
 
+        {/* Future dates are read-only previews — logging is disabled. */}
+        {isFutureDate && selectedHabits.length > 0 ? (
+          <p
+            role="note"
+            title="You cannot log habits for future dates"
+            className="rounded-2xl border border-dashed border-border bg-muted/40 p-4 text-center text-sm text-muted-foreground"
+          >
+            Upcoming — preview only. You cannot log habits for future dates.
+          </p>
+        ) : null}
+
         {selectedHabits.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
             No habits scheduled on this day.
@@ -230,7 +245,7 @@ export function CalendarPage() {
         ) : (
           <ul className="space-y-3">
             {selectedHabits.map((habit) => (
-              <HabitRow key={habit.id} habit={habit} date={selected} />
+              <HabitRow key={habit.id} habit={habit} date={selected} readOnly={isFutureDate} />
             ))}
           </ul>
         )}

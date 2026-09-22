@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { todayKey } from "@/services/dates";
 import { describeSchedule } from "@/services/schedule";
 import { normalizeQuickDecrements } from "@/services/quick-steps";
 import { getLog, streaks } from "@/services/stats";
@@ -45,6 +46,12 @@ export interface Props {
   draggable?: boolean;
   isDragging?: boolean;
   isOverlay?: boolean;
+  /**
+   * When true, all date-specific mutations are disabled and rendered read-only.
+   * Used by the Calendar page for future dates so scheduled habits can be
+   * previewed but not logged ahead of time.
+   */
+  readOnly?: boolean;
   /** Sortable attributes + listeners spread onto the desktop card container. */
   dragHandleProps?: Record<string, unknown>;
   activatorRef?: (element: HTMLElement | null) => void;
@@ -92,6 +99,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     draggable = false,
     isDragging = false,
     isOverlay = false,
+    readOnly = false,
     dragHandleProps,
     dragListeners,
     activatorRef,
@@ -124,6 +132,13 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   const skipped = log?.status === "skipped";
   const done = skipped || value >= target;
   const isFrozen = Boolean(habit.frozenDates?.includes(date)) || log?.status === "frozen";
+  // Future dates are preview-only. Date keys are ISO yyyy-MM-dd, so a
+  // lexicographic comparison matches chronological order.
+  const isFutureDate = date > todayKey();
+  // Read-only when the parent forces it (Calendar future selection) or when
+  // this row's date lies in the future. All mutation controls honor this flag.
+  const readOnlyMode = readOnly || isFutureDate;
+  const mutationsDisabled = isFrozen || readOnlyMode;
   /** The day is already completed — freezing is pointless and must be blocked. */
   const isCompletedToday = !isFrozen && !skipped && target > 0 && value >= target;
   const pct = Math.min(100, target > 0 ? Math.round((value / target) * 100) : 0);
@@ -362,6 +377,10 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   const progressBarFillClass = "h-full rounded-full transition-all duration-500 ease-out";
 
   function complete() {
+    if (readOnlyMode) {
+      toast.info("You cannot log habits for future dates");
+      return;
+    }
     if (isFrozen) {
       toast.error("Habit is frozen for today");
       return;
@@ -376,6 +395,10 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   }
 
   function handleIncrement(amount: number) {
+    if (readOnlyMode) {
+      toast.info("You cannot log habits for future dates");
+      return;
+    }
     if (isFrozen) {
       toast.error("Habit is frozen for today");
       return;
@@ -384,6 +407,10 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   }
 
   function handleStartTimer() {
+    if (readOnlyMode) {
+      toast.info("You cannot log habits for future dates");
+      return;
+    }
     if (isFrozen) {
       toast.error("Habit is frozen for today");
       return;
@@ -520,6 +547,11 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
    * updater (React can re-invoke updaters, which used to double-fire toasts).
    */
   const handleFreezeToggle = () => {
+    // Future dates are preview-only: no freeze / skip / clear mutations allowed.
+    if (readOnlyMode) {
+      toast.info("You cannot log habits for future dates");
+      return;
+    }
     const result = freezeHabit(habit.id, date);
     if (result.ok && result.frozen) {
       playFreezeSound();
@@ -558,7 +590,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           : `Freeze Streak (${freezeQuota.max - freezeQuota.used} left)`,
       Icon: Snowflake,
       iconClassName: "text-cyan-400",
-      disabled: freezesExhausted,
+      disabled: freezesExhausted || readOnlyMode,
       /**
        * Signature must match the other items (Edit, Delete): a bare `onSelect`
        * with NO `event.preventDefault()` / `event.stopPropagation()`. In Radix,
@@ -588,13 +620,27 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       key: "skip",
       label: "Skip today",
       Icon: SkipForward,
-      onSelect: () => skipHabit(habit.id, date),
+      disabled: readOnlyMode,
+      onSelect: () => {
+        if (readOnlyMode) {
+          toast.info("You cannot log habits for future dates");
+          return;
+        }
+        skipHabit(habit.id, date);
+      },
     },
     {
       key: "clear",
       label: "Clear this day",
       Icon: RotateCcw,
-      onSelect: () => clearLog(habit.id, date),
+      disabled: readOnlyMode,
+      onSelect: () => {
+        if (readOnlyMode) {
+          toast.info("You cannot log habits for future dates");
+          return;
+        }
+        clearLog(habit.id, date);
+      },
     },
     {
       key: "delete",
@@ -646,11 +692,16 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     <Button
       size="sm"
       variant="outline"
-      aria-label="Start a timer for this habit"
-      disabled={isFrozen}
+      aria-label={
+        readOnlyMode ? "You cannot log habits for future dates" : "Start a timer for this habit"
+      }
+      title={readOnlyMode ? "You cannot log habits for future dates" : undefined}
+      disabled={mutationsDisabled}
       className={cn(
         "flex h-11 px-7 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-semibold text-emerald-700 transition-all",
         "hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20",
+        // Disabled (future date preview) styling so the read-only state is obvious.
+        readOnlyMode && "opacity-50 cursor-not-allowed hover:bg-emerald-50 dark:hover:bg-emerald-500/10",
         extra,
       )}
       onClick={(e) => {
@@ -691,10 +742,17 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     <Button
       size={withLabel ? "sm" : "icon"}
       variant="outline"
-      disabled={isFrozen}
+      disabled={mutationsDisabled}
       aria-label={
-        isFrozen ? "Frozen for today" : done ? "Mark habit as not done" : "Mark habit as complete"
+        readOnlyMode
+          ? "You cannot log habits for future dates"
+          : isFrozen
+            ? "Frozen for today"
+            : done
+              ? "Mark habit as not done"
+              : "Mark habit as complete"
       }
+      title={readOnlyMode ? "You cannot log habits for future dates" : undefined}
       className={cn(
         "shrink-0 items-center gap-2 rounded-xl border-transparent font-semibold shadow-sm transition-all",
         isFrozen
@@ -702,6 +760,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           : "bg-emerald-600 text-white hover:bg-emerald-500 hover:text-white dark:border-transparent dark:bg-emerald-600 dark:hover:bg-emerald-500",
         withLabel ? "h-11 px-8 text-sm font-bold" : "h-10 w-10",
         done && !isFrozen && "ring-1 ring-emerald-400/40",
+        // Disabled (future date preview) styling so the read-only state is obvious.
+        readOnlyMode && "opacity-50 cursor-not-allowed",
         extra,
       )}
       onClick={(e) => {
@@ -714,7 +774,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       ) : (
         <Check className="h-4 w-4" />
       )}
-      {withLabel ? (isFrozen ? "Frozen" : done ? "Completed" : "Complete") : null}
+      {withLabel ? (readOnlyMode ? "Upcoming" : isFrozen ? "Frozen" : done ? "Completed" : "Complete") : null}
     </Button>
   );
 
@@ -742,9 +802,10 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         key={label}
         size="sm"
         variant="outline"
-        disabled={isFrozen}
-        aria-label={ariaLabel}
-        className={tone}
+        disabled={mutationsDisabled}
+        aria-label={readOnlyMode ? "You cannot log habits for future dates" : ariaLabel}
+        title={readOnlyMode ? "You cannot log habits for future dates" : undefined}
+        className={cn(tone, readOnlyMode && "opacity-50 cursor-not-allowed")}
         onClick={(e) => {
           e.stopPropagation();
           handleIncrement(amount);
@@ -925,16 +986,24 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     <Button
       size="icon"
       variant="outline"
-      disabled={isFrozen}
+      disabled={mutationsDisabled}
       aria-label={
-        isFrozen ? "Frozen for today" : done ? "Mark habit as not done" : "Mark habit as complete"
+        readOnlyMode
+          ? "You cannot log habits for future dates"
+          : isFrozen
+            ? "Frozen for today"
+            : done
+              ? "Mark habit as not done"
+              : "Mark habit as complete"
       }
       title={
-        isFrozen
-          ? "Frozen for today — streak protected"
-          : done
-            ? "Completed — tap to undo"
-            : "Mark complete"
+        readOnlyMode
+          ? "You cannot log habits for future dates"
+          : isFrozen
+            ? "Frozen for today — streak protected"
+            : done
+              ? "Completed — tap to undo"
+              : "Mark complete"
       }
       className={cn(
         "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold transition-all",
@@ -945,6 +1014,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           (done
             ? "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-600 hover:text-white dark:border-emerald-500 dark:bg-emerald-500 dark:text-white"
             : "hover:border-emerald-500/50 hover:bg-emerald-500/25 hover:text-emerald-600 dark:hover:text-emerald-400"),
+        // Disabled (future date preview) styling so the read-only state is obvious.
+        readOnlyMode && "opacity-50 cursor-not-allowed",
       )}
       onClick={(e) => {
         e.stopPropagation();

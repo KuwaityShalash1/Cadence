@@ -398,6 +398,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       date: string,
       mutate: (existing: HabitLog | undefined, habit: Habit) => HabitLog | null,
     ) => {
+      // Defense-in-depth: never persist logs for future dates. UI controls are
+      // disabled for future days, but this guard keeps analytics integrity even
+      // if a caller bypasses the UI.
+      if (date > todayKey()) return;
       setState((prev) => {
         const habit = prev.habits.find((h) => h.id === habitId);
         if (!habit) return prev;
@@ -552,6 +556,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!habit) return buildFreezeFailure("missing", 0, 0);
 
         const dayKey = date || todayKey();
+        // Defense-in-depth: future dates are preview-only, never frozen.
+        if (dayKey > todayKey()) {
+          toast.info("You cannot log habits for future dates");
+          return buildFreezeFailure("missing", 0, 0);
+        }
         const monthKey = dayKey.slice(0, 7);
 
         // Roll the legacy monthly counter forward when the month changes.
