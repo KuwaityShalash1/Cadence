@@ -515,7 +515,11 @@ function HabitBreakdownCard({
           <span className="text-muted-foreground">Completion rate</span>
           <span className="numeric font-medium">{Math.round(stats.completionRate * 100)}%</span>
         </div>
-        <Progress value={Math.round(stats.completionRate * 100)} className="mt-1.5 h-2" />
+        <Progress
+          value={Math.round(stats.completionRate * 100)}
+          aria-label="Completion rate"
+          className="mt-1.5 h-2"
+        />
       </div>
       <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
         <span>

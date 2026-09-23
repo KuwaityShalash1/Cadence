@@ -14,9 +14,13 @@ function dayFillClass(habits: Habit[], logs: LogMap, date: string): string {
   const due = habits.filter((h) => !h.archived && isScheduledOn(h, date));
   if (!due.length) return "";
   const completion = dayCompletion(habits, logs, date);
+  // Text colours on the primary tints are chosen per opacity so the day number
+  // keeps at least 4.5:1 contrast in BOTH themes: solid primary pairs with the
+  // (light) primary-foreground, while the 70% tint needs a near-black number in
+  // light mode AND matches the dark theme's original near-black foreground.
   if (completion >= 0.999) return "bg-primary text-primary-foreground";
-  if (completion >= 0.5) return "bg-primary/70 text-primary-foreground";
-  if (completion > 0) return "bg-primary/20 text-primary-foreground";
+  if (completion >= 0.5) return "bg-primary/70 text-slate-950";
+  if (completion > 0) return "bg-primary/20 text-foreground";
   return "";
 }
 
@@ -163,18 +167,29 @@ export function CalendarPage() {
                 aria-pressed={isSelected}
                 className={cn(
                   "relative flex aspect-square items-center justify-center bg-card text-sm transition-all duration-150",
-                  inMonth ? "text-foreground" : "text-muted-foreground/30",
+                  // Out-of-month days stay at full muted opacity: alpha-reduced
+                  // variants drop below 4.5:1 contrast in both themes. The
+                  // foreground/muted split still reads as clear hierarchy.
+                  inMonth ? "text-foreground" : "text-muted-foreground",
                   !isSelected && !hasData && inMonth && "hover:bg-accent/50",
                   !isSelected && !hasData && !inMonth && "hover:bg-accent/30",
                   fill,
-                  isFrozen && !hasData && "bg-cyan-500/10 text-cyan-400 border-cyan-500/30",
+                  // cyan-700 clears 4.5:1 on the light cyan tint; cyan-400 only
+                  // passes against the dark theme's background.
+                  isFrozen &&
+                    !hasData &&
+                    "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/30",
                   isSelected && "ring-2 ring-inset ring-primary ring-offset-0",
                 )}
               >
                 <span
                   className={cn(
                     "flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-medium tabular-nums transition-colors",
-                    isToday && !hasData && "bg-primary/15 font-bold text-primary",
+                    isToday &&
+                      !hasData &&
+                      // teal-800 gives the brand-tinted badge ≥4.5:1 in light
+                      // mode; the dark theme keeps the bright primary colour.
+                      "bg-primary/15 font-bold text-teal-800 dark:text-primary",
                     isToday &&
                       hasData &&
                       "font-bold ring-2 ring-primary ring-offset-1 ring-offset-transparent",
@@ -183,7 +198,7 @@ export function CalendarPage() {
                   {d.getDate()}
                 </span>
                 {isFrozen && !hasData && (
-                  <span className="absolute bottom-1 right-1 flex h-3.5 w-3.5 items-center justify-center text-cyan-400">
+                                    <span className="absolute bottom-1 right-1 flex h-3.5 w-3.5 items-center justify-center text-cyan-700 dark:text-cyan-400">
                     <Snowflake className="h-3 w-3" />
                   </span>
                 )}
@@ -205,7 +220,7 @@ export function CalendarPage() {
           <span className="h-3 w-3 rounded-full bg-primary/20" /> Started
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="flex h-3 w-3 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-400">
+                    <span className="flex h-3 w-3 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-700 dark:text-cyan-400">
             <Snowflake className="h-2 w-2" />
           </span>{" "}
           Frozen

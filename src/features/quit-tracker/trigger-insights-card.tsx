@@ -100,7 +100,11 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
                 {item.count} ({item.percentage}%)
               </span>
             </div>
-            <Progress value={item.percentage} className="h-2.5" />
+            <Progress
+              value={item.percentage}
+              aria-label={`Relapse share for ${item.label}`}
+              className="h-2.5"
+            />
           </div>
         ))}
       </div>

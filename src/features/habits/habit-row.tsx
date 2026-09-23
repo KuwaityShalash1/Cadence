@@ -947,6 +947,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       {/* Dedicated visual progress bar — accent fill, smooth width animation */}
       <div
         role="progressbar"
+        aria-label={`Progress for ${habit.name}`}
         aria-valuemin={0}
         aria-valuemax={target}
         aria-valuenow={value}

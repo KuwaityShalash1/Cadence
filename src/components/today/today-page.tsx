@@ -292,7 +292,7 @@ export function TodayPage() {
                   className={cn(
                     "h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-colors",
                     filter === mode
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-primary/10 text-teal-800 dark:text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
@@ -417,11 +417,21 @@ export function TodayPage() {
                       <h4 className="truncate font-sans text-sm font-semibold">{habit.name}</h4>
                       {habit.description ? (
                         <p
-                          className="truncate text-sm text-slate-400 cursor-pointer hover:text-slate-300"
+                          role="button"
+                          tabIndex={0}
+                          className="cursor-pointer truncate text-sm text-muted-foreground hover:text-foreground"
                           title="Click to expand"
                           onClick={(e) => {
                             const target = e.currentTarget;
                             target.classList.toggle("truncate");
+                          }}
+                          onKeyDown={(e) => {
+                            // Keyboard users get the same expand/collapse
+                            // behaviour as the pointer interaction above.
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              e.currentTarget.classList.toggle("truncate");
+                            }
                           }}
                         >
                           {habit.description}

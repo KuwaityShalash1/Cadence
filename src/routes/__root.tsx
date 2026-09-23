@@ -89,7 +89,7 @@ const SITE_ORIGIN = "https://cadencepwa.vercel.app";
 /** Homepage copy: keyword-rich but still an accurate description of the app. */
 const HOME_TITLE = "Cadence — Free Offline Habit Tracker & Daily Routine Planner";
 const HOME_DESCRIPTION =
-  "Track habits and build discipline with Cadence. A 100% offline-first PWA featuring unique moderation goals, daily routines, and zero tracking or ads.";
+  "Cadence is an offline-first habit tracker for building daily routines, tracking goals, and staying consistent without ads or account requirements.";
 const HOME_KEYWORDS =
   "habit tracker, offline habit tracker, moderation habits, daily routine planner, privacy-first pwa, habit tracker no ads";
 
@@ -231,8 +231,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { name: "twitter:image", content: SOCIAL_IMAGE_URL },
         { name: "twitter:image:alt", content: SOCIAL_IMAGE_ALT },
         // Only one theme-color on purpose: browsers and crawlers honour the last
-        // occurrence, and the brand surface of the app is the dark shell.
-        { name: "theme-color", content: "#090d16" },
+        // occurrence, and the brand surface of the app is the dark shell. The
+        // value mirrors the `.dark` `--background` token in src/styles.css, and
+        // ThemeSync keeps this meta tag aligned after hydration.
+        { name: "theme-color", content: "#0b0f17" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
@@ -253,7 +255,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         // exactly one canonical URL pointing at its own address.
         ...(isRootOnlyMatch ? [] : [{ rel: "canonical" as const, href: canonicalUrl }]),
         { rel: "manifest", href: "/manifest.json" },
-        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=3" },
+        { rel: "apple-touch-icon", sizes: "512x512", href: "/apple-touch-icon.png?v=3" },
         {
           rel: "icon",
           href: "/favicon-light.svg",

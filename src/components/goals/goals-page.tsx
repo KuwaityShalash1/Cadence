@@ -253,7 +253,11 @@ export function GoalsPage() {
                           </span>
                           <span className="numeric font-medium">{pct}%</span>
                         </div>
-                        <Progress value={pct} className="mt-2 h-2 bg-slate-100 dark:bg-slate-800" />
+                        <Progress
+                          value={pct}
+                          aria-label={`Goal progress for ${goal.name}`}
+                          className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
+                        />
                       </div>
 
                       <GoalValueControls goal={goal} currentValue={goalCurrentValue(goal)} />

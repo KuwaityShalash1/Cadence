@@ -221,6 +221,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
             </div>
             <Progress
               value={usagePercentage}
+              aria-label={t("quitTracker.dailyProgress", "Daily Progress")}
               className={cn(
                 "h-2.5",
                 isLimitExceeded ? "bg-destructive/20" : "",
@@ -339,7 +340,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                         &ldquo;{record.detailedReason}&rdquo;
                       </p>
                     )}
-                    <div className="text-[10px] text-muted-foreground/70 pl-6">
+                    <div className="text-[10px] text-muted-foreground pl-6">
                       {new Date(record.relapsedAt).toLocaleString()}
                     </div>
                   </div>

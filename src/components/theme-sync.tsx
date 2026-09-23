@@ -14,7 +14,10 @@ export function ThemeSync() {
       const dark = theme === "dark" || (theme === "system" && media.matches);
       root.classList.toggle("dark", dark);
       const meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute("content", dark ? "#2b2f36" : "#f8f7f3");
+      // Dark value mirrors the `.dark` `--background` token in src/styles.css
+      // (and the static meta tag in __root.tsx) so the browser UI always paints
+      // the exact shell colour before hydration, then stays aligned after it.
+      if (meta) meta.setAttribute("content", dark ? "#0b0f17" : "#f8f7f3");
     };
     apply();
     media.addEventListener("change", apply);

@@ -132,6 +132,7 @@ export function GoalCard({
         </div>
         <Progress
           value={Math.round(progress * 100)}
+          aria-label={`Goal progress for ${goal.name}`}
           className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
         />
       </div>

@@ -231,6 +231,7 @@ export function StatsPage() {
                     </div>
                     <Progress
                       value={Math.round(stats.completionRate * 100)}
+                      aria-label="Completion rate"
                       className="mt-1.5 h-2"
                     />
                   </div>

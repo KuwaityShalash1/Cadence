@@ -236,6 +236,7 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
 
         <nav
+          aria-label="Main navigation"
           className={cn(
             "flex flex-col gap-1.5 w-full flex-1",
             isSidebarCollapsed ? "items-center px-2" : "px-0",
@@ -251,7 +252,9 @@ function Shell({ children }: { children: ReactNode }) {
                 /// the accessible name of the link.
                 aria-label={item.label}
                 className={cn(
-                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
+                  // Active state: teal-800 clears 4.5:1 on the primary/10 tint
+                  // in light mode; the dark theme keeps the vivid primary colour.
+                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-teal-800 dark:data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
               >
@@ -284,7 +287,7 @@ function Shell({ children }: { children: ReactNode }) {
                 /// Collapsed rails render the gear alone — keep a text name.
                 aria-label="Settings"
                 className={cn(
-                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
+                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-teal-800 dark:data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
               >
@@ -359,8 +362,12 @@ function Shell({ children }: { children: ReactNode }) {
 
       <TimerDock />
 
-      {/* Mobile bottom nav */}
-      <div className="block md:hidden border-t border-border bg-background fixed bottom-0 left-0 right-0 z-50">
+      {/* Mobile bottom nav — a `nav` landmark so every link inside is contained
+          by a landmark (Lighthouse "region" audit) without changing layout. */}
+      <nav
+        aria-label="Primary navigation"
+        className="block md:hidden border-t border-border bg-background fixed bottom-0 left-0 right-0 z-50"
+      >
         <div
           className="flex items-stretch justify-around px-2 pt-1"
           style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))" }}
@@ -380,12 +387,13 @@ function Shell({ children }: { children: ReactNode }) {
             type="button"
             onClick={() => setMoreOpen(true)}
             className="flex min-h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+            aria-label="Open more navigation options"
           >
             <Menu className="h-5 w-5" />
             More
           </button>
         </div>
-      </div>
+      </nav>
 
       <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} title="More Navigation">
         <div className="space-y-4 py-2">
