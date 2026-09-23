@@ -13,6 +13,7 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-ki
 import { HabitIcon, colorStyles, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
+import { useAddModalListener } from "@/hooks/use-shortcuts";
 import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,11 @@ export function RoutinesPage() {
     setEditing(routine);
     setIsOpen(true);
   }
+
+  // Keyboard shortcut bridge: pressing N on /routines opens this sheet.
+  useAddModalListener("routine", () => {
+    if (!isOpen) openNew();
+  });
 
   const sortedRoutines = useMemo(
     () => [...routines].sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt)),

@@ -12,6 +12,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ThemeSync } from "@/components/theme-sync";
+import { BackupReminder } from "@/components/backup-reminder";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/stores/app-store";
@@ -20,7 +21,9 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { checkDailyHabitReminder } from "@/lib/notifications";
 import { registerServiceWorker } from "@/lib/service-worker";
 import { useOnlineStatus } from "@/hooks/use-online-status";
+import { useWeeklyBackupReminder } from "@/hooks/use-weekly-backup";
 import { useApp } from "@/stores/app-store";
+import { useShortcuts } from "@/hooks/use-shortcuts";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -170,7 +173,6 @@ function buildStructuredData(canonicalUrl: string) {
   };
 }
 
-
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   /**
    * Per-page metadata. TanStack Router keeps only the deepest match for every
@@ -193,9 +195,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     const canonicalPath = isRootOnlyMatch ? "/" : routeId ? deepestMatch?.fullPath : "/";
     const pathname = canonicalPath === "/" ? "/" : canonicalPath;
     const canonicalUrl =
-      pathname === "/"
-        ? `${SITE_ORIGIN}/`
-        : `${SITE_ORIGIN}${pathname.replace(/\/$/, "")}`;
+      pathname === "/" ? `${SITE_ORIGIN}/` : `${SITE_ORIGIN}${pathname.replace(/\/$/, "")}`;
     const robotsDirective =
       "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
 
@@ -378,12 +378,16 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // Global keyboard shortcuts (N / Cmd+K / T). Mounted once at the top
+  // level; safe for SSR (listener attaches in useEffect) and offline.
+  useShortcuts();
 
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
         <LanguageProvider>
           <NotificationScheduler />
+          <WeeklyBackupReminder />
           <ServiceWorkerBootstrap />
           <ClientAnalytics />
           <ClientSpeedInsights />
@@ -447,6 +451,35 @@ function ServiceWorkerBootstrap() {
   }, []);
 
   return null;
+}
+
+/**
+ * Smart Weekly Auto-Backup reminder for the offline-first IndexedDB database.
+ *
+ * Runs inside `AppProvider` so it can call the store's canonical `exportData()`
+ * serializer when the user taps "Export Backup (JSON)". The hook itself is
+ * SSR-safe (all `localStorage` work happens in `useEffect`) and respects browser
+ * auto-download policies by only downloading from the banner button gesture.
+ * Renders the floating `BackupReminder` banner; the bottom navigation and top
+ * header layouts are untouched.
+ */
+function WeeklyBackupReminder() {
+  const { exportData, ready } = useApp();
+
+  // Wait until the Dexie snapshot has loaded so the export contains real data.
+  const { visible, exportBackup, snoozeReminder, dismissReminder } = useWeeklyBackupReminder(
+    exportData,
+    { enabled: ready },
+  );
+
+  return (
+    <BackupReminder
+      visible={visible}
+      onExport={exportBackup}
+      onSnooze={snoozeReminder}
+      onDismiss={dismissReminder}
+    />
+  );
 }
 
 function NotificationScheduler() {

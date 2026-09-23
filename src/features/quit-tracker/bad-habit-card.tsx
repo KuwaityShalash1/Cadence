@@ -106,25 +106,27 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
       duration: 5000, // Give them 5 seconds to undo
     });
   }
+  // Single-column card: full row width with extra vertical breathing room on
+  // desktop. min-w-0 + overflow-x-clip guarantee badges never bleed past borders.
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.99] space-y-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3.5">
+    <div className="w-full min-w-0 space-y-4 sm:space-y-5 overflow-x-clip rounded-2xl border border-border bg-card p-4 sm:py-6 sm:px-6 shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.99]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <span
-            className={cn("grid h-12 w-12 place-items-center rounded-2xl shadow-sm", styles.tint)}
+            className={cn("grid h-10 w-10 place-items-center rounded-xl shadow-sm", styles.tint)}
             style={{ backgroundColor: styles.tint }}
           >
             <HabitIcon
               name={habit.icon ?? "Flame"}
               customIcons={customIcons}
-              className={cn("h-6 w-6", { color: styles.rawColor })}
+              className={cn("h-5 w-5", { color: styles.rawColor })}
             />
           </span>
-          <div>
-            <h3 className="font-display text-xl font-bold tracking-tight">{habit.title}</h3>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-              <span>{t("quitTracker.quitDate")}:</span>
-              <span className="font-medium text-foreground">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-lg font-bold tracking-tight leading-tight truncate">{habit.title}</h3>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+              <span className="shrink-0">{t("quitTracker.quitDate")}:</span>
+              <span className="font-medium text-foreground whitespace-nowrap">
                 {new Date(habit.quitDate).toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
@@ -137,11 +139,11 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={() => setEditOpen(true)}
             aria-label="Edit tracker"
           >
@@ -150,7 +152,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-destructive"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
             onClick={handleDelete}
             aria-label="Delete tracker"
           >
@@ -159,42 +161,42 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
         </div>
       </div>
 
-      {/* Current Abstinence Streak - Only show for cold-turkey strategies, NOT for limit/moderation */}
+      {/* Live abstinence timer — shown only for cold-turkey trackers, not for moderation. */}
       {!isLimitStrategy && (
-        <div className="rounded-2xl bg-muted/40 border border-border/60 p-5 text-center space-y-2">
-          <div className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
+        <div className="rounded-xl bg-muted/40 border border-border/60 p-3 text-center space-y-2">
+          <div className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
             Current Abstinence Streak
           </div>
-          <div className="grid grid-cols-4 gap-2 max-w-md mx-auto pt-1">
-            <div className="flex flex-col items-center bg-card rounded-xl p-2.5 border shadow-2xs">
-              <span className="font-display text-2xl sm:text-3xl font-extrabold text-foreground numeric">
+          <div className="grid grid-cols-4 gap-1.5 max-w-md mx-auto">
+            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+              <span className="font-display text-xl font-extrabold text-foreground numeric">
                 {days}
               </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Days
               </span>
             </div>
-            <div className="flex flex-col items-center bg-card rounded-xl p-2.5 border shadow-2xs">
-              <span className="font-display text-2xl sm:text-3xl font-extrabold text-foreground numeric">
+            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+              <span className="font-display text-xl font-extrabold text-foreground numeric">
                 {String(hours).padStart(2, "0")}
               </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Hours
               </span>
             </div>
-            <div className="flex flex-col items-center bg-card rounded-xl p-2.5 border shadow-2xs">
-              <span className="font-display text-2xl sm:text-3xl font-extrabold text-foreground numeric">
+            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+              <span className="font-display text-xl font-extrabold text-foreground numeric">
                 {String(minutes).padStart(2, "0")}
               </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Mins
               </span>
             </div>
-            <div className="flex flex-col items-center bg-card rounded-xl p-2.5 border shadow-2xs">
-              <span className="font-display text-2xl sm:text-3xl font-extrabold text-primary numeric animate-pulse">
+            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+              <span className="font-display text-xl font-extrabold text-primary numeric animate-pulse">
                 {String(seconds).padStart(2, "0")}
               </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Secs
               </span>
             </div>
@@ -204,16 +206,16 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
 
       {/* Limit Strategy UI: Progress bar comes first for limit cards */}
       {isLimitStrategy ? (
-        <div className="space-y-3">
-          <div className="rounded-xl border bg-card p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <BarChart2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">
+        <div className="space-y-4 sm:space-y-5">
+          <div className="rounded-xl border bg-card p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3 text-sm">
+                <BarChart2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate text-muted-foreground">
                   {t("quitTracker.dailyProgress", "Daily Progress")}
                 </span>
               </div>
-              <span className="text-sm font-semibold">
+              <span className="shrink-0 text-sm font-semibold whitespace-nowrap tabular-nums">
                 {todayUsage} / {limitValue} {limitValue === 1 && habit.limitType === "count" ? t("quitTracker.unitSingular", "unit") : t("quitTracker.unitPlural", "units")}
               </span>
             </div>
@@ -225,31 +227,32 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
               )}
             />
             {isLimitExceeded && (
-              <div className="flex items-center gap-2 text-sm text-destructive font-medium">
+              <div className="flex items-center gap-3 text-sm text-destructive font-medium">
                 <AlertCircle className="h-4 w-4" />
                 <span>{t("quitTracker.limitExceeded", "Limit exceeded — streak reset!")}</span>
               </div>
             )}
           </div>
           {/* Streak row: Current Streak & Longest Streak — displayed after progress bar for limit cards */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl border bg-card p-3 flex items-center justify-between">
-              <span className="text-muted-foreground">{t("quitTracker.currentStreak")}</span>
-              <span className="font-semibold text-foreground">
+          {/* Responsive wrap: stack vertically on narrow screens, side-by-side on sm+. min-w-0 prevents overflow. */}
+          <div className="flex min-w-0 flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="rounded-xl border bg-card px-3 py-2 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">{t("quitTracker.currentStreak")}</span>
+              <span className="shrink-0 font-semibold text-foreground whitespace-nowrap tabular-nums">
                 {formatStreakDays(currentStreakHours)}
               </span>
             </div>
-            <div className="rounded-xl border bg-card p-3 flex items-center justify-between">
-              <span className="text-muted-foreground">{t("quitTracker.longestStreak")}</span>
-              <span className="font-semibold text-primary flex items-center gap-1">
-                <ShieldCheck className="h-4 w-4" />
+            <div className="rounded-xl border bg-card px-3 py-2 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">{t("quitTracker.longestStreak")}</span>
+              <span className="shrink-0 font-semibold text-primary flex items-center gap-1 whitespace-nowrap tabular-nums">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
                 {formatStreakDays(longestStreakHours)}
               </span>
             </div>
           </div>
           <Button
             variant="outline"
-            className="w-full h-12 rounded-xl border-primary/30 bg-primary/5 text-primary font-semibold hover:bg-primary/10 hover:border-primary transition-colors"
+            className="w-full h-10 rounded-xl border-primary/30 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 hover:border-primary transition-colors"
             onClick={() => {
               if (todayUsage >= limitValue) {
                 toast.warning(t("quitTracker.limitAlreadyReached", "You've already reached your daily limit."));
@@ -263,27 +266,34 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
           </Button>
         </div>
       ) : (
-        /* Cold Turkey Strategy UI: Streak row + Standard "I Relapsed" button */
-        <div className="space-y-3">
-          {/* Streak row: Current Streak & Longest Streak — for cold-turkey cards */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl border bg-card p-3 flex items-center justify-between">
-              <span className="text-muted-foreground">{t("quitTracker.currentStreak")}</span>
-              <span className="font-semibold text-foreground">
-                {formatStreakHours(currentStreakHours)}
-              </span>
-            </div>
-            <div className="rounded-xl border bg-card p-3 flex items-center justify-between">
-              <span className="text-muted-foreground">{t("quitTracker.longestStreak")}</span>
-              <span className="font-semibold text-primary flex items-center gap-1">
-                <ShieldCheck className="h-4 w-4" />
-                {formatStreakHours(longestStreakHours)}
-              </span>
-            </div>
+        /* Cold Turkey footer: live counter above already shows the current streak,
+           so keep only Longest Streak plus a compact relapse summary. */
+        <div className="space-y-4 sm:space-y-5">
+          {/* Abstinence footer: stacks on mobile, spreads on sm+. flex-wrap + min-w-0 stops badge overflow. */}
+          <div className="rounded-xl border bg-card px-3 py-2 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">{t("quitTracker.longestStreak")}</span>
+            <span className="shrink-0 font-semibold text-primary flex items-center gap-1 whitespace-nowrap tabular-nums">
+              <ShieldCheck className="h-4 w-4 shrink-0" />
+              {formatStreakHours(longestStreakHours)}
+            </span>
           </div>
+          {habit.history.length > 0 && (
+            <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 font-medium whitespace-nowrap">
+                <History className="h-3.5 w-3.5" />
+                {habit.history.length} {habit.history.length === 1 ? "relapse" : "relapses"}
+              </span>
+              <span className="truncate tabular-nums">
+                Last:{" "}
+                {new Date(
+                  Math.max(...habit.history.map((r) => r.relapsedAt)),
+                ).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+              </span>
+            </div>
+          )}
           <Button
             variant="outline"
-            className="w-full h-12 rounded-xl border-destructive/30 bg-destructive/5 text-destructive font-semibold hover:bg-destructive/10 hover:border-destructive transition-colors"
+            className="w-full h-10 rounded-xl border-destructive/30 bg-destructive/5 text-destructive text-sm font-semibold hover:bg-destructive/10 hover:border-destructive transition-colors"
             onClick={() => setRelapseOpen(true)}
           >
             <AlertCircle className="mr-2 h-4 w-4" />

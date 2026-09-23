@@ -51,6 +51,7 @@ import {
   sendTestNotification,
   type NotificationPermissionState,
 } from "@/lib/notifications";
+import { buildBackupFileName, downloadJsonBackup, markBackupComplete } from "@/lib/backup";
 import { usePWA } from "@/hooks/use-pwa";
 import { useApp } from "@/stores/app-store";
 import { useTranslation } from "@/i18n/context";
@@ -116,14 +117,11 @@ export function SettingsPage() {
   }
 
   function handleExport() {
+    // Reuse the shared backup helper so manual exports and the weekly Toast
+    // reminder produce the same file and both refresh the reminder timestamp.
     const json = exportData();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `cadence-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadJsonBackup(json, buildBackupFileName());
+    markBackupComplete();
     toast.success("Data exported");
   }
 

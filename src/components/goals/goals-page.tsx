@@ -14,6 +14,7 @@ import { HabitIcon, colorStyles, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
+import { useAddModalListener } from "@/hooks/use-shortcuts";
 import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,11 @@ export function GoalsPage() {
     setEditing(goal);
     setIsOpen(true);
   }
+
+  // Keyboard shortcut bridge: pressing N on /goals opens this sheet.
+  useAddModalListener("goal", () => {
+    if (!isOpen) openNew();
+  });
 
   const goalProgressMap = useMemo(() => {
     const progress = new Map<string, number>();

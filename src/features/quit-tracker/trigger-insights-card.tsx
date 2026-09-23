@@ -40,9 +40,11 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
     return { totalRelapses, items };
   }, [badHabits]);
 
+  // Card foundation matches Today HabitRow tokens: rounded-2xl,
+  // border-border, bg-card, p-4 (p-5 on sm+) — full unified width.
   if (insights.totalRelapses === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
             <Sparkles className="h-5 w-5" />
@@ -61,7 +63,7 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
   const topTrigger = insights.items[0];
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-5">
+    <div className="w-full space-y-5 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">

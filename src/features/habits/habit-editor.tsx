@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 
 import { HabitForm } from "@/features/habits/habit-form";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
+import { useAddModalListener } from "@/hooks/use-shortcuts";
 import type { Habit } from "@/types";
 
 interface EditorApi {
@@ -18,6 +19,12 @@ export function HabitEditorProvider({ children }: { children: ReactNode }) {
     setHabit(next);
     setIsOpen(true);
   }, []);
+
+  // Keyboard shortcut bridge: pressing N on the Today/default route
+  // opens a new habit sheet. Ignored while a sheet is already open.
+  useAddModalListener("habit", () => {
+    if (!isOpen) open();
+  });
 
   const api = useMemo(() => ({ open }), [open]);
 
