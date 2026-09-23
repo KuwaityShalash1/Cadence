@@ -323,7 +323,7 @@ function Shell({ children }: { children: ReactNode }) {
         {/* Top bar header with profile in top-right corner */}
         {/* Safe area top padding ensures the header sits below the iOS status bar / dynamic island */}
         {/* Horizontal gutter matches the page container so header and feed stay aligned: 16px on mobile, 24px from md up */}
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 md:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur md:justify-end">
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 md:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur md:justify-end">
           <div className="md:hidden">
             <Link to="/" className="flex items-center">
               <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-xl">
@@ -346,7 +346,7 @@ function Shell({ children }: { children: ReactNode }) {
               <span className="max-w-32 truncate text-sm font-medium">{displayName}</span>
             </Link>
           </div>
-        </div>
+        </header>
 
         {/*
           Single source of truth for the page gutter and max width: a strict

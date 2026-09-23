@@ -324,7 +324,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const loadStore = async () => {
       try {
         const snapshot = await repo.loadSnapshot();
         if (cancelled) return;
@@ -384,9 +384,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } finally {
         if (!cancelled) setReady(true);
       }
-    })();
+    };
+
+    // Let the shell paint before opening IndexedDB. This keeps storage startup
+    // work out of the critical first-render window on slower devices.
+    let timeout: number | undefined;
+    const frame = window.requestAnimationFrame(() => {
+      timeout = window.setTimeout(() => void loadStore(), 0);
+    });
     return () => {
       cancelled = true;
+      window.cancelAnimationFrame(frame);
+      if (timeout !== undefined) window.clearTimeout(timeout);
     };
   }, []);
 
