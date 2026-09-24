@@ -426,7 +426,7 @@ export function SettingsPage() {
           <Button
             type="button"
             variant="outline"
-            className="mt-4 w-full sm:w-auto"
+            className="mt-4 w-full"
             disabled={notificationPermission !== "granted"}
             onClick={async () => {
               const sent = await sendTestNotification();
@@ -542,7 +542,7 @@ export function SettingsPage() {
             href="https://tally.so/r/VLgMGy"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Bug className="h-4 w-4 shrink-0" />
             Report a Bug / Feedback
