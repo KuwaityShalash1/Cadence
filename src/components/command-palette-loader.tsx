@@ -1,8 +1,9 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
 import { toast } from "sonner";
 
 import type { CommandPaletteProps } from "@/components/command-palette";
 import { useCommandPalette } from "@/hooks/use-command-palette";
+import { OPEN_SHORTCUTS_HELP_EVENT } from "@/hooks/use-shortcuts";
 import { useTranslation } from "@/i18n/context";
 
 /**
@@ -14,6 +15,11 @@ import { useTranslation } from "@/i18n/context";
  * `vite.config.ts` pins to its own vendor chunk) is fetched with a dynamic
  * `import()` only when it is actually needed, so the initial JavaScript payload
  * that Lighthouse measures is unchanged.
+ *
+ * The `OPEN_SHORTCUTS_HELP_EVENT` listener also lives here (not inside the lazy
+ * `<CommandPalette>`) because this component is always mounted. Moving it here
+ * fixes the bug where pressing `?` before ever opening the palette would fire
+ * the event into the void — the lazy chunk simply wasn't loaded yet.
  */
 
 /** Props contract of the lazily loaded palette chunk. */
@@ -86,9 +92,13 @@ function warmCommandPaletteChunk(): void {
 }
 
 export function CommandPaletteLoader() {
-  const { open, setOpen, mounted } = useCommandPalette();
+  const { open, setOpen, mounted, openPalette } = useCommandPalette();
   const { t } = useTranslation();
   const [Palette, setPalette] = useState<CommandPaletteComponent | null>(null);
+
+  // One-shot signal passed to <Palette> so it can open the shortcuts help dialog
+  // immediately after mounting. Resets to false once the palette acknowledges it.
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
 
   useEffect(() => {
     if (!PREFETCH_ON_IDLE) return;
@@ -123,10 +133,39 @@ export function CommandPaletteLoader() {
     };
   }, [open, Palette, setOpen, t]);
 
+  /**
+   * `?` global shortcut handler — lives here (always mounted) rather than inside
+   * the lazy `<CommandPalette>`, which may not yet be in the DOM.
+   *
+   * When fired:
+   *  1. Ensure the palette chunk is loaded (force-mount + trigger the load effect).
+   *  2. Set `shortcutsHelpOpen` so the palette opens its sub-dialog as soon as it
+   *     renders. The palette resets this signal via `onShortcutsHelpOpenChange`.
+   */
+  const handleOpenShortcutsHelp = useCallback(() => {
+    setShortcutsHelpOpen(true);
+    // Force the chunk to load so <Palette> is in the DOM to receive the signal.
+    if (!mounted) openPalette();
+  }, [mounted, openPalette]);
+
+  useEffect(() => {
+    window.addEventListener(OPEN_SHORTCUTS_HELP_EVENT, handleOpenShortcutsHelp);
+    return () => window.removeEventListener(OPEN_SHORTCUTS_HELP_EVENT, handleOpenShortcutsHelp);
+  }, [handleOpenShortcutsHelp]);
+
   // Stays unmounted (so SSR output and the initial payload are untouched) until
   // the first press; afterwards it remains mounted so Radix can finish the exit
   // animation and restore focus instead of unmounting mid-transition.
   if (!mounted || !Palette) return null;
 
-  return <Palette open={open} onOpenChange={setOpen} />;
+  return (
+    <Palette
+      open={open}
+      onOpenChange={setOpen}
+      openShortcutsHelp={shortcutsHelpOpen}
+      onShortcutsHelpOpenChange={setShortcutsHelpOpen}
+    />
+  );
 }
+
+

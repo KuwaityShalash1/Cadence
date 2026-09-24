@@ -46,7 +46,6 @@ import {
   dispatchOpenAddModal,
   FOCUS_HABIT_SEARCH_EVENT,
   OPEN_ARCHIVED_HABITS_EVENT,
-  OPEN_SHORTCUTS_HELP_EVENT,
 } from "@/hooks/use-shortcuts";
 
 /**
@@ -67,6 +66,10 @@ import {
 export interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When flipped to `true` by the loader, immediately opens the shortcuts help dialog. */
+  openShortcutsHelp?: boolean;
+  /** Called once the loader's `openShortcutsHelp` signal has been consumed. */
+  onShortcutsHelpOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -265,6 +268,7 @@ function ShortcutsHelpDialog({ open, onOpenChange, shortcutHint }: ShortcutsHelp
                 label={t("command.createHabit", "New Habit / Context Item")}
                 shortcut="N"
               />
+              <ShortcutRow label={t("command.searchPage", "Search Current Page")} shortcut="/" />
               <ShortcutRow label={t("command.shortcutsHelp", "Shortcuts Help")} shortcut="?" />
             </div>
           </div>
@@ -286,13 +290,28 @@ function ShortcutsHelpDialog({ open, onOpenChange, shortcutHint }: ShortcutsHelp
   );
 }
 
-export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({
+  open,
+  onOpenChange,
+  openShortcutsHelp,
+  onShortcutsHelpOpenChange,
+}: CommandPaletteProps) {
   const navigate = useNavigate();
   const { settings, updateSettings, exportData } = useApp();
   const { t } = useTranslation();
   const shortcutHint = useShortcutHint();
 
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+
+  // Sync the external "open shortcuts help" signal (driven by the always-mounted
+  // loader) into local state. This lets the `?` shortcut work even before the
+  // palette chunk has ever been opened via ⌘K.
+  useEffect(() => {
+    if (openShortcutsHelp) {
+      setShortcutsHelpOpen(true);
+      onShortcutsHelpOpenChange?.(false); // acknowledge / reset the signal
+    }
+  }, [openShortcutsHelp, onShortcutsHelpOpenChange]);
   const feedbackAnchorRef = useRef<HTMLAnchorElement | null>(null);
   /**
    * The feedback row renders a real anchor (`target="_blank"` +
@@ -340,16 +359,37 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     }
   }, [navigate]);
 
-  const focusHabitSearch = useCallback(() => {
-    if (window.location.pathname !== "/") {
+  /**
+   * Context-aware search focus: targets the search input on the *current* page
+   * rather than always navigating to Today first.
+   *
+   * Strategy:
+   *  1. Query the live DOM for any `input[type="search"]` that is visible (i.e.
+   *     not hidden by `display:none` or `visibility:hidden`). Goals, Routines,
+   *     Quit Tracker, and Today all render one when they have content.
+   *  2. If found → focus it in place. No navigation needed.
+   *  3. If not found (Settings, Calendar, Stats — pages with no search bar) →
+   *     navigate to "/" and focus Today's search bar after the route settles,
+   *     reusing the same `FOCUS_HABIT_SEARCH_EVENT` that Today already handles.
+   *
+   * The 100ms delay after closing the palette gives Radix time to finish its
+   * exit animation and return focus to the trigger before we steal it again.
+   */
+  const focusPageSearch = useCallback(() => {
+    window.setTimeout(() => {
+      const searchInput = document.querySelector<HTMLInputElement>("input[type='search']");
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+        return;
+      }
+      // No search bar on this page — fall back to Today.
       void navigate({ to: "/" }).then(() => {
         window.setTimeout(() => {
           window.dispatchEvent(new Event(FOCUS_HABIT_SEARCH_EVENT));
         }, 120);
       });
-    } else {
-      window.dispatchEvent(new Event(FOCUS_HABIT_SEARCH_EVENT));
-    }
+    }, 100);
   }, [navigate]);
 
   const handleExportBackup = useCallback(() => {
@@ -365,12 +405,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     if (open) feedbackOpenedByPointerRef.current = false;
   }, [open]);
 
-  // Global listener for opening shortcuts help modal
-  useEffect(() => {
-    const handleOpenHelp = () => setShortcutsHelpOpen(true);
-    window.addEventListener(OPEN_SHORTCUTS_HELP_EVENT, handleOpenHelp);
-    return () => window.removeEventListener(OPEN_SHORTCUTS_HELP_EVENT, handleOpenHelp);
-  }, []);
 
   const feedbackLabel = t("command.feedback", "Report a Bug / Feedback");
 
@@ -490,12 +524,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     </CommandItem>
 
                     <CommandItem
-                      value={`${t("command.searchHabits", "Search Habits")} search find filter habits query`}
-                      onSelect={() => runCommand(focusHabitSearch)}
+                      value={`${t("command.searchPage", "Search Current Page")} search find filter habits goals routines tracker query`}
+                      onSelect={() => runCommand(focusPageSearch)}
                       className={COMMAND_ITEM_CLASSES}
                     >
                       <Search className="h-4 w-4 text-muted-foreground" />
-                      <span>{t("command.searchHabits", "Search Habits")}</span>
+                      <span>{t("command.searchPage", "Search Current Page")}</span>
+                      <CommandShortcut>
+                        <Kbd className="border-border/80 bg-muted/60 text-muted-foreground shadow-xs">
+                          /
+                        </Kbd>
+                      </CommandShortcut>
                     </CommandItem>
                   </CommandGroup>
 

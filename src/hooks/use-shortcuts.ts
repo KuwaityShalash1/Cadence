@@ -88,6 +88,7 @@ export function useAddModalListener(entity: AddModalEntity, onOpen: () => void):
  * - Q: Quit Tracker (/quit-tracker)
  * - S: Settings (/settings)
  * - N: Add New (context-aware: habit, goal, routine, or quit tracker)
+ * - /: Focus the search bar (skipped when already inside an input/textarea)
  * - ?: Open Keyboard Shortcuts Help
  *
  * Cmd/Ctrl+K is deliberately NOT handled here: it belongs to the command
@@ -156,6 +157,13 @@ export function useShortcuts(): void {
         else if (pathname.includes("/quit-tracker")) dispatchOpenAddModal("quit-tracker");
         else if (pathname.includes("/routines")) dispatchOpenAddModal("routine");
         else dispatchOpenAddModal("habit");
+        return;
+      }
+
+      // /: Focus the search bar on the active page.
+      if (e.key === "/") {
+        e.preventDefault();
+        (document.querySelector('input[type="search"]') as HTMLInputElement | null)?.focus();
         return;
       }
 
