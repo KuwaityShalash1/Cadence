@@ -74,9 +74,8 @@ export interface CommandPaletteProps {
 
 /**
  * Feedback form opened by the "Report a Bug / Feedback" command.
- * Replace `YOUR_FORM_ID` with the live Tally form id before shipping.
  */
-const FEEDBACK_URL = "https://tally.so/r/YOUR_FORM_ID";
+const FEEDBACK_URL = "https://tally.so/r/VLgMGy";
 
 /** Route literals are typed so TanStack Router validates every target at build time. */
 type NavigationTarget =
