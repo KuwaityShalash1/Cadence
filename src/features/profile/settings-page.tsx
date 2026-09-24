@@ -1,5 +1,6 @@
 import {
   Bell,
+  Bug,
   Camera,
   CheckCircle2,
   Download,
@@ -524,6 +525,29 @@ export function SettingsPage() {
             className="hidden"
             onChange={handleImport}
           />
+        </div>
+      </section>
+
+      {/* Help & Support */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Bug className="h-4 w-4 text-muted-foreground" />
+          Help &amp; Support
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Found a bug or have feedback? We&apos;d love to hear from you.
+        </p>
+        <div className="mt-4">
+          <a
+            href="https://tally.so/r/VLgMGy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
+          >
+            <Bug className="h-4 w-4 shrink-0" />
+            Report a Bug / Feedback
+            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          </a>
         </div>
       </section>
     </div>
