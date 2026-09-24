@@ -1,6 +1,16 @@
-import { Archive, ListFilter as Filter, Plus, RotateCcw, Search, Trash2, X, Globe } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  Archive,
+  ListFilter as Filter,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
+  Globe,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { FOCUS_HABIT_SEARCH_EVENT, OPEN_ARCHIVED_HABITS_EVENT } from "@/hooks/use-shortcuts";
 
 import {
   DndContext,
@@ -85,6 +95,25 @@ export function TodayPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleOpenArchived = () => setArchivedOpen(true);
+    const handleFocusSearch = () => {
+      window.setTimeout(() => {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }, 50);
+    };
+
+    window.addEventListener(OPEN_ARCHIVED_HABITS_EVENT, handleOpenArchived);
+    window.addEventListener(FOCUS_HABIT_SEARCH_EVENT, handleFocusSearch);
+
+    return () => {
+      window.removeEventListener(OPEN_ARCHIVED_HABITS_EVENT, handleOpenArchived);
+      window.removeEventListener(FOCUS_HABIT_SEARCH_EVENT, handleFocusSearch);
+    };
+  }, []);
 
   const archivedHabits = useMemo(() => habits.filter((h) => h.archived), [habits]);
 
@@ -264,10 +293,12 @@ export function TodayPage() {
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
+                type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search habits…"
-                className="h-11 pl-10"
+                className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
                 aria-label="Search habits"
               />
               {query ? (
@@ -370,8 +401,8 @@ export function TodayPage() {
         }}
         className={cn(
           "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
-          "bg-indigo-600 text-white shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
-          "hover:bg-indigo-700 dark:bg-indigo-500 dark:text-white dark:ring-white/10 dark:hover:bg-indigo-400",
+          "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
+          "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
         )}
       >
         <Plus className="h-6 w-6" />

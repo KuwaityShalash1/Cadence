@@ -37,16 +37,24 @@ export default defineConfig(({ command }) => ({
          *  - `ui-vendor`: Radix UI primitives and the `lucide-react` icon set
          *    shared by every screen.
          *
+         * The command palette needs no rule here: `cmdk` is imported by exactly
+         * one dynamically imported chunk, so the bundler already ships it with
+         * that chunk. Grouping it manually would be actively harmful — Rollup
+         * also drops a group's *unassigned* dependencies (react, react-dom, the
+         * JSX runtime) into the manual chunk, which would then become part of
+         * the eagerly loaded graph and pull cmdk into the initial payload.
+         *
          * Only `node_modules` ids are routed so first-party code keeps its
          * route-based splitting, and tree-shaking (`sideEffects: false` in
          * package.json) still runs before chunks are assigned, so unused
          * exports never reach any chunk.
          */
-        manualChunks(id: string) {
-          if (!id.includes("node_modules")) return;
+        manualChunks(id: string): string | undefined {
+          if (!id.includes("node_modules")) return undefined;
           if (/node_modules[\\/](recharts|d3-)/.test(id)) return "recharts-vendor";
           if (/node_modules[\\/]dexie/.test(id)) return "storage-vendor";
           if (/node_modules[\\/](@radix-ui|lucide-react)/.test(id)) return "ui-vendor";
+          return undefined;
         },
       },
     },

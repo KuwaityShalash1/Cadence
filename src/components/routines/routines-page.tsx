@@ -1,4 +1,4 @@
-import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ListFilter as Filter, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -12,18 +12,27 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-ki
 
 import { HabitIcon, colorStyles, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
 import { useAddModalListener } from "@/hooks/use-shortcuts";
 import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
-import { describeSchedule } from "@/services/schedule";
+import { describeSchedule, scheduleMatches } from "@/services/schedule";
 import { todayKey } from "@/services/dates";
 import { useApp, uid } from "@/stores/app-store";
 import type { Routine, RoutineStep } from "@/types";
 import { RoutineForm } from "@/features/routines/routine-form";
 import { SortableCard, SortableCardOverlay } from "@/components/sortable-card";
 import { RoutineCard } from "@/components/routines/routine-card";
+
+type RoutineFilterMode = "all" | "active" | "completed";
+
+const ROUTINE_FILTER_LABELS: Record<RoutineFilterMode, string> = {
+  all: "All",
+  active: "Active",
+  completed: "Completed",
+};
 
 export function RoutinesPage() {
   const {
@@ -37,10 +46,13 @@ export function RoutinesPage() {
     reorderRoutines,
     toggleRoutineStep,
     customIcons,
+    activeTimer,
   } = useApp();
   const [editing, setEditing] = useState<Routine | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<RoutineFilterMode>("all");
 
   const today = todayKey();
 
@@ -62,6 +74,35 @@ export function RoutinesPage() {
     () => [...routines].sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt)),
     [routines],
   );
+
+  const filteredRoutines = useMemo(() => {
+    let list = sortedRoutines;
+    if (filter === "active") {
+      list = list.filter((r) => {
+        const isScheduled = scheduleMatches(r.schedule, today, today);
+        const log = routineLogs.find((l) => l.id === `${r.id}:${today}`);
+        const completedSteps = log?.completedStepIds ?? [];
+        const isCompleted = r.steps.length > 0 && completedSteps.length >= r.steps.length;
+        return isScheduled && !isCompleted;
+      });
+    } else if (filter === "completed") {
+      list = list.filter((r) => {
+        const log = routineLogs.find((l) => l.id === `${r.id}:${today}`);
+        const completedSteps = log?.completedStepIds ?? [];
+        return r.steps.length > 0 && completedSteps.length >= r.steps.length;
+      });
+    }
+
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.steps.some((s) => s.title.toLowerCase().includes(q)),
+      );
+    }
+    return list;
+  }, [sortedRoutines, filter, query, routineLogs, today]);
 
   /**
    * Mobile-first reorder activation shared by every card list: a 400ms hold
@@ -118,175 +159,239 @@ export function RoutinesPage() {
           </Button>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveId(null)}
-        >
-          <SortableContext
-            items={sortedRoutines.map((routine) => routine.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="cadence-stagger space-y-4">
-              {sortedRoutines.map((routine) => {
-                const log = routineLogs.find((l) => l.id === `${routine.id}:${today}`);
-                // Accent + tint for the card icon — works for palette names and custom HEX.
-                const cardTint = getColorStyle(routine.color ?? "teal", 0.14);
-                const completed = log?.completedStepIds ?? [];
-                const pct =
-                  routine.steps.length > 0
-                    ? Math.round((completed.length / routine.steps.length) * 100)
-                    : 0;
-                return (
-                  <SortableCard key={routine.id} id={routine.id}>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-sm"
-                            style={{ ...cardTint.style, color: cardTint.rawColor }}
-                          >
-                            <HabitIcon
-                              name={routine.icon}
-                              customIcons={customIcons}
-                              className="h-5 w-5"
-                            />
-                          </span>
-                          <div>
-                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                              {routine.name}
-                            </h3>
-                            <p className="text-xs text-muted-foreground">
-                              {describeSchedule(routine.schedule)} · {routine.steps.length} steps ·{" "}
-                              {pct}% done today
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                            onClick={() => openEdit(routine)}
-                            aria-label="Edit routine"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full text-slate-500 hover:bg-rose-50 hover:text-destructive dark:text-slate-400 dark:hover:bg-rose-950/30"
-                            onClick={() => {
-                              // Snapshot the routine BEFORE deleting so the toast's
-                              // Undo action can put it (steps included) back.
-                              const routineToRestore = structuredClone(routine);
-                              removeRoutine(routine.id);
-                              toast.success("Routine deleted", {
-                                action: {
-                                  label: "Undo",
-                                  onClick: () => restoreRoutine(routineToRestore),
-                                },
-                                duration: 5000, // Give them 5 seconds to undo
-                              });
-                            }}
-                            aria-label="Delete routine"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+        <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search routines…"
+                className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
+                aria-label="Search routines"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <Filter className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" />
+              {(Object.keys(ROUTINE_FILTER_LABELS) as RoutineFilterMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setFilter(mode)}
+                  aria-pressed={filter === mode}
+                  className={cn(
+                    "h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-colors",
+                    filter === mode
+                      ? "bg-primary/10 text-teal-800 dark:text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  {ROUTINE_FILTER_LABELS[mode]}
+                </button>
+              ))}
+            </div>
+          </div>
 
-                      {routine.steps.length === 0 ? (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                          No steps yet. Edit to add steps.
-                        </p>
-                      ) : (
-                        <ul className="mt-3 space-y-2">
-                          {routine.steps.map((step) => {
-                            const isDone = completed.includes(step.id);
-                            const habit = step.habitId
-                              ? habits.find((h) => h.id === step.habitId)
-                              : undefined;
-                            const styles = habit ? colorStyles(habit.color) : null;
-                            return (
-                              <li key={step.id}>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleRoutineStep(routine.id, step.id, today)}
-                                  className={cn(
-                                    "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 active:scale-[0.99]",
-                                    isDone
-                                      ? "border-primary/40 bg-primary/5"
-                                      : "border-slate-200 bg-slate-50/70 hover:bg-white dark:border-slate-800 dark:bg-slate-800/30 dark:hover:bg-slate-800/60",
-                                  )}
-                                >
-                                  <span
-                                    className={cn(
-                                      "grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-all duration-200",
-                                      isDone
-                                        ? "border-primary bg-primary text-primary-foreground"
-                                        : "border-slate-300 bg-white text-transparent dark:border-slate-700 dark:bg-slate-900",
-                                    )}
-                                  >
-                                    {isDone ? <Check className="h-4 w-4" /> : null}
-                                  </span>
-                                  <div className="min-w-0 flex-1">
-                                    <p
+          {filteredRoutines.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              No routines match your search.
+            </p>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
+              <SortableContext
+                items={filteredRoutines.map((routine) => routine.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="cadence-stagger space-y-4">
+                  {filteredRoutines.map((routine) => {
+                    const log = routineLogs.find((l) => l.id === `${routine.id}:${today}`);
+                    // Accent + tint for the card icon — works for palette names and custom HEX.
+                    const cardTint = getColorStyle(routine.color ?? "teal", 0.14);
+                    const completed = log?.completedStepIds ?? [];
+                    const pct =
+                      routine.steps.length > 0
+                        ? Math.round((completed.length / routine.steps.length) * 100)
+                        : 0;
+                    return (
+                      <SortableCard key={routine.id} id={routine.id}>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span
+                                className="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-sm"
+                                style={{ ...cardTint.style, color: cardTint.rawColor }}
+                              >
+                                <HabitIcon
+                                  name={routine.icon}
+                                  customIcons={customIcons}
+                                  className="h-5 w-5"
+                                />
+                              </span>
+                              <div>
+                                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                                  {routine.name}
+                                </h3>
+                                <p className="text-xs text-muted-foreground">
+                                  {describeSchedule(routine.schedule)} · {routine.steps.length}{" "}
+                                  steps · {pct}% done today
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                onClick={() => openEdit(routine)}
+                                aria-label="Edit routine"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full text-slate-500 hover:bg-rose-50 hover:text-destructive dark:text-slate-400 dark:hover:bg-rose-950/30"
+                                onClick={() => {
+                                  // Snapshot the routine BEFORE deleting so the toast's
+                                  // Undo action can put it (steps included) back.
+                                  const routineToRestore = structuredClone(routine);
+                                  removeRoutine(routine.id);
+                                  toast.success("Routine deleted", {
+                                    action: {
+                                      label: "Undo",
+                                      onClick: () => restoreRoutine(routineToRestore),
+                                    },
+                                    duration: 5000, // Give them 5 seconds to undo
+                                  });
+                                }}
+                                aria-label="Delete routine"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {routine.steps.length === 0 ? (
+                            <p className="mt-3 text-sm text-muted-foreground">
+                              No steps yet. Edit to add steps.
+                            </p>
+                          ) : (
+                            <ul className="mt-3 space-y-2">
+                              {routine.steps.map((step) => {
+                                const isDone = completed.includes(step.id);
+                                const habit = step.habitId
+                                  ? habits.find((h) => h.id === step.habitId)
+                                  : undefined;
+                                const styles = habit ? colorStyles(habit.color) : null;
+                                return (
+                                  <li key={step.id}>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleRoutineStep(routine.id, step.id, today)}
                                       className={cn(
-                                        "truncate text-sm font-medium",
-                                        isDone && "text-muted-foreground line-through",
+                                        "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 active:scale-[0.99]",
+                                        isDone
+                                          ? "border-primary/40 bg-primary/5"
+                                          : "border-slate-200 bg-slate-50/70 hover:bg-white dark:border-slate-800 dark:bg-slate-800/30 dark:hover:bg-slate-800/60",
                                       )}
                                     >
-                                      {step.title}
-                                    </p>
-                                    {habit && styles ? (
-                                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <HabitIcon
-                                          name={habit.icon}
-                                          customIcons={customIcons}
-                                          className={cn("h-3 w-3", styles.text)}
-                                        />
-                                        {habit.name}
-                                      </p>
-                                    ) : null}
-                                  </div>
-                                </button>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  </SortableCard>
-                );
-              })}
-            </div>
-          </SortableContext>
-          <DragOverlay dropAnimation={null}>
-            {activeRoutine ? (
-              <SortableCardOverlay>
-                <RoutineCard
-                  routine={activeRoutine}
-                  habits={habits}
-                  completedStepIds={
-                    routineLogs.find((log) => log.id === `${activeRoutine.id}:${today}`)
-                      ?.completedStepIds ?? []
-                  }
-                  date={today}
-                  customIcons={customIcons}
-                  onEdit={openEdit}
-                />
-              </SortableCardOverlay>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+                                      <span
+                                        className={cn(
+                                          "grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-all duration-200",
+                                          isDone
+                                            ? "border-primary bg-primary text-primary-foreground"
+                                            : "border-slate-300 bg-white text-transparent dark:border-slate-700 dark:bg-slate-900",
+                                        )}
+                                      >
+                                        {isDone ? <Check className="h-4 w-4" /> : null}
+                                      </span>
+                                      <div className="min-w-0 flex-1">
+                                        <p
+                                          className={cn(
+                                            "truncate text-sm font-medium",
+                                            isDone && "text-muted-foreground line-through",
+                                          )}
+                                        >
+                                          {step.title}
+                                        </p>
+                                        {habit && styles ? (
+                                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                            <HabitIcon
+                                              name={habit.icon}
+                                              customIcons={customIcons}
+                                              className={cn("h-3 w-3", styles.text)}
+                                            />
+                                            {habit.name}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </SortableCard>
+                    );
+                  })}
+                </div>
+              </SortableContext>
+              <DragOverlay dropAnimation={null}>
+                {activeRoutine ? (
+                  <SortableCardOverlay>
+                    <RoutineCard
+                      routine={activeRoutine}
+                      habits={habits}
+                      completedStepIds={
+                        routineLogs.find((log) => log.id === `${activeRoutine.id}:${today}`)
+                          ?.completedStepIds ?? []
+                      }
+                      date={today}
+                      customIcons={customIcons}
+                      onEdit={openEdit}
+                    />
+                  </SortableCardOverlay>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </>
       )}
 
-      <Button className="w-full md:hidden" onClick={openNew}>
-        <Plus className="mr-1 h-4 w-4" /> New routine
-      </Button>
+      {/* Mobile FAB — floats above the bottom nav and the timer bar */}
+      <button
+        type="button"
+        aria-label="Create routine"
+        onClick={openNew}
+        style={{
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
+        }}
+        className={cn(
+          "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
+          "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
+          "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
+        )}
+      >
+        <Plus className="h-6 w-6" />
+      </button>
 
       <ResponsiveSheet
         open={isOpen}

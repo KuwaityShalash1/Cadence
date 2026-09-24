@@ -12,6 +12,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ThemeSync } from "@/components/theme-sync";
+import { CommandPaletteLoader } from "@/components/command-palette-loader";
 import { BackupReminder } from "@/components/backup-reminder";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -87,7 +88,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 const SITE_ORIGIN = "https://cadencepwa.vercel.app";
 
 /** Homepage copy: keyword-rich but still an accurate description of the app. */
-const HOME_TITLE = "Cadence — Free Offline Habit Tracker & Daily Routine Planner";
+const HOME_TITLE = "Cadence | Minimalist Habit Tracker";
 const HOME_DESCRIPTION =
   "Cadence is an offline-first habit tracker for building daily routines, tracking goals, and staying consistent without ads or account requirements.";
 const HOME_KEYWORDS =
@@ -255,7 +256,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         // exactly one canonical URL pointing at its own address.
         ...(isRootOnlyMatch ? [] : [{ rel: "canonical" as const, href: canonicalUrl }]),
         { rel: "manifest", href: "/manifest.json" },
-        { rel: "apple-touch-icon", sizes: "512x512", href: "/apple-touch-icon.png?v=3" },
+        { rel: "apple-touch-icon", sizes: "512x512", href: "/apple-touch-icon.png" },
+        { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
         {
           rel: "icon",
           href: "/favicon-light.svg",
@@ -281,7 +283,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -394,6 +396,12 @@ function RootComponent() {
           <ClientAnalytics />
           <ClientSpeedInsights />
           <ThemeSync />
+          {/*
+            Command palette (⌘K / Ctrl+K). The launcher is part of the initial
+            bundle but renders nothing until the palette is first opened; the
+            palette component itself is a separate lazily imported chunk.
+          */}
+          <CommandPaletteLoader />
           <TooltipProvider delayDuration={200}>
             <ErrorBoundary>
               {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}

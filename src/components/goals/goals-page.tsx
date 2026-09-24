@@ -1,4 +1,13 @@
-import { Calendar, Pencil, Plus, Target, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  ListFilter as Filter,
+  Pencil,
+  Plus,
+  Search,
+  Target,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -12,6 +21,7 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-ki
 
 import { HabitIcon, colorStyles, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
 import { useAddModalListener } from "@/hooks/use-shortcuts";
@@ -26,6 +36,14 @@ import { GoalForm } from "@/features/goals/goal-form";
 import { SortableCard, SortableCardOverlay } from "@/components/sortable-card";
 import { GoalCard, GoalValueControls } from "@/components/goals/goal-card";
 
+type GoalFilterMode = "all" | "in_progress" | "completed";
+
+const GOAL_FILTER_LABELS: Record<GoalFilterMode, string> = {
+  all: "All",
+  in_progress: "In Progress",
+  completed: "Completed",
+};
+
 export function GoalsPage() {
   const {
     goals,
@@ -38,10 +56,13 @@ export function GoalsPage() {
     reorderGoals,
     updateHabit,
     customIcons,
+    activeTimer,
   } = useApp();
   const [editing, setEditing] = useState<Goal | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<GoalFilterMode>("all");
 
   function openNew() {
     setEditing(null);
@@ -91,6 +112,23 @@ export function GoalsPage() {
     () => [...goals].sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt)),
     [goals],
   );
+
+  const filteredGoals = useMemo(() => {
+    let list = sortedGoals;
+    if (filter === "in_progress") {
+      list = list.filter((g) => (goalProgressMap.progress.get(g.id) ?? 0) < 1);
+    } else if (filter === "completed") {
+      list = list.filter((g) => (goalProgressMap.progress.get(g.id) ?? 0) >= 1);
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(
+        (g) =>
+          g.name.toLowerCase().includes(q) || (g.description?.toLowerCase().includes(q) ?? false),
+      );
+    }
+    return list;
+  }, [sortedGoals, filter, query, goalProgressMap]);
 
   /**
    * Mobile-first reorder activation shared by every card list: a 400ms hold
@@ -155,164 +193,228 @@ export function GoalsPage() {
           </Button>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveId(null)}
-        >
-          <SortableContext
-            items={sortedGoals.map((goal) => goal.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="cadence-stagger space-y-3">
-              {sortedGoals.map((goal) => {
-                const pct = Math.round(goalProgress(goal) * 100);
-                // Accent + tint for the card icon — works for palette names and custom HEX.
-                const cardTint = getColorStyle(goal.color || "#3B82F6", 0.14);
-                const linkedHabits = goal.habitIds
-                  .map((id) => habits.find((h) => h.id === id))
-                  .filter((h): h is Habit => !!h && !h.archived);
-                return (
-                  <SortableCard key={goal.id} id={goal.id}>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span
-                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-sm"
-                            style={{ ...cardTint.style, color: cardTint.rawColor }}
-                          >
-                            <HabitIcon
-                              name={goal.icon || "target"}
-                              customIcons={customIcons}
-                              className="h-5 w-5"
-                            />
-                          </span>
-                          <div className="min-w-0">
-                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                              {goal.name}
-                            </h3>
-                            {goal.description ? (
-                              <p className="mt-0.5 text-sm text-muted-foreground">
-                                {goal.description}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                            onClick={() => openEdit(goal)}
-                            aria-label="Edit goal"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-full text-slate-500 hover:bg-rose-50 hover:text-destructive dark:text-slate-400 dark:hover:bg-rose-950/30"
-                            onClick={() => {
-                              // Snapshot the goal BEFORE deleting so the toast's
-                              // Undo action can put it back exactly as it was.
-                              const goalToRestore = structuredClone(goal);
-                              removeGoal(goal.id);
-                              toast.success("Goal deleted", {
-                                action: {
-                                  label: "Undo",
-                                  onClick: () => restoreGoal(goalToRestore),
-                                },
-                                duration: 5000, // Give them 5 seconds to undo
-                              });
-                            }}
-                            aria-label="Delete goal"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+        <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search goals…"
+                className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
+                aria-label="Search goals"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <Filter className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" />
+              {(Object.keys(GOAL_FILTER_LABELS) as GoalFilterMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setFilter(mode)}
+                  aria-pressed={filter === mode}
+                  className={cn(
+                    "h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-colors",
+                    filter === mode
+                      ? "bg-primary/10 text-teal-800 dark:text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  {GOAL_FILTER_LABELS[mode]}
+                </button>
+              ))}
+            </div>
+          </div>
 
-                      {goal.targetDate ? (
-                        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Calendar className="h-3.5 w-3.5" />
-                          Target:{" "}
-                          {fromDateKey(goal.targetDate).toLocaleDateString(undefined, {
-                            month: "long",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </p>
-                      ) : null}
-
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">
-                            {linkedHabits.length} habits linked
-                          </span>
-                          <span className="numeric font-medium">{pct}%</span>
-                        </div>
-                        <Progress
-                          value={pct}
-                          aria-label={`Goal progress for ${goal.name}`}
-                          className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
-                        />
-                      </div>
-
-                      <GoalValueControls goal={goal} currentValue={goalCurrentValue(goal)} />
-
-                      {linkedHabits.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {linkedHabits.map((habit) => {
-                            const styles = colorStyles(habit.color);
-                            return (
+          {filteredGoals.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              No goals match your search.
+            </p>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
+              <SortableContext
+                items={filteredGoals.map((goal) => goal.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="cadence-stagger space-y-3">
+                  {filteredGoals.map((goal) => {
+                    const pct = Math.round(goalProgress(goal) * 100);
+                    // Accent + tint for the card icon — works for palette names and custom HEX.
+                    const cardTint = getColorStyle(goal.color || "#3B82F6", 0.14);
+                    const linkedHabits = goal.habitIds
+                      .map((id) => habits.find((h) => h.id === id))
+                      .filter((h): h is Habit => !!h && !h.archived);
+                    return (
+                      <SortableCard key={goal.id} id={goal.id}>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
                               <span
-                                key={habit.id}
-                                className={cn(
-                                  "flex items-center gap-1.5 rounded-lg border border-slate-200/70 px-2 py-1 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300",
-                                  styles.soft,
-                                )}
+                                className="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-sm"
+                                style={{ ...cardTint.style, color: cardTint.rawColor }}
                               >
                                 <HabitIcon
-                                  name={habit.icon}
+                                  name={goal.icon || "target"}
                                   customIcons={customIcons}
-                                  className={cn("h-3.5 w-3.5", styles.text)}
+                                  className="h-5 w-5"
                                 />
-                                {habit.name}
                               </span>
-                            );
-                          })}
+                              <div className="min-w-0">
+                                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                                  {goal.name}
+                                </h3>
+                                {goal.description ? (
+                                  <p className="mt-0.5 text-sm text-muted-foreground">
+                                    {goal.description}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                onClick={() => openEdit(goal)}
+                                aria-label="Edit goal"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full text-slate-500 hover:bg-rose-50 hover:text-destructive dark:text-slate-400 dark:hover:bg-rose-950/30"
+                                onClick={() => {
+                                  // Snapshot the goal BEFORE deleting so the toast's
+                                  // Undo action can put it back exactly as it was.
+                                  const goalToRestore = structuredClone(goal);
+                                  removeGoal(goal.id);
+                                  toast.success("Goal deleted", {
+                                    action: {
+                                      label: "Undo",
+                                      onClick: () => restoreGoal(goalToRestore),
+                                    },
+                                    duration: 5000, // Give them 5 seconds to undo
+                                  });
+                                }}
+                                aria-label="Delete goal"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {goal.targetDate ? (
+                            <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Target:{" "}
+                              {fromDateKey(goal.targetDate).toLocaleDateString(undefined, {
+                                month: "long",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </p>
+                          ) : null}
+
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                {linkedHabits.length} habits linked
+                              </span>
+                              <span className="numeric font-medium">{pct}%</span>
+                            </div>
+                            <Progress
+                              value={pct}
+                              aria-label={`Goal progress for ${goal.name}`}
+                              className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
+                            />
+                          </div>
+
+                          <GoalValueControls goal={goal} currentValue={goalCurrentValue(goal)} />
+
+                          {linkedHabits.length > 0 ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {linkedHabits.map((habit) => {
+                                const styles = colorStyles(habit.color);
+                                return (
+                                  <span
+                                    key={habit.id}
+                                    className={cn(
+                                      "flex items-center gap-1.5 rounded-lg border border-slate-200/70 px-2 py-1 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300",
+                                      styles.soft,
+                                    )}
+                                  >
+                                    <HabitIcon
+                                      name={habit.icon}
+                                      customIcons={customIcons}
+                                      className={cn("h-3.5 w-3.5", styles.text)}
+                                    />
+                                    {habit.name}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
-                    </div>
-                  </SortableCard>
-                );
-              })}
-            </div>
-          </SortableContext>
-          <DragOverlay dropAnimation={null}>
-            {activeGoal ? (
-              <SortableCardOverlay>
-                <GoalCard
-                  goal={activeGoal}
-                  linkedHabits={activeGoal.habitIds
-                    .map((id) => habits.find((habit) => habit.id === id))
-                    .filter((habit): habit is Habit => !!habit && !habit.archived)}
-                  progress={goalProgress(activeGoal)}
-                  currentValue={goalCurrentValue(activeGoal)}
-                  customIcons={customIcons}
-                  onEdit={openEdit}
-                />
-              </SortableCardOverlay>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+                      </SortableCard>
+                    );
+                  })}
+                </div>
+              </SortableContext>
+              <DragOverlay dropAnimation={null}>
+                {activeGoal ? (
+                  <SortableCardOverlay>
+                    <GoalCard
+                      goal={activeGoal}
+                      linkedHabits={activeGoal.habitIds
+                        .map((id) => habits.find((habit) => habit.id === id))
+                        .filter((habit): habit is Habit => !!habit && !habit.archived)}
+                      progress={goalProgress(activeGoal)}
+                      currentValue={goalCurrentValue(activeGoal)}
+                      customIcons={customIcons}
+                      onEdit={openEdit}
+                    />
+                  </SortableCardOverlay>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </>
       )}
 
-      <Button className="w-full md:hidden" onClick={openNew}>
-        <Plus className="mr-1 h-4 w-4" /> New goal
-      </Button>
+      {/* Mobile FAB — floats above the bottom nav and the timer bar */}
+      <button
+        type="button"
+        aria-label="Create goal"
+        onClick={openNew}
+        style={{
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
+        }}
+        className={cn(
+          "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
+          "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
+          "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
+        )}
+      >
+        <Plus className="h-6 w-6" />
+      </button>
 
       <ResponsiveSheet
         open={isOpen}

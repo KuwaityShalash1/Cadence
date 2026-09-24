@@ -8,6 +8,11 @@ export const OPEN_ADD_GOAL_EVENT = "cadence:open-add-goal";
 export const OPEN_ADD_ROUTINE_EVENT = "cadence:open-add-routine";
 export const OPEN_ADD_QUIT_TRACKER_EVENT = "cadence:open-add-quit-tracker";
 
+// Canonical event names for habit actions and help modals.
+export const OPEN_ARCHIVED_HABITS_EVENT = "cadence:open-archived-habits";
+export const FOCUS_HABIT_SEARCH_EVENT = "cadence:focus-habit-search";
+export const OPEN_SHORTCUTS_HELP_EVENT = "cadence:open-shortcuts-help";
+
 export type AddModalEntity = "habit" | "goal" | "routine" | "quit-tracker";
 
 export interface OpenAddModalDetail {
@@ -73,7 +78,23 @@ export function useAddModalListener(entity: AddModalEntity, onOpen: () => void):
 /**
  * Global, zero-dependency keyboard shortcuts for the Cadence PWA.
  * Attaches a single keydown listener; context-aware via TanStack Router.
- * Shortcuts: N (add new), Cmd/Ctrl+K (focus search), T (go to Today).
+ *
+ * Single-key Navigation Shortcuts (when NOT typing inside inputs):
+ * - T: Today (/)
+ * - C: Calendar (/calendar)
+ * - A: Analytics (/stats)
+ * - G: Goals (/goals)
+ * - R: Routines (/routines)
+ * - Q: Quit Tracker (/quit-tracker)
+ * - S: Settings (/settings)
+ * - N: Add New (context-aware: habit, goal, routine, or quit tracker)
+ * - ?: Open Keyboard Shortcuts Help
+ *
+ * Cmd/Ctrl+K is deliberately NOT handled here: it belongs to the command
+ * palette (`useCommandPalette` in src/hooks/use-command-palette.ts), which owns
+ * the chord globally. Two listeners on the same chord would fight over focus
+ * and call `preventDefault()` twice.
+ *
  * Mount once at the top level (inside RootComponent in __root.tsx).
  */
 export function useShortcuts(): void {
@@ -98,25 +119,33 @@ export function useShortcuts(): void {
       // CRITICAL safety guard: never hijack keystrokes while typing.
       const active = document.activeElement as HTMLElement | null;
       const isInput =
-        active?.tagName === "INPUT" || active?.tagName === "TEXTAREA" || active?.isContentEditable;
+        active?.tagName === "INPUT" ||
+        active?.tagName === "TEXTAREA" ||
+        active?.tagName === "SELECT" ||
+        active?.isContentEditable;
       if (isInput) return;
 
       // Ignore IME composition and auto-repeat for single-press actions.
       if (e.isComposing) return;
 
-      // Cmd+K / Ctrl+K: focus the primary search input on the page.
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      // Explicitly prevent Chrome default search bar if Ctrl+K / Cmd+K reaches this listener
+      const isK = e.key?.toLowerCase() === "k" || e.key === "K" || e.code === "KeyK";
+      if ((e.ctrlKey || e.metaKey) && isK) {
         e.preventDefault();
-        const searchInput = document.querySelector<HTMLInputElement>(
-          'input[type="search"], input[aria-label*="search" i], input[placeholder*="search" i]',
-        );
-        if (searchInput) searchInput.focus();
         return;
       }
 
-      // Modifier combos (except Cmd/Ctrl+K above) are not shortcuts.
+      // Modifier combos are not plain single-key shortcuts. (Cmd/Ctrl+K is
+      // owned by the command palette — see the note in the hook docs above.)
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.repeat) return;
+
+      // Help modal shortcut: Shift+/ or ?
+      if (e.key === "?") {
+        e.preventDefault();
+        window.dispatchEvent(new Event(OPEN_SHORTCUTS_HELP_EVENT));
+        return;
+      }
 
       const key = e.key.toLowerCase();
       const pathname = pathnameRef.current ?? "";
@@ -130,10 +159,36 @@ export function useShortcuts(): void {
         return;
       }
 
-      // T: go to the Today view.
-      if (key === "t") {
-        e.preventDefault();
-        void navigateRef.current({ to: "/" });
+      // Main pages global single-key navigation:
+      switch (key) {
+        case "t":
+          e.preventDefault();
+          void navigateRef.current({ to: "/" });
+          break;
+        case "c":
+          e.preventDefault();
+          void navigateRef.current({ to: "/calendar" });
+          break;
+        case "a":
+          e.preventDefault();
+          void navigateRef.current({ to: "/stats" });
+          break;
+        case "g":
+          e.preventDefault();
+          void navigateRef.current({ to: "/goals" });
+          break;
+        case "r":
+          e.preventDefault();
+          void navigateRef.current({ to: "/routines" });
+          break;
+        case "q":
+          e.preventDefault();
+          void navigateRef.current({ to: "/quit-tracker" });
+          break;
+        case "s":
+          e.preventDefault();
+          void navigateRef.current({ to: "/settings" });
+          break;
       }
     };
 

@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import { Plus, ShieldAlert, Flame, LayoutGrid, Gauge } from "lucide-react";
+import {
+  Plus,
+  ShieldAlert,
+  Flame,
+  LayoutGrid,
+  ListFilter as Filter,
+  Search,
+  X,
+} from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -10,6 +18,7 @@ import {
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAddModalListener } from "@/hooks/use-shortcuts";
 import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import { triggerHaptic } from "@/lib/haptics";
@@ -25,18 +34,17 @@ type TrackerFilter = "all" | "abstinence" | "moderation";
 const FILTER_TABS: Array<{
   id: TrackerFilter;
   label: string;
-  hint: string;
-  icon: typeof LayoutGrid;
 }> = [
-  { id: "all", label: "All", hint: "Show every tracker", icon: LayoutGrid },
-  { id: "abstinence", label: "Abstinence", hint: "Cold turkey live timers", icon: Flame },
-  { id: "moderation", label: "Moderation", hint: "Daily limit trackers", icon: Gauge },
+  { id: "all", label: "All" },
+  { id: "abstinence", label: "Abstinence" },
+  { id: "moderation", label: "Moderation" },
 ];
 
 export function QuitTrackerPage() {
   const { badHabits, ready, activeTimer, reorderTrackers } = useApp();
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   // Mental-model separation: abstinence (cold turkey) vs moderation (daily limits).
   const [activeFilter, setActiveFilter] = useState<TrackerFilter>("all");
 
@@ -50,18 +58,20 @@ export function QuitTrackerPage() {
     [badHabits],
   );
 
-  const abstinenceCount = useMemo(
-    () => sortedHabits.filter((habit) => habit.strategy !== "limit").length,
-    [sortedHabits],
-  );
-  const moderationCount = sortedHabits.length - abstinenceCount;
-
-  // Smooth client-side filtering based on the active tab. No DB queries involved.
+  // Smooth client-side filtering based on active tab and search query. No DB queries involved.
   const filteredHabits = useMemo(() => {
-    if (activeFilter === "abstinence") return sortedHabits.filter((habit) => habit.strategy !== "limit");
-    if (activeFilter === "moderation") return sortedHabits.filter((habit) => habit.strategy === "limit");
-    return sortedHabits;
-  }, [sortedHabits, activeFilter]);
+    let list = sortedHabits;
+    if (activeFilter === "abstinence") {
+      list = list.filter((habit) => habit.strategy !== "limit");
+    } else if (activeFilter === "moderation") {
+      list = list.filter((habit) => habit.strategy === "limit");
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter((habit) => habit.title.toLowerCase().includes(q));
+    }
+    return list;
+  }, [sortedHabits, activeFilter, query]);
 
   /**
    * Mobile-first reorder activation shared by every card list: a 400ms hold
@@ -124,48 +134,47 @@ export function QuitTrackerPage() {
       {sortedHabits.length > 0 && <TriggerInsightsCard badHabits={sortedHabits} />}
 
       {sortedHabits.length > 0 && (
-        <div
-          role="tablist"
-          aria-label="Filter quit trackers"
-          className="flex flex-wrap items-center gap-2"
-        >
-          {FILTER_TABS.map((tab) => {
-            const isActive = activeFilter === tab.id;
-            const count =
-              tab.id === "abstinence"
-                ? abstinenceCount
-                : tab.id === "moderation"
-                  ? moderationCount
-                  : sortedHabits.length;
-            const Icon = tab.icon;
-            return (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search quit trackers…"
+              className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
+              aria-label="Search quit trackers"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <Filter className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" />
+            {FILTER_TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                role="tab"
-                aria-selected={isActive}
-                title={tab.hint}
                 onClick={() => setActiveFilter(tab.id)}
+                aria-pressed={activeFilter === tab.id}
                 className={cn(
-                  "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors",
-                  isActive
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                  "h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-colors",
+                  activeFilter === tab.id
+                    ? "bg-primary/10 text-teal-800 dark:text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
                 {tab.label}
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 text-xs font-semibold tabular-nums",
-                    isActive ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {count}
-                </span>
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
       )}
 
@@ -186,19 +195,27 @@ export function QuitTrackerPage() {
           </Button>
         </div>
       ) : filteredHabits.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-10 text-center space-y-3">
-          <p className="font-display text-lg font-bold">
-            {activeFilter === "abstinence" ? "No abstinence trackers yet" : "No moderation trackers yet"}
+        query ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            No trackers match your search.
           </p>
-          <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-            {activeFilter === "abstinence"
-              ? "Track a habit with total abstinence to see its live clean-streak timer here."
-              : "Track a habit with a daily limit to monitor moderation progress here."}
-          </p>
-          <Button variant="outline" onClick={() => setActiveFilter("all")}>
-            <LayoutGrid className="mr-2 h-4 w-4" /> Show all trackers
-          </Button>
-        </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center space-y-3">
+            <p className="font-display text-lg font-bold">
+              {activeFilter === "abstinence"
+                ? "No abstinence trackers yet"
+                : "No moderation trackers yet"}
+            </p>
+            <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+              {activeFilter === "abstinence"
+                ? "Track a habit with total abstinence to see its live clean-streak timer here."
+                : "Track a habit with a daily limit to monitor moderation progress here."}
+            </p>
+            <Button variant="outline" onClick={() => setActiveFilter("all")}>
+              <LayoutGrid className="mr-2 h-4 w-4" /> Show all trackers
+            </Button>
+          </div>
+        )
       ) : (
         <DndContext
           sensors={sensors}
@@ -231,21 +248,22 @@ export function QuitTrackerPage() {
         </DndContext>
       )}
 
-      {/* Mobile Floating / Bottom Action Button */}
-      <div
-        className="fixed right-6 z-20 md:hidden transition-all"
+      {/* Mobile FAB — floats above the bottom nav and the timer bar */}
+      <button
+        type="button"
+        aria-label="New bad habit"
+        onClick={() => setEditorOpen(true)}
         style={{
-          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9rem" : "5rem"})`,
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
         }}
+        className={cn(
+          "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
+          "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
+          "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
+        )}
       >
-        <Button
-          onClick={() => setEditorOpen(true)}
-          className="h-14 w-14 rounded-full shadow-lg flex items-center justify-center p-0"
-          aria-label="New bad habit"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </div>
+        <Plus className="h-6 w-6" />
+      </button>
 
       <BadHabitEditor open={editorOpen} onOpenChange={setEditorOpen} />
     </div>

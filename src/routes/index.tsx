@@ -11,7 +11,7 @@ import { TodayPage } from "@/components/today/today-page";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Cadence — Free Offline Habit Tracker & Daily Routine Planner" },
+      { title: "Cadence | Minimalist Habit Tracker" },
       {
         name: "description",
         content:
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:title",
-        content: "Cadence — Free Offline Habit Tracker & Daily Routine Planner",
+        content: "Cadence | Minimalist Habit Tracker",
       },
       {
         property: "og:description",
@@ -35,7 +35,7 @@ export const Route = createFileRoute("/")({
       { property: "og:image", content: "https://cadencepwa.vercel.app/og-image.png" },
       {
         name: "twitter:title",
-        content: "Cadence — Free Offline Habit Tracker & Daily Routine Planner",
+        content: "Cadence | Minimalist Habit Tracker",
       },
       {
         name: "twitter:description",
