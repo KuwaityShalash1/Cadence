@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useProgressiveDisclosure } from "@/hooks/use-progressive-disclosure";
 import { toast } from "sonner";
 import { ChevronDown, Search } from "lucide-react";
 
@@ -99,8 +100,13 @@ export function QuitTrackerForm({
   const [quitDateTime, setQuitDateTime] = useState<string>(
     toLocalDateTimeString(habit?.quitDate ?? Date.now()),
   );
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(true);
-  const [suggestionSearch, setSuggestionSearch] = useState("");
+  const {
+    isExpanded: isSuggestionsOpen,
+    toggle: toggleSuggestions,
+    query: suggestionSearch,
+    setQuery: setSuggestionSearch,
+  } = useProgressiveDisclosure();
+
 
   // Strategy configuration (new feature)
   const [strategy, setStrategy] = useState<"cold-turkey" | "limit">(
@@ -191,7 +197,7 @@ export function QuitTrackerForm({
           <div className="flex items-start justify-between gap-3 mb-2">
             <div
               className="flex-1 cursor-pointer select-none"
-              onClick={() => setIsSuggestionsOpen((v) => !v)}
+              onClick={toggleSuggestions}
             >
               <div className="flex items-center gap-2">
                 <span className="text-xs">✨</span>
@@ -207,7 +213,7 @@ export function QuitTrackerForm({
             {/* PERMANENT TOGGLE BUTTON */}
             <button
               type="button"
-              onClick={() => setIsSuggestionsOpen((v) => !v)}
+              onClick={toggleSuggestions}
               aria-expanded={isSuggestionsOpen}
               aria-label={isSuggestionsOpen ? "Collapse suggestions" : "Expand suggestions"}
               className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors shrink-0 cursor-pointer"

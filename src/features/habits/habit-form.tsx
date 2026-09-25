@@ -1,4 +1,5 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useProgressiveDisclosure } from "@/hooks/use-progressive-disclosure";
 import { toast } from "sonner";
 import {
   Check,
@@ -156,13 +157,12 @@ export function HabitForm({ habit, onDone }: Props) {
   const skipTypeDefaults = useRef(false);
 
   // Quick Suggestions: expandable template catalog with live search.
-  const [isSuggestionsExpanded, setIsSuggestionsExpanded] = useState(false);
-  const [suggestionQuery, setSuggestionQuery] = useState("");
-
-  function toggleSuggestions() {
-    if (isSuggestionsExpanded) setSuggestionQuery("");
-    setIsSuggestionsExpanded((prev) => !prev);
-  }
+  const {
+    isExpanded: isSuggestionsExpanded,
+    toggle: toggleSuggestions,
+    query: suggestionQuery,
+    setQuery: setSuggestionQuery,
+  } = useProgressiveDisclosure();
 
   // Live search across template name, category, and description.
   const filteredTemplates = HABIT_TEMPLATES.filter(
