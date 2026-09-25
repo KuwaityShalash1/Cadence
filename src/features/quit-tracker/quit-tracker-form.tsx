@@ -220,19 +220,61 @@ export function QuitTrackerForm({
             >
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 transition-transform duration-200",
+                  "h-4 w-4 transition-transform duration-300",
                   isSuggestionsOpen ? "rotate-180" : "rotate-0",
                 )}
                 aria-hidden="true"
               />
             </button>
           </div>
-          {/* Collapsed: exactly two suggestions in a fixed 2-column grid — no
-              horizontal scrolling and nothing clipped at the container edge.
-              Expanded: search box + the full scrollable template catalog. */}
-          {isSuggestionsOpen ? (
-            <>
-              <div className="relative my-2">
+          {/* Collapsed peek: two preview chips — hidden once the panel is open.
+              Expanded panel: CSS Grid height animation (0fr → 1fr) keeps this
+              purely CSS-driven with zero layout thrash. */}
+          {!isSuggestionsOpen && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {QUIT_SUGGESTIONS.slice(0, 2).map((suggestion) => (
+                <button
+                  key={suggestion.name}
+                  type="button"
+                  aria-label={`Use template: ${suggestion.name}`}
+                  aria-pressed={title === suggestion.name}
+                  onClick={() => applySuggestion(suggestion)}
+                  className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition active:scale-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                      style={{
+                        backgroundColor: `${suggestion.color}20`,
+                        color: suggestion.color,
+                      }}
+                    >
+                      <RenderIcon
+                        className="w-4 h-4"
+                        name={suggestion.icon}
+                        style={{ color: suggestion.color }}
+                      />
+                    </div>
+                    <span className="min-w-0 flex-1 text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      {suggestion.name}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Grid-based height animation — transition on grid-template-rows
+              from 0fr (fully collapsed, no height) to 1fr (natural height).
+              The inner div MUST have overflow-hidden for the clip to work. */}
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows] duration-300 ease-in-out",
+              isSuggestionsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="relative mt-2">
                 <Search
                   className="absolute top-2.5 left-3 h-4 w-4 text-slate-400"
                   aria-hidden="true"
@@ -248,87 +290,51 @@ export function QuitTrackerForm({
               </div>
               {filteredQuitSuggestions().length > 0 ? (
                 <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden mt-2">
-                  {filteredQuitSuggestions().map((suggestion) => {
-                    return (
-                      <button
-                        key={suggestion.name}
-                        type="button"
-                        aria-label={`Use template: ${suggestion.name}`}
-                        aria-pressed={title === suggestion.name}
-                        onClick={() => applySuggestion(suggestion)}
-                        style={
-                          title === suggestion.name
-                            ? {
-                                borderColor: suggestion.color,
-                                boxShadow: `0 0 0 1px ${suggestion.color}`,
-                              }
-                            : undefined
-                        }
-                        className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-slate-200/80 bg-white px-3 py-2 transition active:scale-[0.99] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:bg-slate-800/80"
-                      >
-                        <span className="flex min-w-0 flex-1 items-center gap-2.5">
-                          <span
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                            style={{
-                              backgroundColor: `${suggestion.color}20`,
-                              color: suggestion.color,
-                            }}
-                          >
-                            <RenderIcon
-                              className="h-4 w-4"
-                              name={suggestion.icon}
-                              style={{ color: suggestion.color }}
-                            />
-                          </span>
-                          <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-slate-800 dark:text-slate-200">
-                            {suggestion.name}
-                          </span>
+                  {filteredQuitSuggestions().map((suggestion) => (
+                    <button
+                      key={suggestion.name}
+                      type="button"
+                      aria-label={`Use template: ${suggestion.name}`}
+                      aria-pressed={title === suggestion.name}
+                      onClick={() => applySuggestion(suggestion)}
+                      style={
+                        title === suggestion.name
+                          ? {
+                              borderColor: suggestion.color,
+                              boxShadow: `0 0 0 1px ${suggestion.color}`,
+                            }
+                          : undefined
+                      }
+                      className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-slate-200/80 bg-white px-3 py-2 transition active:scale-[0.99] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:bg-slate-800/80"
+                    >
+                      <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <span
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                          style={{
+                            backgroundColor: `${suggestion.color}20`,
+                            color: suggestion.color,
+                          }}
+                        >
+                          <RenderIcon
+                            className="h-4 w-4"
+                            name={suggestion.icon}
+                            style={{ color: suggestion.color }}
+                          />
                         </span>
-                      </button>
-                    );
-                  })}
+                        <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-slate-800 dark:text-slate-200">
+                          {suggestion.name}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
                 </div>
               ) : (
                 <p className="py-4 text-center text-xs text-muted-foreground">
                   No matching templates found
                 </p>
               )}
-            </>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {QUIT_SUGGESTIONS.slice(0, 2).map((suggestion) => {
-                return (
-                  <button
-                    key={suggestion.name}
-                    type="button"
-                    aria-label={`Use template: ${suggestion.name}`}
-                    aria-pressed={title === suggestion.name}
-                    onClick={() => applySuggestion(suggestion)}
-                    className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition active:scale-95 cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                        style={{
-                          backgroundColor: `${suggestion.color}20`,
-                          color: suggestion.color,
-                        }}
-                      >
-                        <RenderIcon
-                          className="w-4 h-4"
-                          name={suggestion.icon}
-                          style={{ color: suggestion.color }}
-                        />
-                      </div>
-                      <span className="min-w-0 flex-1 text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                        {suggestion.name}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
             </div>
-          )}
+          </div>
         </fieldset>
       )}
 

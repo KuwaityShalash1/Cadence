@@ -308,50 +308,17 @@ export function HabitForm({ habit, onDone }: Props) {
             >
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 transition-transform duration-200",
+                  "h-4 w-4 transition-transform duration-300",
                   isSuggestionsExpanded ? "rotate-180" : "rotate-0",
                 )}
                 aria-hidden="true"
               />
             </button>
           </div>
-          {/* Collapsed: exactly two suggestions in a fixed 2-column grid — no
-              horizontal scrolling and nothing clipped at the container edge.
-              Expanded: search box + the full scrollable template catalog. */}
-          {isSuggestionsExpanded ? (
-            <>
-              <div className="relative my-2">
-                <Search
-                  className="absolute top-2.5 left-3 h-4 w-4 text-slate-400"
-                  aria-hidden="true"
-                />
-                <input
-                  type="text"
-                  placeholder="Search habits..."
-                  value={suggestionQuery}
-                  onChange={(e) => setSuggestionQuery(e.target.value)}
-                  aria-label="Search templates"
-                  className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-100"
-                />
-              </div>
-              {filteredTemplates.length > 0 ? (
-                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden mt-2">
-                  {filteredTemplates.map((t) => (
-                    <TemplateRow
-                      key={t.id}
-                      template={t}
-                      selected={name === t.name}
-                      onSelect={handleTemplateSelect}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="py-4 text-center text-xs text-muted-foreground">
-                  No matching templates found
-                </p>
-              )}
-            </>
-          ) : (
+          {/* Collapsed peek: two preview chips — hidden once the panel is open.
+              Expanded panel: CSS Grid height animation (0fr → 1fr) keeps this
+              purely CSS-driven with zero layout thrash. */}
+          {!isSuggestionsExpanded && (
             <div className="grid grid-cols-2 gap-2 mt-2">
               {HABIT_TEMPLATES.slice(0, 2).map((template) => {
                 const TemplateGlyph = TEMPLATE_ICONS[template.iconName];
@@ -387,6 +354,49 @@ export function HabitForm({ habit, onDone }: Props) {
               })}
             </div>
           )}
+
+          {/* Grid-based height animation — transition on grid-template-rows
+              from 0fr (fully collapsed, no height) to 1fr (natural height).
+              The inner div MUST have overflow-hidden for the clip to work. */}
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows] duration-300 ease-in-out",
+              isSuggestionsExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="relative mt-2">
+                <Search
+                  className="absolute top-2.5 left-3 h-4 w-4 text-slate-400"
+                  aria-hidden="true"
+                />
+                <input
+                  type="text"
+                  placeholder="Search habits..."
+                  value={suggestionQuery}
+                  onChange={(e) => setSuggestionQuery(e.target.value)}
+                  aria-label="Search templates"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-100"
+                />
+              </div>
+              {filteredTemplates.length > 0 ? (
+                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden mt-2">
+                  {filteredTemplates.map((t) => (
+                    <TemplateRow
+                      key={t.id}
+                      template={t}
+                      selected={name === t.name}
+                      onSelect={handleTemplateSelect}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="py-4 text-center text-xs text-muted-foreground">
+                  No matching templates found
+                </p>
+              )}
+            </div>
+          </div>
         </fieldset>
       ) : null}
 
