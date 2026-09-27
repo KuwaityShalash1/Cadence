@@ -256,11 +256,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         // Emitted for every route except the 404 page so each document has
         // exactly one canonical URL pointing at its own address.
         ...(isRootOnlyMatch ? [] : [{ rel: "canonical" as const, href: canonicalUrl }]),
-        { rel: "manifest", href: "/manifest.json" },
-        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
-        { rel: "icon", href: "/favicon.ico", sizes: "48x48 32x32 16x16" },
-        { rel: "icon", href: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { rel: "icon", href: "/icon-512.png", sizes: "512x512", type: "image/png" },
+        { rel: "manifest", href: "/manifest.json?v=2" },
+        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=2" },
+        { rel: "icon", href: "/favicon.ico?v=2", sizes: "48x48 32x32 16x16" },
+        { rel: "icon", type: "image/svg+xml", href: "/logo.svg?v=2" },
+        { rel: "icon", href: "/icon-192.png?v=2", sizes: "192x192", type: "image/png" },
+        { rel: "icon", href: "/icon-512.png?v=2", sizes: "512x512", type: "image/png" },
       ],
     };
   },

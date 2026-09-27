@@ -104,7 +104,7 @@ export async function checkDailyHabitReminder(
         const currentStreak = streaks(habit, logs).current;
         dispatchNotification(habit.name, {
           body: `Your current streak is ${currentStreak} day${currentStreak === 1 ? "" : "s"}. Keep it going!`,
-          icon: "/favicon.svg",
+          icon: "/pwa-192x192.png?v=2",
           tag: `cadence-reminder-${habit.id}-${dateKey}-${reminderTime}`,
         });
         window.localStorage.setItem(sentKey, "1");
@@ -129,7 +129,7 @@ export async function sendTestNotification(): Promise<boolean> {
   try {
     dispatchNotification("Cadence test notification", {
       body: "Notifications are working. Your reminders can reach you here.",
-      icon: "/favicon.svg",
+      icon: "/pwa-192x192.png?v=2",
       tag: "cadence-test-notification",
     });
     return true;

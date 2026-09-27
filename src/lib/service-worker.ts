@@ -81,6 +81,8 @@ export function registerServiceWorker(): Promise<ServiceWorkerRegistration | nul
       }),
     )
     .then((registration) => {
+      // Force an immediate check for worker updates on load
+      void registration.update();
       watchForUpdates(registration);
       requestRouteCacheRefresh();
       return registration;
