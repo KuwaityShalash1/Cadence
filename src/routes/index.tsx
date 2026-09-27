@@ -34,8 +34,8 @@ export const Route = createFileRoute("/")({
         content:
           "Track habits and build discipline with Cadence. A 100% offline-first PWA featuring unique moderation goals, daily routines, and zero tracking or ads.",
       },
-      { property: "og:image", content: "https://cadencepwa.vercel.app/og-image.png" },
-      { property: "og:image:secure_url", content: "https://cadencepwa.vercel.app/og-image.png" },
+      { property: "og:image", content: "https://cadencepwa.vercel.app/og-image.png?v=2" },
+      { property: "og:image:secure_url", content: "https://cadencepwa.vercel.app/og-image.png?v=2" },
       { property: "og:image:type", content: "image/png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
@@ -53,7 +53,7 @@ export const Route = createFileRoute("/")({
         content:
           "Track habits and build discipline with Cadence. A 100% offline-first PWA featuring unique moderation goals, daily routines, and zero tracking or ads.",
       },
-      { name: "twitter:image", content: "https://cadencepwa.vercel.app/og-image.png" },
+      { name: "twitter:image", content: "https://cadencepwa.vercel.app/og-image.png?v=2" },
       {
         name: "twitter:image:alt",
         content: "Cadence — free offline habit tracker and daily routine planner",

@@ -95,7 +95,7 @@ const HOME_KEYWORDS =
   "habit tracker, offline habit tracker, moderation habits, daily routine planner, privacy-first pwa, habit tracker no ads";
 
 /** Social preview artwork (1200x630) served from /public along with the app. */
-const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/og-image.png`;
+const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/og-image.png?v=2`;
 const SOCIAL_IMAGE_ALT = "Cadence — free offline habit tracker and daily routine planner";
 
 /** Features advertised to search engines and AI answer engines. */
