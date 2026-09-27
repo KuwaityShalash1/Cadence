@@ -24,7 +24,7 @@
 "use strict";
 
 /** Version of the caching scheme. Also part of every cache name. */
-const SW_VERSION = "1.0.0";
+const SW_VERSION = "1.0.1";
 
 const CACHE_NAMESPACE = "cadence";
 /** Core shell files (document + icons + manifest); never trimmed at runtime. */
@@ -53,6 +53,8 @@ const PRECACHE_URLS = [
   "/apple-touch-icon.png",
   "/icon-192.png",
   "/icon-512.png",
+  "/pwa-192x192.png",
+  "/pwa-512x512.png",
 ];
 
 /**

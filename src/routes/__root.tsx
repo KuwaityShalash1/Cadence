@@ -221,6 +221,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { property: "og:description", content: HOME_DESCRIPTION },
         { property: "og:url", content: canonicalUrl },
         { property: "og:image", content: SOCIAL_IMAGE_URL },
+        { property: "og:image:secure_url", content: SOCIAL_IMAGE_URL },
         { property: "og:image:type", content: "image/png" },
         { property: "og:image:width", content: "1200" },
         { property: "og:image:height", content: "630" },
