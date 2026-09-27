@@ -52,8 +52,9 @@ declare global {
   }
 }
 
-const SHARE_TITLE = "Cadence";
-const SHARE_TEXT = "Cadence — a calm, offline-first habit tracker and routine planner.";
+const SHARE_TITLE = "Cadence - Offline Habit Tracker";
+const SHARE_TEXT =
+  "Plan your routines, track your streaks, and break bad habits — 100% offline.";
 
 /** Used when the page has no usable origin (e.g. `file://` previews). */
 const FALLBACK_SHARE_URL = "https://cadencepwa.vercel.app/";
