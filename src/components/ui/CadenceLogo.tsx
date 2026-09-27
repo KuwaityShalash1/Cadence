@@ -17,56 +17,37 @@ export function CadenceLogo({
   textClassName,
   ...props
 }: CadenceLogoProps) {
-  const svgContent = (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 32 32"
-      fill="none"
-      className={cn("shrink-0 h-8 w-8", iconClassName, !showText ? className : undefined)}
-      width={size}
-      height={size}
+  const iconSize = typeof size === "number" ? size : undefined;
+
+  const logoImg = (
+    <img
+      src="/logo.png"
+      alt="Cadence logo"
       /**
-       * The wordmark "Cadence" is always rendered next to the glyph (or the
-       * glyph sits inside a link that carries its own `aria-label`), so the
-       * mark itself is purely decorative: hide it from assistive tech and take
-       * it out of the tab order.
+       * The wordmark "Cadence" is always rendered next to the logo (or the
+       * logo sits inside a link that carries its own `aria-label`), so the
+       * mark itself is purely decorative: hide it from assistive tech.
        */
       aria-hidden="true"
-      focusable="false"
-      {...(!showText ? (props as React.SVGProps<SVGSVGElement>) : undefined)}
-    >
-      <rect
-        width="32"
-        height="32"
-        rx="8"
-        className="fill-indigo-50 dark:fill-slate-900/90 text-indigo-600 dark:text-cyan-400"
-      />
-      <path
-        d="M5 16h4l2.5-6 4.5 12 3-8h7"
-        className="text-indigo-400/70 dark:text-cyan-200/60"
-        stroke="currentColor"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M5 16h4l2.5-6 4.5 12 3-8h7"
-        className="text-indigo-600 dark:text-cyan-400"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+      draggable={false}
+      width={iconSize}
+      height={iconSize}
+      className={cn(
+        "shrink-0 h-8 w-8 object-contain",
+        iconClassName,
+        !showText ? className : undefined,
+      )}
+      {...(!showText ? (props as React.ImgHTMLAttributes<HTMLImageElement>) : undefined)}
+    />
   );
 
   if (!showText) {
-    return svgContent;
+    return logoImg;
   }
 
   return (
     <div className={cn("flex items-center gap-2.5 min-w-0", className)} {...props}>
-      {svgContent}
+      {logoImg}
       <span
         className={cn(
           "font-semibold text-lg tracking-tight truncate text-slate-900 dark:text-slate-100",

@@ -256,22 +256,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         // exactly one canonical URL pointing at its own address.
         ...(isRootOnlyMatch ? [] : [{ rel: "canonical" as const, href: canonicalUrl }]),
         { rel: "manifest", href: "/manifest.json" },
-        { rel: "apple-touch-icon", sizes: "512x512", href: "/apple-touch-icon.png" },
-        { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-        {
-          rel: "icon",
-          href: "/favicon-light.svg",
-          media: "(prefers-color-scheme: light)",
-          type: "image/svg+xml",
-        },
-        {
-          rel: "icon",
-          href: "/favicon-dark.svg",
-          media: "(prefers-color-scheme: dark)",
-          type: "image/svg+xml",
-        },
-        { rel: "icon", href: "/favicon-32.png", sizes: "32x32", type: "image/png" },
-        { rel: "icon", href: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+        { rel: "icon", href: "/favicon.ico", sizes: "48x48 32x32 16x16" },
+        { rel: "icon", href: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { rel: "icon", href: "/icon-512.png", sizes: "512x512", type: "image/png" },
       ],
     };
   },
