@@ -93,8 +93,8 @@ function isAbortError(error: unknown): boolean {
 function resolveShareUrl(): string {
   if (typeof window === "undefined") return FALLBACK_SHARE_URL;
 
-  const { origin, href } = window.location;
-  return origin && origin !== "null" ? href : FALLBACK_SHARE_URL;
+  const { origin } = window.location;
+  return origin && origin !== "null" ? origin : FALLBACK_SHARE_URL;
 }
 
 /**
