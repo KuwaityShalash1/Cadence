@@ -275,6 +275,7 @@ export function SettingsPage() {
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
               className="h-11"
+              maxLength={60}
             />
             <Button
               className="h-11 shrink-0"

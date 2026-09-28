@@ -441,6 +441,7 @@ export function GoalForm({
           onChange={(e) => setName(e.target.value)}
           placeholder="Read 12 books this year"
           autoComplete="off"
+          maxLength={60}
         />
       </div>
 

@@ -314,6 +314,7 @@ export function RoutineForm({
           onChange={(e) => setName(e.target.value)}
           placeholder="Morning Routine"
           autoComplete="off"
+          maxLength={60}
         />
       </div>
 

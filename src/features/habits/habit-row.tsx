@@ -1130,7 +1130,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           {/* Left info column — never squeezed by the trailing action buttons */}
           <div className="min-w-0 flex-1 pr-2">
             <h3
-              className="cursor-pointer break-words text-base md:text-lg font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-50"
+              className="cursor-pointer truncate text-base md:text-lg font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-50"
               onClick={() => editor.open(habit)}
             >
               {habit.name}

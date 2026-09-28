@@ -165,10 +165,15 @@ export function QuitTrackerForm({
       ? new Date(quitDateTime).getTime()
       : (habit?.quitDate ?? now);
 
+    if (isNaN(parsedQuitDate)) {
+      toast.error("Please enter a valid date and time");
+      return;
+    }
+
     const updated: BadHabit = {
       id,
       title: title.trim(),
-      quitDate: isNaN(parsedQuitDate) ? now : parsedQuitDate,
+      quitDate: parsedQuitDate,
       history: habit?.history ?? [],
       createdAt: habit?.createdAt ?? now,
       /** ISO timestamp initialized on creation for sync metadata. */
@@ -346,6 +351,7 @@ export function QuitTrackerForm({
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g., Smoking, Junk Food, Social Media Scrolling"
           autoComplete="off"
+          maxLength={60}
           className="h-11"
         />
       </div>

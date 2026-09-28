@@ -408,6 +408,7 @@ export function HabitForm({ habit, onDone }: Props) {
           onChange={(e) => setName(e.target.value)}
           placeholder="Deep study session"
           autoComplete="off"
+          maxLength={60}
         />
       </div>
 
@@ -569,6 +570,9 @@ export function HabitForm({ habit, onDone }: Props) {
                     onClick={() => {
                       const val = parseInt(newIncrement);
                       if (!isNaN(val) && val > 0) {
+                        if (quickIncrements.includes(val)) {
+                          return toast.info("This value is already added");
+                        }
                         setQuickIncrements((prev) => [...prev, val].slice(0, 2));
                         setNewIncrement("");
                       }
@@ -615,6 +619,9 @@ export function HabitForm({ habit, onDone }: Props) {
                     onClick={() => {
                       const val = parseInt(newDecrement);
                       if (!isNaN(val) && val > 0) {
+                        if (quickDecrements.includes(val)) {
+                          return toast.info("This value is already added");
+                        }
                         setQuickDecrements((prev) => [...prev, val].slice(0, 2));
                         setNewDecrement("");
                       }
