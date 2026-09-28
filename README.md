@@ -1,62 +1,62 @@
-# Cadence
+<div align="center">
+  <img src="public/logo.png" alt="Cadence Logo" width="150" />
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-cadencepwa.vercel.app-09090b?logo=vercel&logoColor=white)](https://cadencepwa.vercel.app/)
+  <h1>Cadence - Offline-First Habit Tracker</h1>
 
-Cadence is a calm, offline-first habit tracker for building daily routines, maintaining streaks, and making steady progress. Your data stays available locally through IndexedDB, even when you are offline.
+  <p>
+    <strong>A lightning-fast, beautiful, and completely offline habit tracker designed to help you build consistency and maintain your momentum.</strong>
+  </p>
 
-## Features
+  <p>
+    <img src="https://img.shields.io/badge/Deployed-Vercel-000000?style=for-the-badge&logo=vercel" alt="Vercel" />
+    <img src="https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa" alt="PWA Ready" />
+    <img src="https://img.shields.io/badge/Offline-First-4CAF50?style=for-the-badge" alt="Offline First" />
+    <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+    <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  </p>
+</div>
 
-- **Offline-first tracking** with local IndexedDB persistence.
-- **Routine management** for organizing daily habits into repeatable flows.
-- **Habit streaks** with daily check-ins and progress statistics.
-- **Goals and calendar views** for a broader view of progress.
-- **Dark mode** with responsive desktop and mobile layouts.
-- **Installable PWA** for a focused standalone experience.
+## 📸 Screenshots
 
-## App Icons
+| Light Mode | Dark Mode |
+| :---: | :---: |
+| <img src="public/screenshots/light.png" alt="Light Mode" width="400"/> | <img src="public/screenshots/dark.png" alt="Dark Mode" width="400"/> |
+| **Light Statistics** | **Dark Statistics** |
+| <img src="public/screenshots/lightstats.png" alt="Light Statistics" width="400"/> | <img src="public/screenshots/darkstats.png" alt="Dark Statistics" width="400"/> |
+| **Settings** | **Mobile Experience** |
+| <img src="public/screenshots/settings.png" alt="Settings" width="400"/> | <img src="public/screenshots/mobile.png" alt="Mobile Experience" width="400"/> |
 
-The PWA icon set lives in `public/`:
+## ✨ Key Features
 
-- `favicon-light.svg` and `favicon-dark.svg`: theme-aware browser favicons.
-- `favicon-16.png` and `favicon-32.png`: standard browser fallbacks.
-- `apple-touch-icon.png`: 180x180 high-contrast iOS home screen icon.
-- `icon-192.png` and `icon-512.png`: 192x192 and 512x512 PNG icons used for standard and maskable manifest entries.
+*   **⚡ 100% Offline Architecture:** Cadence works completely offline. Your data is stored locally using IndexedDB, ensuring zero latency and absolute privacy. No internet? No problem.
+*   **📱 Progressive Web App (PWA):** Install Cadence directly to your home screen or desktop. It functions perfectly as a native-feeling app on any device, complete with offline support and standalone launch.
+*   **↩️ Robust Undo System:** Made a mistake? Our comprehensive undo system ensures you can effortlessly revert changes without fear of losing your progress or messing up your streak.
+*   **🌗 Beautiful UI:** A clean, modern interface with support for both light and dark modes, built for focus and ease of use.
 
-Keep the PNG assets opaque and preserve generous padding around the mark so Android maskable icon safe areas and iOS home screen cropping remain clear.
+## 🛠️ Tech Stack
 
-## Tech Stack
+*   **Frontend Framework:** React
+*   **Styling:** Tailwind CSS
+*   **Data Persistence:** IndexedDB
+*   **Platform:** PWA
+*   **Deployment:** Vercel
 
-- TanStack Start
-- React 19
-- Tailwind CSS
-- Vite
-- Nitro
-- Vercel
+## 🚀 Local Setup
 
-## Quick Start
+To get a local copy up and running, follow these simple steps.
 
-Requirements: Node.js and npm.
-
+**1. Clone the repo**
 ```sh
-git clone <repository-url>
+git clone https://github.com/your_username/cadence.git
 cd cadence
+```
+
+**2. Install NPM packages**
+```sh
 npm install
+```
+
+**3. Run the development server**
+```sh
 npm run dev
 ```
-
-Open the local URL printed by Vite. For a production build:
-
-```sh
-npm run build
-npm run preview
-```
-
-Run the project checks with:
-
-```sh
-npm run lint
-```
-
-## Live Demo
-
-Visit [cadencepwa.vercel.app](https://cadencepwa.vercel.app/) to use Cadence in the browser.
