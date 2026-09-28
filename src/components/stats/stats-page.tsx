@@ -1,5 +1,5 @@
 import { Award, Flame, Target, TrendingUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 import { HabitIcon, colorStyles } from "@/components/icon-map";
 import { Progress } from "@/components/ui/progress";
@@ -50,6 +50,7 @@ function MetricCard({
 export function StatsPage() {
   const { habits, logMap, ready, customIcons } = useApp();
   const [rangeIdx, setRangeIdx] = useState(1);
+  const [isPending, startTransition] = useTransition();
   const range = RANGES[rangeIdx] ?? { label: "30 days", days: 30 };
 
   const today = todayKey();
@@ -60,19 +61,22 @@ export function StatsPage() {
     [habits],
   );
 
+  const habitStatsList = useMemo(() => {
+    return activeHabits.map((habit) => ({
+      habit,
+      stats: habitStats(habit, logMap, fromKey, today),
+    }));
+  }, [activeHabits, logMap, fromKey, today]);
+
   const overallCompletion = useMemo(() => {
-    const days = rangeKeys(fromKey, today);
     let scheduled = 0;
     let completed = 0;
-    for (const day of days) {
-      for (const h of activeHabits) {
-        if (!isScheduledOn(h, day)) continue;
-        scheduled += 1;
-        if (isCompleteOn(h, logMap, day)) completed += 1;
-      }
+    for (const { stats } of habitStatsList) {
+      scheduled += stats.scheduledDays;
+      completed += Math.round(stats.completionRate * stats.scheduledDays);
     }
     return scheduled ? completed / scheduled : 0;
-  }, [activeHabits, logMap, fromKey, today]);
+  }, [habitStatsList]);
 
   const consistency = useMemo(
     () => consistencyScore(activeHabits, logMap, Math.min(range.days, 30)),
@@ -121,7 +125,11 @@ export function StatsPage() {
           <button
             key={r.label}
             type="button"
-            onClick={() => setRangeIdx(i)}
+            onClick={() => {
+              startTransition(() => {
+                setRangeIdx(i);
+              });
+            }}
             aria-pressed={i === rangeIdx}
             className={cn(
               "h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-colors",
@@ -135,7 +143,8 @@ export function StatsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={cn("space-y-6 transition-opacity", isPending && "opacity-50")}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard
           icon={Target}
           label="Completion"
@@ -187,14 +196,13 @@ export function StatsPage() {
 
       <section className="space-y-3">
         <h2 className="font-display text-lg">Per-habit breakdown</h2>
-        {activeHabits.length === 0 ? (
+        {habitStatsList.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
             No active habits yet.
           </p>
         ) : (
           <div className="space-y-3">
-            {activeHabits.map((habit) => {
-              const stats = habitStats(habit, logMap, fromKey, today);
+            {habitStatsList.map(({ habit, stats }) => {
               const styles = colorStyles(habit.color);
               return (
                 <div key={habit.id} className="rounded-2xl border border-border bg-card p-4">
@@ -255,6 +263,7 @@ export function StatsPage() {
           </div>
         )}
       </section>
+      </div>
     </div>
   );
 }
