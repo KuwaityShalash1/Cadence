@@ -75,12 +75,12 @@ export function GoalCard({
           >
             <HabitIcon name={goal.icon || "target"} customIcons={customIcons} className="h-5 w-5" />
           </span>
-          <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-lg font-semibold text-slate-800 dark:text-slate-100">
               {goal.name}
             </h3>
             {goal.description ? (
-              <p className="mt-0.5 text-sm text-muted-foreground">{goal.description}</p>
+              <p className="mt-0.5 truncate text-sm text-muted-foreground">{goal.description}</p>
             ) : null}
           </div>
         </div>

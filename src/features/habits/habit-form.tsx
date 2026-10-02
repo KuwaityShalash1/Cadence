@@ -113,7 +113,7 @@ interface Props {
 }
 
 export function HabitForm({ habit, onDone }: Props) {
-  const { groups, goals, createHabit, updateHabit, removeHabit, customIcons } = useApp();
+  const { groups, goals, createHabit, updateHabit, removeHabit } = useApp();
   const [name, setName] = useState(habit?.name ?? "");
   const [description, setDescription] = useState(habit?.description ?? "");
   const [icon, setIcon] = useState(habit?.icon ?? "Target");
@@ -267,14 +267,14 @@ export function HabitForm({ habit, onDone }: Props) {
     setUnit(t.unit ?? (habitType === "duration" ? "min" : habitType === "counter" ? "reps" : ""));
   }
 
-  // Accent + tint for the live preview — works for palette names and custom HEX.
-  const previewTint = getColorStyle(color, 0.14);
+  // Accent tint for the selected icon tile in the picker grid.
+  const { tint: iconTileTint, rawColor: iconTileColor } = getColorStyle(color, 0.14);
 
   /** Selected icon tile in the picker grid — habit-coloured tint, border and glyph. */
   const activeIconTileStyle: React.CSSProperties = {
-    backgroundColor: previewTint.tint,
-    borderColor: previewTint.rawColor,
-    color: previewTint.rawColor,
+    backgroundColor: iconTileTint,
+    borderColor: iconTileColor,
+    color: iconTileColor,
   };
 
   return (
@@ -438,20 +438,6 @@ export function HabitForm({ habit, onDone }: Props) {
 
       <fieldset className="min-w-0 space-y-2">
         <legend className="mb-2 text-sm font-medium">Icon</legend>
-        {/* Live preview — mirrors the habit card. Custom icons are resolved
-            first so a saved SVG never falls back to the default Lucide glyph. */}
-        <div className="mb-3 flex w-full min-w-0 items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
-          <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-            style={{ ...previewTint.style, color: previewTint.rawColor }}
-          >
-            <HabitIcon name={icon} customIcons={customIcons} className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{name.trim() || "Habit preview"}</p>
-            <p className="text-xs text-muted-foreground">How your habit will look</p>
-          </div>
-        </div>
         <IconPicker selectedIcon={icon} onChange={setIcon} activeTileStyle={activeIconTileStyle} />
       </fieldset>
 
@@ -571,7 +557,8 @@ export function HabitForm({ habit, onDone }: Props) {
                       const val = parseInt(newIncrement);
                       if (!isNaN(val) && val > 0) {
                         if (quickIncrements.includes(val)) {
-                          return toast.info("This value is already added");
+                          toast.info("This value is already added");
+                          return;
                         }
                         setQuickIncrements((prev) => [...prev, val].slice(0, 2));
                         setNewIncrement("");
@@ -620,7 +607,8 @@ export function HabitForm({ habit, onDone }: Props) {
                       const val = parseInt(newDecrement);
                       if (!isNaN(val) && val > 0) {
                         if (quickDecrements.includes(val)) {
-                          return toast.info("This value is already added");
+                          toast.info("This value is already added");
+                          return;
                         }
                         setQuickDecrements((prev) => [...prev, val].slice(0, 2));
                         setNewDecrement("");

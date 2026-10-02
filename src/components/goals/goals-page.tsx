@@ -263,9 +263,9 @@ export function GoalsPage() {
                       .filter((h): h is Habit => !!h && !h.archived);
                     return (
                       <SortableCard key={goal.id} id={goal.id}>
-                        <div className="rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
                           <div className="flex items-start justify-between gap-3">
-                            <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
                               <span
                                 className="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-sm"
                                 style={{ ...cardTint.style, color: cardTint.rawColor }}
@@ -276,12 +276,12 @@ export function GoalsPage() {
                                   className="h-5 w-5"
                                 />
                               </span>
-                              <div className="min-w-0">
-                                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="truncate text-lg font-semibold text-slate-800 dark:text-slate-100">
                                   {goal.name}
                                 </h3>
                                 {goal.description ? (
-                                  <p className="mt-0.5 text-sm text-muted-foreground">
+                                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
                                     {goal.description}
                                   </p>
                                 ) : null}

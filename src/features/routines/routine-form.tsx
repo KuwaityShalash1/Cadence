@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useProgressiveDisclosure } from "@/hooks/use-progressive-disclosure";
 import { toast } from "sonner";
 
-import { HabitIcon, RenderIcon, getColorStyle, resolveIconName } from "@/components/icon-map";
+import { RenderIcon, getColorStyle, resolveIconName } from "@/components/icon-map";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { IconPicker } from "@/components/shared/IconPicker";
 import { Button } from "@/components/ui/button";
@@ -82,16 +82,15 @@ export function RoutineForm({
 
 
   const activeHabits = habits;
-  const { customIcons } = useApp();
 
-  // Accent + tint for the live preview — works for palette names and custom HEX.
-  const previewTint = getColorStyle(color, 0.14);
+  // Accent tint for the selected icon tile in the picker grid.
+  const { tint: iconTileTint, rawColor: iconTileColor } = getColorStyle(color, 0.14);
 
   /** Selected icon tile in the picker grid — colour-matched tint, border and glyph. */
   const activeIconTileStyle: React.CSSProperties = {
-    backgroundColor: previewTint.tint,
-    borderColor: previewTint.rawColor,
-    color: previewTint.rawColor,
+    backgroundColor: iconTileTint,
+    borderColor: iconTileColor,
+    color: iconTileColor,
   };
 
   /** One-click template: fills the name, icon and colour in a single tap. */
@@ -320,20 +319,6 @@ export function RoutineForm({
 
       <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">Icon</legend>
-        {/* Live preview — mirrors the routine card. Custom icons are resolved
-            first so a saved SVG never falls back to the default Lucide glyph. */}
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
-          <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-            style={{ ...previewTint.style, color: previewTint.rawColor }}
-          >
-            <HabitIcon name={icon} customIcons={customIcons} className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{name.trim() || "Routine preview"}</p>
-            <p className="text-xs text-muted-foreground">How your routine will look</p>
-          </div>
-        </div>
         <IconPicker selectedIcon={icon} onChange={setIcon} activeTileStyle={activeIconTileStyle} />
       </fieldset>
 

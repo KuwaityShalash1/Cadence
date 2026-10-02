@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { ChevronDown, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { HabitIcon, RenderIcon, getColorStyle, resolveIconName } from "@/components/icon-map";
+import { RenderIcon, getColorStyle, resolveIconName } from "@/components/icon-map";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { IconPicker } from "@/components/shared/IconPicker";
 import { Button } from "@/components/ui/button";
@@ -117,13 +117,12 @@ export function QuitTrackerForm({
   );
   const [limitValue, setLimitValue] = useState(habit?.limitValue ?? 120);
 
-  // Accent + tint for the selected picker tile — works for palette names and
-  // custom HEX values, so the picker highlight always matches the live card.
-  const activeTint = getColorStyle(color, 0.14);
+  // Accent tint for the selected icon tile in the picker grid.
+  const { tint: iconTileTint, rawColor: iconTileColor } = getColorStyle(color, 0.14);
   const activeIconTileStyle: React.CSSProperties = {
-    backgroundColor: activeTint.tint,
-    borderColor: activeTint.rawColor,
-    color: activeTint.rawColor,
+    backgroundColor: iconTileTint,
+    borderColor: iconTileColor,
+    color: iconTileColor,
   };
 
   /** One-click template: fills the title, icon, colour, and strategy in a single tap. */
@@ -441,20 +440,6 @@ export function QuitTrackerForm({
           popover with a persisted palette. */}
       <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">Icon</legend>
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
-          <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors"
-            style={{ ...activeTint.style, color: activeTint.rawColor }}
-          >
-            <HabitIcon name={icon} className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">
-              {title.trim() || "Quit tracker preview"}
-            </p>
-            <p className="text-xs text-muted-foreground">How your quit tracker will look</p>
-          </div>
-        </div>
         <IconPicker selectedIcon={icon} onChange={setIcon} activeTileStyle={activeIconTileStyle} />
       </fieldset>
 

@@ -9,7 +9,6 @@ import {
   SkipForward,
   Snowflake,
   Trash2,
-  Undo2,
 } from "lucide-react";
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -1081,7 +1080,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             : isFrozen
               ? "Frozen for today"
               : isUndo
-                ? "Undo — mark habit as not done"
+                ? "Completed — tap to undo"
                 : "Mark habit as complete"
         }
         title={
@@ -1090,7 +1089,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             : isFrozen
               ? "Frozen for today — streak protected"
               : isUndo
-                ? "Undo completion"
+                ? "Completed — tap to undo"
                 : "Mark complete"
         }
         className={cn(
@@ -1114,7 +1113,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         {isFrozen ? (
           <Snowflake className="h-4 w-4" />
         ) : isUndo ? (
-          <Undo2 className="h-4 w-4" />
+          <Check className="h-4 w-4" />
         ) : (
           <Check className="h-4 w-4" />
         )}
@@ -1123,7 +1122,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           : isFrozen
             ? "Frozen"
             : isUndo
-              ? "Undo"
+              ? "Completed"
               : skipped
                 ? "Skipped"
                 : "Complete"}

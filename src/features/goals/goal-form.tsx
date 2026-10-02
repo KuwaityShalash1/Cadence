@@ -210,14 +210,14 @@ export function GoalForm({
 
   const activeHabits = habits.filter((h) => !h.archived);
 
-  // Accent + tint for the live preview — works for palette names and custom HEX.
-  const previewTint = getColorStyle(color, 0.14);
+  // Accent tint for the selected icon tile in the picker grid.
+  const { tint: iconTileTint, rawColor: iconTileColor } = getColorStyle(color, 0.14);
 
   /** Selected icon tile in the picker grid — colour-matched tint, border and glyph. */
   const activeIconTileStyle: React.CSSProperties = {
-    backgroundColor: previewTint.tint,
-    borderColor: previewTint.rawColor,
-    color: previewTint.rawColor,
+    backgroundColor: iconTileTint,
+    borderColor: iconTileColor,
+    color: iconTileColor,
   };
 
   /** One-click template: fills name, description, icon and colour in a single tap. */
@@ -511,20 +511,6 @@ export function GoalForm({
 
       <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">Icon</legend>
-        {/* Live preview — mirrors the goal card. Custom icons are resolved
-            first so a saved SVG never falls back to the default Lucide glyph. */}
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-3">
-          <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition-colors"
-            style={{ ...previewTint.style, color: previewTint.rawColor }}
-          >
-            <HabitIcon name={icon} customIcons={customIcons} className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{name.trim() || "Goal preview"}</p>
-            <p className="text-xs text-muted-foreground">How your goal will look</p>
-          </div>
-        </div>
         <IconPicker selectedIcon={icon} onChange={setIcon} activeTileStyle={activeIconTileStyle} />
       </fieldset>
 
