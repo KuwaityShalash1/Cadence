@@ -1,3 +1,9 @@
+/* ===== Android PWA Fixes ===== */
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 html[data-sidebar-collapsed="true"] aside {
   width: 4rem !important;
 }
