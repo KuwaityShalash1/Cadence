@@ -45,7 +45,7 @@ export function ResponsiveSheet({
             {description ? <DrawerDescription>{description}</DrawerDescription> : null}
           </DrawerHeader>
           <div
-            className="safe-bottom overflow-x-hidden overflow-y-auto px-6 pt-4 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            className="safe-bottom w-full overflow-x-hidden overflow-y-auto px-6 pt-4 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             style={{ ["--safe-extra" as string]: "1.5rem" }}
           >
             {children}

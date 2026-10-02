@@ -278,7 +278,7 @@ export function HabitForm({ habit, onDone }: Props) {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <form onSubmit={submit} className="w-full min-w-0 overflow-hidden space-y-5">
       {!habit ? (
         <fieldset className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
           {/* Unified header: title + subtitle form one large click target that
@@ -408,7 +408,7 @@ export function HabitForm({ habit, onDone }: Props) {
           onChange={(e) => setName(e.target.value)}
           placeholder="Deep study session"
           autoComplete="off"
-          maxLength={60}
+          maxLength={40}
         />
       </div>
 
@@ -436,18 +436,18 @@ export function HabitForm({ habit, onDone }: Props) {
         />
       </div>
 
-      <fieldset className="space-y-2">
+      <fieldset className="min-w-0 space-y-2">
         <legend className="mb-2 text-sm font-medium">Icon</legend>
         {/* Live preview — mirrors the habit card. Custom icons are resolved
             first so a saved SVG never falls back to the default Lucide glyph. */}
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
+        <div className="mb-3 flex w-full min-w-0 items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
           <span
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
             style={{ ...previewTint.style, color: previewTint.rawColor }}
           >
             <HabitIcon name={icon} customIcons={customIcons} className="h-5 w-5" />
           </span>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{name.trim() || "Habit preview"}</p>
             <p className="text-xs text-muted-foreground">How your habit will look</p>
           </div>

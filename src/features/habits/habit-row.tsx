@@ -1168,7 +1168,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         <div aria-hidden className={accentGlowClass} />
 
         {/* Top row — icon, title + streak, and the (+) quick-actions toggle + menu */}
-        <div className="relative z-10 flex items-start gap-2.5">
+        <div className="relative z-10 flex min-w-0 items-start gap-2.5">
           <span
             role="button"
             tabIndex={0}

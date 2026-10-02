@@ -231,7 +231,7 @@ export function IconPicker({
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-2">
+    <div className="w-full min-w-0 overflow-hidden space-y-2">
       {/* ── Icon grid ─────────────────────────────────────────────────────── */}
       {/*
        * Outer wrapper clips the grid to 2 rows when collapsed.
@@ -244,7 +244,7 @@ export function IconPicker({
        */}
       <div
         className={cn(
-          "transition-[max-height] duration-300 ease-in-out",
+          "w-full transition-[max-height] duration-300 ease-in-out",
           isExpanded
             ? // Expanded: scrollable panel, themed scrollbar
               "max-h-56 overflow-y-auto rounded-xl scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600 hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-500"
