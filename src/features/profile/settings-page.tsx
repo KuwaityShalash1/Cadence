@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ImageCropperModal } from "./image-cropper-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -40,11 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import {
   getNotificationPermission,
@@ -70,34 +67,6 @@ const THEME_OPTIONS: {
 
 const AVATAR_EMOJIS = ["😀", "😎", "🦊", "🐱", "🌟", "🚀", "📚", "💪", "🎯", "🔥", "🌱", "⚡"];
 
-// Max image size before compression (256px square)
-const MAX_AVATAR_DIM = 256;
-
-function fileToCompressedDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, MAX_AVATAR_DIM / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return reject(new Error("Canvas not supported"));
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
-      };
-      img.onerror = reject;
-      img.src = reader.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export function SettingsPage() {
   const { settings, ready, updateSettings, toggleSoundSettings, exportData, importData, resetAll } =
     useApp();
@@ -106,6 +75,8 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>("unsupported");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -139,25 +110,36 @@ export function SettingsPage() {
     if (importRef.current) importRef.current.value = "";
   }
 
-  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be under 10MB");
       return;
     }
-    try {
-      const dataUrl = await fileToCompressedDataURL(file);
-      updateSettings({ avatar: dataUrl });
-      toast.success("Profile picture updated");
-    } catch {
-      toast.error("Could not process the image");
-    }
+
+    // Intercept image selection: read as data URL and open cropper modal without saving yet
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImage(reader.result as string);
+      setIsCropperOpen(true);
+    };
+    reader.onerror = () => {
+      toast.error("Could not read image file");
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so re-selecting the same file works
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function handleSaveCroppedAvatar(croppedDataUrl: string) {
+    updateSettings({ avatar: croppedDataUrl });
+    toast.success("Profile picture updated");
   }
 
   async function handleReset() {
@@ -477,7 +459,9 @@ export function SettingsPage() {
             Your data lives only on this device
           </AlertTitle>
           <AlertDescription className="text-amber-700 dark:text-amber-400">
-            Cadence is a 100% offline-first application. Your data is stored locally on this device and is not synced to the cloud. To prevent data loss if your browser cache is cleared, please export a backup of your data regularly.
+            Cadence is a 100% offline-first application. Your data is stored locally on this device
+            and is not synced to the cloud. To prevent data loss if your browser cache is cleared,
+            please export a backup of your data regularly.
           </AlertDescription>
         </Alert>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -551,6 +535,17 @@ export function SettingsPage() {
           </a>
         </div>
       </section>
+
+      {/* Cropper Modal */}
+      <ImageCropperModal
+        open={isCropperOpen}
+        imageSrc={selectedImage}
+        onClose={() => {
+          setIsCropperOpen(false);
+          setSelectedImage(null);
+        }}
+        onCropSave={handleSaveCroppedAvatar}
+      />
     </div>
   );
 }
