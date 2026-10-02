@@ -9,6 +9,7 @@ import {
   SkipForward,
   Snowflake,
   Trash2,
+  Undo2,
 } from "lucide-react";
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
@@ -1032,43 +1033,101 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   );
 
   /**
-   * Mobile bottom action row — quick actions use the remaining width and can
-   * be swiped horizontally, while the completion/menu group never shrinks.
+   * Mobile expandable quick-actions tray — only the ±1 steppers, custom
+   * increments/decrements, and the timer CTA. Controlled by the (+) toggle.
+   * Rendered BELOW the full-width Complete/Undo button so the primary action
+   * is always at a consistent position regardless of expansion state.
    */
   const renderMobileTray = () => {
+    if (!isExpanded) return null;
     return (
-      <div
-        className={cn(
-          "relative z-10 mt-3 flex items-center gap-2",
-          isExpanded && "animate-in fade-in slide-in-from-top-1 duration-200",
-        )}
-      >
-        {/* Group A — swipeable quick actions. */}
-        <div className="min-w-0 flex-1 overflow-x-auto flex flex-nowrap items-center gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {isExpanded && showMobileStepper ? (
+      <div className="relative z-10 pt-3 pb-1 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="flex flex-nowrap items-center gap-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {showMobileStepper ? (
             <>
-              {/* Left — user-configured decrement jumps, then the standard −1.
-                  Nothing is shown for unconfigured habits beyond the ±1 pair. */}
               {decrements.map((dec) =>
                 renderStepperButton(`-${dec}`, -dec, `Subtract ${dec}`, true),
               )}
               {renderStepperButton("-1", -1, "Subtract 1", true)}
-              {/* Right — the standard +1, then user-configured increment jumps. */}
               {renderStepperButton("+1", 1, "Add 1", true)}
               {increments.map((inc) => renderStepperButton(`+${inc}`, inc, `Add ${inc}`, true))}
             </>
           ) : null}
-
-          {/* Timer CTA — strictly timed habits; counter and boolean habits hide it. */}
-          {isExpanded && isTimerHabit ? renderTimerButton("h-10 px-4 text-xs font-semibold") : null}
-        </div>
-
-        {/* Group B — fixed primary action and menu; never squeeze or wrap. */}
-        <div className="flex shrink-0 items-center gap-2">
-          {renderMobilePrimaryAction()}
-          {renderMenuButton(mobileMenuButtonClass)}
+          {isTimerHabit ? renderTimerButton("h-10 px-4 text-xs font-semibold") : null}
         </div>
       </div>
+    );
+  };
+
+  /**
+   * Full-width primary action button — sits in its own dedicated bottom row so
+   * it is always prominent and never fights for space with the stepper tray.
+   *
+   * • Not complete → solid emerald "Complete" CTA.
+   * • Complete      → muted slate "Undo" button with an undo icon, so the user
+   *                   can revert the habit back to the "To Do" state.
+   * • Frozen / read-only → disabled with appropriate labelling.
+   */
+  const renderMobileFullWidthAction = () => {
+    const isUndo = done && !isFrozen && !skipped;
+
+    return (
+      <button
+        type="button"
+        disabled={mutationsDisabled}
+        aria-label={
+          readOnlyMode
+            ? "You cannot log habits for future dates"
+            : isFrozen
+              ? "Frozen for today"
+              : isUndo
+                ? "Undo — mark habit as not done"
+                : "Mark habit as complete"
+        }
+        title={
+          readOnlyMode
+            ? "You cannot log habits for future dates"
+            : isFrozen
+              ? "Frozen for today — streak protected"
+              : isUndo
+                ? "Undo completion"
+                : "Mark complete"
+        }
+        className={cn(
+          "relative z-10 mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98]",
+          isFrozen
+            ? "border border-sky-200 bg-sky-50 text-sky-600 dark:border-sky-800/60 dark:bg-sky-900/30 dark:text-sky-400"
+            : isUndo
+              ? // Undo state — muted/secondary appearance
+                "border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:border-slate-700/60 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700/80 dark:hover:text-slate-300"
+              : // Complete state — vibrant primary CTA
+                "border border-emerald-500/20 bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-600 dark:hover:bg-emerald-500",
+          readOnlyMode && "cursor-not-allowed opacity-50",
+          skipped &&
+            "border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-500",
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          complete();
+        }}
+      >
+        {isFrozen ? (
+          <Snowflake className="h-4 w-4" />
+        ) : isUndo ? (
+          <Undo2 className="h-4 w-4" />
+        ) : (
+          <Check className="h-4 w-4" />
+        )}
+        {readOnlyMode
+          ? "Upcoming"
+          : isFrozen
+            ? "Frozen"
+            : isUndo
+              ? "Undo"
+              : skipped
+                ? "Skipped"
+                : "Complete"}
+      </button>
     );
   };
 
@@ -1107,7 +1166,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           style={{ width: `${pct}%` }}
         />
         <div aria-hidden className={accentGlowClass} />
-        {/* Top row — icon, title + streak and the complete / (+) tray actions */}
+
+        {/* Top row — icon, title + streak, and the (+) quick-actions toggle + menu */}
         <div className="relative z-10 flex items-start gap-2.5">
           <span
             role="button"
@@ -1183,15 +1243,14 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             </div>
           </div>
 
-          {/* Complete action + dedicated (+) tray toggle. The toggle only stops
-              propagation, so tapping it never marks the habit complete. It is
-              always available because the tray always carries the actions menu. */}
+          {/* Top-right controls: (+) quick-actions toggle + three-dots menu */}
           <div className="flex shrink-0 items-center gap-1.5">
+            {/* (+) toggle — expands/collapses the stepper quick-actions row */}
             <button
               type="button"
               aria-expanded={isExpanded}
-              aria-label={isExpanded ? "Hide extra actions" : "Show extra actions"}
-              title={isExpanded ? "Hide extra actions" : "Show extra actions"}
+              aria-label={isExpanded ? "Hide quick actions" : "Show quick actions"}
+              title={isExpanded ? "Hide quick actions" : "Show quick actions"}
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-all hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white",
                 isExpanded &&
@@ -1209,6 +1268,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
                 )}
               />
             </button>
+            {/* Three-dots menu */}
+            {renderMenuButton(mobileMenuButtonClass)}
           </div>
         </div>
 
@@ -1226,7 +1287,10 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           />
         </div>
 
-        {/* Expandable secondary tray */}
+        {/* Full-width primary action — Complete (green) or Undo (muted) */}
+        {renderMobileFullWidthAction()}
+
+        {/* Expandable quick-actions tray (±1, custom steps, timer) — sits below the CTA */}
         {renderMobileTray()}
       </div>
     );

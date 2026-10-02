@@ -209,7 +209,7 @@ export function TodayPage() {
      * px-6 from md up) and the max width. Repeating them would compound the
      * mobile gutter to 48px and squeeze the habit cards.
      */
-    <div className="mx-0 w-full space-y-8">
+    <div className="mx-0 w-full space-y-8 pb-28 md:pb-0">
       <header className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
