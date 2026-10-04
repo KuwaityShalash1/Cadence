@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useTranslation } from "@/i18n/context";
 
 /**
  * Easter egg "About Us" page — completely hidden from the UI.
@@ -6,6 +7,8 @@ import { Link } from "@tanstack/react-router";
  * No links to this page exist anywhere in the navbar, sidebar, or app shell.
  */
 export function AboutPage() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-16 text-center">
       {/* ── Glowing backdrop pill ── */}
@@ -19,12 +22,12 @@ export function AboutPage() {
       <div className="relative z-10 flex max-w-lg flex-col items-center gap-6">
         {/* ── Main title ── */}
         <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-          🕵️‍♂️ You found the secret page!
+          {t("about.title")}
         </h1>
 
         {/* ── Subtitle ── */}
         <p className="text-base text-muted-foreground sm:text-lg">
-          Ah, a fellow developer. Welcome to the backstage of Cadence.
+          {t("about.subtitle")}
         </p>
 
         {/* ── Divider ── */}
@@ -89,13 +92,13 @@ export function AboutPage() {
           to="/"
           className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          ⬅️ Return to Dashboard
+          {t("about.return")}
         </Link>
       </div>
 
       {/* ── Footer text ── */}
       <p className="relative z-10 mt-16 text-xs text-muted-foreground/60">
-        Built with React, Vite, Tailwind, and a lot of ☕
+        {t("about.footer")}
       </p>
     </div>
   );

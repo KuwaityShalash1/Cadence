@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useTranslation } from "@/i18n/context";
 
 import {
   downloadJsonBackup,
@@ -89,6 +90,8 @@ export function useWeeklyBackupReminder(
     return () => window.clearTimeout(timerId);
   }, [enabled, delayMs]);
 
+  const { t } = useTranslation();
+
   // Export immediately from the user gesture, then dismiss the banner.
   const exportBackup = useCallback(() => {
     try {
@@ -96,11 +99,11 @@ export function useWeeklyBackupReminder(
       downloadJsonBackup(json);
       markBackupComplete();
       setVisible(false);
-      toast.success("Backup downloaded — your data is safe.");
+      toast.success(t("backup.success"));
     } catch {
-      toast.error("Could not create the backup. Try again from Settings.");
+      toast.error(t("backup.error"));
     }
-  }, []);
+  }, [t]);
 
   // Persist a 7-day snooze timestamp and hide the banner quietly.
   const snoozeReminder = useCallback(() => {

@@ -1,5 +1,6 @@
 import { Snowflake, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "@/i18n/context";
 
 /**
  * Data for the premium streak-freeze toast. Rendered through sonner's
@@ -26,6 +27,7 @@ export function FreezeToastContent({
   daysUntilReset,
   onDismiss,
 }: FreezeToastData & { onDismiss: () => void }) {
+  const { t } = useTranslation();
   const pct = Math.min(100, Math.round((used / Math.max(1, max)) * 100));
 
   return (
@@ -45,19 +47,29 @@ export function FreezeToastContent({
               {habitName}
             </p>
           ) : null}
-          <p className="text-sm font-semibold leading-tight">❄️ Habit Frozen!</p>
+          <p className="text-sm font-semibold leading-tight">
+            {t("toast.habitFrozenTitle", "❄️ Habit Frozen!")}
+          </p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            Freezes this month:{" "}
-            <span className="font-semibold text-slate-700 dark:text-slate-200">
-              {used} of {max}
-            </span>
-            . Limit resets in {daysUntilReset} {daysUntilReset === 1 ? "day" : "days"}.
+            {t(
+              "toast.freezesThisMonth",
+              "Freezes this month: {used} of {max}. Limit resets in {days} {unit}.",
+              {
+                used: String(used),
+                max: String(max),
+                days: String(daysUntilReset),
+                unit:
+                  daysUntilReset === 1
+                    ? t("habitRow.day", "day")
+                    : t("habitRow.days", "days"),
+              },
+            )}
           </p>
         </div>
 
         <button
           type="button"
-          aria-label="Dismiss notification"
+          aria-label={t("toast.dismissNotification", "Dismiss notification")}
           className="-m-1 shrink-0 rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
           onClick={onDismiss}
         >

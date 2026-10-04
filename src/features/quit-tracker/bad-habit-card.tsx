@@ -42,7 +42,7 @@ interface BadHabitCardProps {
 
 export function BadHabitCard({ habit }: BadHabitCardProps) {
   const { removeBadHabit, restoreBadHabit, customIcons, logUsage } = useApp();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [now, setNow] = useState<number>(Date.now());
   const [relapseOpen, setRelapseOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -78,17 +78,17 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
 
   // Format streak for cold-turkey: show detailed hours/minutes (e.g., "1d 4h")
   function formatStreakHours(hoursVal: number): string {
-    if (hoursVal < 24) return `${Math.floor(hoursVal)} hrs`;
+    if (hoursVal < 24) return `${Math.floor(hoursVal)} ${t("common.hours")}`;
     const d = Math.floor(hoursVal / 24);
     const h = Math.floor(hoursVal % 24);
-    return `${d}d ${h}h`;
+    return `${d}${t("common.daysShort")} ${h}${t("common.hoursShort")}`;
   }
 
   // Format streak for limit strategy: show whole days only (e.g., "5 Days")
   // Limit adherence is evaluated on a daily basis, not per second.
   function formatStreakDays(hoursVal: number): string {
     const d = Math.floor(hoursVal / 24);
-    return `${d} Day${d !== 1 ? "s" : ""}`;
+    return `${d} ${d === 1 ? t("habitRow.day") : t("habitRow.days")}`;
   }
 
   const styles = getColorStyle(habit.color ?? "rose");
@@ -98,9 +98,9 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
     // tracker (relapse history included) so the toast's Undo can restore it.
     const trackerToRestore = structuredClone(habit);
     removeBadHabit(habit.id);
-    toast.success(t("quitTracker.deletedToast", "Quit tracker deleted"), {
+    toast.success(t("quitTracker.deletedToast"), {
       action: {
-        label: t("common.undo", "Undo"),
+        label: t("common.undo"),
         onClick: () => restoreBadHabit(trackerToRestore),
       },
       duration: 5000, // Give them 5 seconds to undo
@@ -145,7 +145,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={() => setEditOpen(true)}
-            aria-label="Edit tracker"
+            aria-label={t("quitTracker.editTrackerAria", "Edit tracker")}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -154,7 +154,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
             onClick={handleDelete}
-            aria-label="Delete tracker"
+            aria-label={t("quitTracker.deleteTrackerAria", "Delete tracker")}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -165,7 +165,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
       {!isLimitStrategy && (
         <div className="rounded-xl bg-muted/40 border border-border/60 p-3 text-center space-y-2">
           <div className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
-            Current Abstinence Streak
+            {t("quitTracker.currentAbstinenceStreak", "Current Abstinence Streak")}
           </div>
           <div className="grid grid-cols-4 gap-1.5 max-w-md mx-auto">
             <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
@@ -173,7 +173,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                 {days}
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Days
+                {t("common.days", "Days")}
               </span>
             </div>
             <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
@@ -181,7 +181,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                 {String(hours).padStart(2, "0")}
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Hours
+                {t("common.hours", "Hours")}
               </span>
             </div>
             <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
@@ -189,7 +189,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                 {String(minutes).padStart(2, "0")}
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Mins
+                {t("common.mins", "Mins")}
               </span>
             </div>
             <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
@@ -197,7 +197,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                 {String(seconds).padStart(2, "0")}
               </span>
               <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Secs
+                {t("common.secs", "Secs")}
               </span>
             </div>
           </div>
@@ -262,7 +262,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
               setUsageDialogOpen(true);
             }}
           >
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <PlusCircle className="me-2 h-4 w-4" />
             {t("quitTracker.logUsage", "Log Usage")}
           </Button>
         </div>
@@ -297,7 +297,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
             className="w-full h-10 rounded-xl border-destructive/30 bg-destructive/5 text-destructive text-sm font-semibold hover:bg-destructive/10 hover:border-destructive transition-colors"
             onClick={() => setRelapseOpen(true)}
           >
-            <AlertCircle className="mr-2 h-4 w-4" />
+            <AlertCircle className="me-2 h-4 w-4" />
             {t("quitTracker.iRelapsed", "I Relapsed")}
           </Button>
         </div>
@@ -318,7 +318,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
           </button>
 
           {showHistory && (
-            <div className="mt-3 space-y-2.5 max-h-60 overflow-y-auto pr-1">
+            <div className="mt-3 space-y-2.5 max-h-60 overflow-y-auto pe-1">
               {habit.history.map((record) => {
                 const triggerObj = TRIGGER_OPTIONS.find((t) => t.id === record.triggerCategory);
                 return (
@@ -336,11 +336,11 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                       </span>
                     </div>
                     {record.detailedReason && (
-                      <p className="text-muted-foreground italic pl-6">
+                      <p className="text-muted-foreground italic ps-6">
                         &ldquo;{record.detailedReason}&rdquo;
                       </p>
                     )}
-                    <div className="text-[10px] text-muted-foreground pl-6">
+                    <div className="text-[10px] text-muted-foreground ps-6">
                       {new Date(record.relapsedAt).toLocaleString()}
                     </div>
                   </div>

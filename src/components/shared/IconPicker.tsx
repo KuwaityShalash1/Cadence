@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/stores/app-store";
+import { useTranslation } from "@/i18n/context";
 
 export interface IconPickerProps {
   /** Active icon — a Lucide icon name or a saved custom icon id. */
@@ -57,6 +58,7 @@ export function IconPicker({
   activeTileStyle,
 }: IconPickerProps) {
   const { customIcons, addCustomIcon, removeCustomIcon } = useApp();
+  const { t } = useTranslation();
 
   // ─── Progressive Disclosure ────────────────────────────────────────────────
   const [isExpanded, setIsExpanded] = useState(false);
@@ -180,7 +182,7 @@ export function IconPicker({
 
     // Validate file type
     if (!file.name.toLowerCase().endsWith(".svg")) {
-      toast.error("Please upload an SVG file");
+      toast.error(t("iconPicker.uploadSvgError"));
       e.target.value = "";
       return;
     }
@@ -193,9 +195,9 @@ export function IconPicker({
       processAndSaveCustomSvg(svgContent);
 
       handleIconModalChange(false);
-      toast.success("Custom icon added");
+      toast.success(t("iconPicker.customIconAdded"));
     };
-    reader.onerror = () => toast.error("Could not read the SVG file");
+    reader.onerror = () => toast.error(t("iconPicker.readSvgError"));
     reader.readAsText(file);
 
     // Reset the input so the same file can be selected again
@@ -206,13 +208,13 @@ export function IconPicker({
   function handleUseSvgCode() {
     const svgContent = svgCodeInput.trim();
     if (!svgContent) {
-      toast.error("Please paste some SVG code");
+      toast.error(t("iconPicker.pasteSvgError"));
       return;
     }
 
     // Basic validation - check if it looks like SVG
     if (!svgContent.includes("<svg") && !svgContent.includes("<?xml")) {
-      toast.error("Invalid SVG code - must contain <svg> element");
+      toast.error(t("iconPicker.invalidSvgError"));
       return;
     }
 
@@ -221,7 +223,7 @@ export function IconPicker({
     // Close the modal and reset its inputs.
     handleIconModalChange(false);
 
-    toast.success("Custom icon added");
+    toast.success(t("iconPicker.customIconAdded"));
   }
 
   // Stable toggle callback — does NOT cause parent re-renders.
@@ -252,7 +254,7 @@ export function IconPicker({
               "overflow-hidden",
         )}
         style={isExpanded ? undefined : { maxHeight: COLLAPSED_MAX_H }}
-        aria-label="Icon grid"
+        aria-label={t("iconPicker.gridAria")}
       >
         {/*
          * Responsive auto-fill grid: tiles are 44px wide, gap is 8px (gap-2).
@@ -269,8 +271,8 @@ export function IconPicker({
               <button
                 type="button"
                 className="grid h-11 w-11 place-items-center rounded-xl border-2 border-dashed border-slate-300 text-slate-400 transition-colors hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-500 dark:border-slate-600 dark:hover:bg-emerald-900/20"
-                aria-label="Add custom SVG icon"
-                title="Upload or paste SVG"
+                aria-label={t("iconPicker.addCustomSvgAria")}
+                title={t("iconPicker.uploadOrPasteTitle")}
               >
                 <Plus className="h-5 w-5" />
               </button>
@@ -280,9 +282,9 @@ export function IconPicker({
                 <div className="mb-2 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-500">
                   <Code className="h-6 w-6" aria-hidden="true" />
                 </div>
-                <DialogTitle>Add a custom icon</DialogTitle>
+                <DialogTitle>{t("iconPicker.modalTitle")}</DialogTitle>
                 <DialogDescription>
-                  Upload an SVG file or paste its code to personalize.
+                  {t("iconPicker.modalDesc")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -302,31 +304,31 @@ export function IconPicker({
               >
                 <Upload className="pointer-events-none h-7 w-7" aria-hidden="true" />
                 <span className="pointer-events-none text-sm font-medium">
-                  {isDragging ? "Drop your SVG here" : "Drop an SVG or click to browse"}
+                  {isDragging ? t("iconPicker.dropHere") : t("iconPicker.dropOrBrowse")}
                 </span>
-                <span className="pointer-events-none text-xs">SVG files only</span>
+                <span className="pointer-events-none text-xs">{t("iconPicker.svgOnly")}</span>
               </button>
               <input
                 ref={iconUploadRef}
                 type="file"
                 accept=".svg,image/svg+xml"
                 className="hidden"
-                aria-label="Upload SVG file"
+                aria-label={t("iconPicker.uploadFileAria")}
                 onChange={handleSvgUpload}
               />
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <div className="h-px flex-1 bg-border" />
-                <span>or paste code</span>
+                <span>{t("iconPicker.orPasteCode")}</span>
                 <div className="h-px flex-1 bg-border" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="custom-icon-svg-code">SVG code</Label>
+                <Label htmlFor="custom-icon-svg-code">{t("iconPicker.svgCodeLabel")}</Label>
                 <Textarea
                   id="custom-icon-svg-code"
                   value={svgCodeInput}
                   onChange={(e) => setSvgCodeInput(e.target.value)}
-                  placeholder="Paste raw &lt;svg&gt;...&lt;/svg&gt; code here..."
+                  placeholder={t("iconPicker.svgCodePlaceholder")}
                   rows={5}
                   spellCheck={false}
                   className="resize-y rounded-xl bg-slate-50 font-mono text-xs dark:bg-slate-900/50"
@@ -334,7 +336,7 @@ export function IconPicker({
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={() => handleIconModalChange(false)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -342,7 +344,7 @@ export function IconPicker({
                   disabled={!svgCodeInput.trim()}
                   className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
                 >
-                  Add Icon
+                  {t("iconPicker.addIcon")}
                 </Button>
               </div>
             </DialogContent>
@@ -382,13 +384,13 @@ export function IconPicker({
                   setShowDeleteForId(null);
                   removeCustomIcon(customIcon.id);
                   if (icon === customIcon.id) setIcon(ICON_NAMES[0] ?? "Target");
-                  toast.success("Custom icon deleted");
+                  toast.success(t("iconPicker.customIconDeleted"));
                 }}
                 className={cn(
-                  "absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:scale-110",
+                  "absolute -top-1 -end-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:scale-110",
                   showDeleteForId === customIcon.id && "opacity-100",
                 )}
-                aria-label={`Delete custom icon ${customIcon.id}`}
+                aria-label={t("iconPicker.deleteIconAria")}
               >
                 <X className="h-2.5 w-2.5" />
               </button>
@@ -420,7 +422,7 @@ export function IconPicker({
         type="button"
         onClick={handleToggle}
         aria-expanded={isExpanded}
-        aria-label={isExpanded ? "Show fewer icons" : "Show all icons"}
+        aria-label={isExpanded ? t("iconPicker.showFewer") : t("iconPicker.showAll")}
         className={cn(
           "flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium",
           "text-gray-600 dark:text-gray-300",
@@ -438,7 +440,7 @@ export function IconPicker({
           )}
           aria-hidden="true"
         />
-        <span>{isExpanded ? "Show less" : "See more icons"}</span>
+        <span>{isExpanded ? t("iconPicker.showLess") : t("iconPicker.seeMore")}</span>
       </button>
     </div>
   );

@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { HabitForm } from "@/features/habits/habit-form";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
 import { useAddModalListener } from "@/hooks/use-shortcuts";
+import { useTranslation } from "@/i18n/context";
 import type { Habit } from "@/types";
 
 interface EditorApi {
@@ -14,6 +15,7 @@ const EditorContext = createContext<EditorApi | null>(null);
 export function HabitEditorProvider({ children }: { children: ReactNode }) {
   const [habit, setHabit] = useState<Habit | undefined>(undefined);
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
 
   const open = useCallback((next?: Habit) => {
     setHabit(next);
@@ -34,11 +36,11 @@ export function HabitEditorProvider({ children }: { children: ReactNode }) {
       <ResponsiveSheet
         open={isOpen}
         onOpenChange={setIsOpen}
-        title={habit ? "Edit habit" : "New habit"}
+        title={habit ? t("habit.editHabit") : t("habit.newHabit")}
         description={
           habit
-            ? "Changes apply from today onward. Past records stay untouched."
-            : "Set the target and schedule — you can change it later."
+            ? t("habit.editHabitDesc")
+            : t("habit.newHabitDesc")
         }
       >
         <HabitForm

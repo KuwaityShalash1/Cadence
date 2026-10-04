@@ -5,6 +5,7 @@ import { HabitIcon, colorStyles, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { fromDateKey } from "@/services/dates";
 import { useApp } from "@/stores/app-store";
 import type { CustomIcon, Goal, Habit } from "@/types";
@@ -19,6 +20,7 @@ interface GoalCardProps {
 }
 
 export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentValue: number }) {
+  const { t } = useTranslation();
   const { adjustGoalValue } = useApp();
   if (goal.type !== "numeric") return null;
 
@@ -27,7 +29,7 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
   return (
     <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50 p-2.5 dark:border-slate-800 dark:bg-slate-800/50">
       <span className="min-w-0 text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">
-        {currentValue} / {goal.targetValue} {unit || "complete"}
+        {currentValue} / {goal.targetValue} {unit || t("goal.complete")}
       </span>
       <div className="flex shrink-0 items-center gap-1.5">
         <Button
@@ -36,7 +38,7 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
           size="icon"
           className="h-8 w-8 rounded-full border-slate-200 bg-white shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
           onClick={() => adjustGoalValue(goal.id, -1)}
-          aria-label={`Decrease ${goal.name}`}
+          aria-label={t("goal.decreaseGoalAria").replace("{name}", goal.name)}
         >
           <Minus className="h-3.5 w-3.5" />
         </Button>
@@ -45,7 +47,7 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
           size="icon"
           className="h-8 w-8 rounded-full shadow-sm"
           onClick={() => adjustGoalValue(goal.id, 1)}
-          aria-label={`Increase ${goal.name}`}
+          aria-label={t("goal.increaseGoalAria").replace("{name}", goal.name)}
         >
           <Plus className="h-3.5 w-3.5" />
         </Button>
@@ -62,6 +64,7 @@ export function GoalCard({
   customIcons,
   onEdit,
 }: GoalCardProps) {
+  const { t, language } = useTranslation();
   const { removeGoal, restoreGoal } = useApp();
   const cardTint = getColorStyle(goal.color || "#3B82F6", 0.14);
 
@@ -90,7 +93,7 @@ export function GoalCard({
             size="icon"
             className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             onClick={() => onEdit(goal)}
-            aria-label="Edit goal"
+            aria-label={t("goal.edit")}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -101,12 +104,12 @@ export function GoalCard({
             onClick={() => {
               const goalToRestore = structuredClone(goal);
               removeGoal(goal.id);
-              toast.success("Goal deleted", {
-                action: { label: "Undo", onClick: () => restoreGoal(goalToRestore) },
+              toast.success(t("goal.deleted"), {
+                action: { label: t("common.undo"), onClick: () => restoreGoal(goalToRestore) },
                 duration: 5000,
               });
             }}
-            aria-label="Delete goal"
+            aria-label={t("goal.deleteGoalAria")}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -116,8 +119,8 @@ export function GoalCard({
       {goal.targetDate ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar className="h-3.5 w-3.5" />
-          Target:{" "}
-          {fromDateKey(goal.targetDate).toLocaleDateString(undefined, {
+          {t("goal.targetDate")}:{" "}
+          {fromDateKey(goal.targetDate).toLocaleDateString(language, {
             month: "long",
             day: "numeric",
             year: "numeric",
@@ -127,12 +130,12 @@ export function GoalCard({
 
       <div className="mt-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">{linkedHabits.length} habits linked</span>
+          <span className="text-muted-foreground">{linkedHabits.length} {t("goal.habitsLinked")}</span>
           <span className="numeric font-medium">{Math.round(progress * 100)}%</span>
         </div>
         <Progress
           value={Math.round(progress * 100)}
-          aria-label={`Goal progress for ${goal.name}`}
+          aria-label={t("goal.goalProgressFor").replace("{name}", goal.name)}
           className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
         />
       </div>

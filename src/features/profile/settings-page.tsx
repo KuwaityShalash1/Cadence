@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
+  Globe,
   Monitor,
   Moon,
   Share2,
@@ -52,17 +53,17 @@ import {
 import { buildBackupFileName, downloadJsonBackup, markBackupComplete } from "@/lib/backup";
 import { usePWA } from "@/hooks/use-pwa";
 import { useApp } from "@/stores/app-store";
-import { useTranslation } from "@/i18n/context";
+import { useTranslation, LANGUAGES } from "@/i18n/context";
 import type { ThemeMode } from "@/types";
 
 const THEME_OPTIONS: {
   value: ThemeMode;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
+  { value: "light", labelKey: "settings.themeLight", icon: Sun },
+  { value: "dark",  labelKey: "settings.themeDark",  icon: Moon },
+  { value: "system", labelKey: "settings.themeSystem", icon: Monitor },
 ];
 
 const AVATAR_EMOJIS = ["😀", "😎", "🦊", "🐱", "🌟", "🚀", "📚", "💪", "🎯", "🔥", "🌱", "⚡"];
@@ -71,7 +72,7 @@ export function SettingsPage() {
   const { settings, ready, updateSettings, toggleSoundSettings, exportData, importData, resetAll } =
     useApp();
   const { shareApp, isInstallAvailable, triggerInstall } = usePWA();
-  const { t } = useTranslation();
+  const { t, language, setLanguage, isRtl } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>("unsupported");
@@ -85,7 +86,7 @@ export function SettingsPage() {
   }, []);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading", "Loading…")}</div>;
   }
 
   function handleExport() {
@@ -94,7 +95,7 @@ export function SettingsPage() {
     const json = exportData();
     downloadJsonBackup(json, buildBackupFileName());
     markBackupComplete();
-    toast.success("Data exported");
+    toast.success(t("settings.dataExported"));
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -103,9 +104,9 @@ export function SettingsPage() {
     try {
       const text = await file.text();
       await importData(text);
-      toast.success("Data imported");
+      toast.success(t("settings.dataImported"));
     } catch {
-      toast.error("Could not import — invalid file");
+      toast.error(t("settings.importError"));
     }
     if (importRef.current) importRef.current.value = "";
   }
@@ -114,11 +115,11 @@ export function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+      toast.error(t("settings.selectImageError"));
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image must be under 10MB");
+      toast.error(t("settings.imageSizeError"));
       return;
     }
 
@@ -129,7 +130,7 @@ export function SettingsPage() {
       setIsCropperOpen(true);
     };
     reader.onerror = () => {
-      toast.error("Could not read image file");
+      toast.error(t("settings.imageReadError"));
     };
     reader.readAsDataURL(file);
 
@@ -139,39 +140,39 @@ export function SettingsPage() {
 
   function handleSaveCroppedAvatar(croppedDataUrl: string) {
     updateSettings({ avatar: croppedDataUrl });
-    toast.success("Profile picture updated");
+    toast.success(t("settings.avatarUpdated"));
   }
 
   async function handleReset() {
     await resetAll();
     setDisplayName("");
-    toast.success("All data cleared");
+    toast.success(t("settings.allDataCleared"));
   }
 
   async function handleShareApp() {
     const outcome = await shareApp();
-    if (outcome === "copied") toast.success("Share link copied to clipboard");
-    else if (outcome === "failed") toast.error("Could not share Cadence");
+    if (outcome === "copied") toast.success(t("settings.shareCopied"));
+    else if (outcome === "failed") toast.error(t("settings.shareFailed"));
   }
 
   async function handleInstallApp() {
     const outcome = await triggerInstall();
-    if (outcome === "accepted") toast.success("Installing Cadence — check your home screen");
-    else if (outcome === "unavailable") toast.error("The install prompt is no longer available");
+    if (outcome === "accepted") toast.success(t("settings.installingApp"));
+    else if (outcome === "unavailable") toast.error(t("settings.installUnavailable"));
   }
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("settings.title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage your profile, theme, and data.</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("settings.subtitle")}</p>
       </header>
 
-      {/* Profile */}
+      {/* ── Profile ──────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <User className="h-4 w-4 text-muted-foreground" />
-          Profile
+          {t("settings.profile")}
         </div>
 
         {/* Avatar + upload */}
@@ -180,7 +181,7 @@ export function SettingsPage() {
             <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-border">
               {settings.avatar ? (
                 settings.avatar.startsWith("data:") ? (
-                  <img src={settings.avatar} alt="Profile" className="h-full w-full object-cover" />
+                  <img src={settings.avatar} alt={t("settings.profile")} className="h-full w-full object-cover" />
                 ) : (
                   <span className="text-4xl">{settings.avatar}</span>
                 )
@@ -188,12 +189,12 @@ export function SettingsPage() {
                 <User className="h-10 w-10 text-muted-foreground" />
               )}
             </div>
-            {/* Upload button overlay */}
+            {/* Upload button overlay — positioned at bottom-end for RTL awareness */}
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md transition-transform hover:scale-105"
-              aria-label="Upload profile picture"
+              className="absolute -bottom-1 -end-1 grid h-9 w-9 place-items-center rounded-full border-2 border-card bg-primary text-primary-foreground shadow-md transition-transform hover:scale-105"
+              aria-label={t("settings.uploadPhotoAria")}
             >
               <Camera className="h-4 w-4" />
             </button>
@@ -206,17 +207,15 @@ export function SettingsPage() {
             />
           </div>
 
-          <div className="flex-1 text-center sm:text-left">
-            <p className="text-xs text-muted-foreground">
-              Click the camera icon to upload a photo, or pick an emoji below.
-            </p>
+          <div className="flex-1 text-center sm:text-start">
+            <p className="text-xs text-muted-foreground">{t("settings.photoHint")}</p>
             {settings.avatar && settings.avatar.startsWith("data:") ? (
               <button
                 type="button"
                 onClick={() => updateSettings({ avatar: undefined })}
                 className="mt-2 text-xs text-destructive hover:underline"
               >
-                Remove photo
+                {t("settings.removePhoto")}
               </button>
             ) : null}
           </div>
@@ -224,7 +223,7 @@ export function SettingsPage() {
 
         {/* Emoji picker */}
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">Or choose an emoji</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">{t("settings.chooseEmoji")}</p>
           <div className="flex flex-wrap gap-2">
             {AVATAR_EMOJIS.map((emoji) => (
               <button
@@ -248,14 +247,14 @@ export function SettingsPage() {
         {/* Display name */}
         <div className="mt-5 space-y-2">
           <Label htmlFor="display-name" className="mb-2 block font-medium">
-            Display name
+            {t("settings.displayName")}
           </Label>
           <div className="flex gap-2">
             <Input
               id="display-name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t("settings.displayNamePlaceholder")}
               className="h-11"
               maxLength={60}
             />
@@ -263,20 +262,51 @@ export function SettingsPage() {
               className="h-11 shrink-0"
               onClick={() => {
                 updateSettings({ displayName: displayName.trim() || undefined });
-                toast.success("Name saved");
+                toast.success(t("settings.nameSaved"));
               }}
             >
-              Save
+              {t("settings.save")}
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Theme */}
+      {/* ── Language ─────────────────────────────────────────────────────── */}
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Globe className="h-4 w-4 text-muted-foreground" />
+          {t("settings.language")}
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">{t("settings.languageDesc")}</p>
+        <div className="mt-4 w-full">
+          <Select
+            value={language}
+            onValueChange={(val) => setLanguage(val as typeof language)}
+            dir={isRtl ? "rtl" : "ltr"}
+          >
+            <SelectTrigger className="h-11 w-full text-start">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGES.map((lang) => (
+                <SelectItem key={lang.code} value={lang.code} className="text-start">
+                  <span className="me-2">{lang.flag}</span>
+                  {lang.nativeName}
+                  {lang.dir === "rtl" && (
+                    <span className="ms-1.5 text-xs text-muted-foreground">(RTL)</span>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </section>
+
+      {/* ── Theme ────────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Sun className="h-4 w-4 text-muted-foreground" />
-          Theme
+          {t("settings.theme")}
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
           {THEME_OPTIONS.map((opt) => (
@@ -293,12 +323,13 @@ export function SettingsPage() {
               )}
             >
               <opt.icon className="h-5 w-5" />
-              <span className="text-sm font-medium">{opt.label}</span>
+              <span className="text-sm font-medium">{t(opt.labelKey)}</span>
             </button>
           ))}
         </div>
       </section>
-      {/* Sound */}
+
+      {/* ── Sound ────────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -307,7 +338,7 @@ export function SettingsPage() {
             ) : (
               <VolumeX className="h-4 w-4 text-muted-foreground" />
             )}
-            Sound Effects
+            {t("settings.sound")}
           </div>
           <Switch
             checked={Boolean(settings.isSoundEnabled && !settings.isMuted)}
@@ -317,20 +348,18 @@ export function SettingsPage() {
                 isMuted: !checked,
               });
             }}
-            aria-label="Toggle sound effects"
+            aria-label={t("settings.toggleSoundAria")}
           />
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Enable or disable audio feedback and chimes across the app.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("settings.soundDesc")}</p>
       </section>
 
-      {/* Notifications and reminders */}
+      {/* ── Notifications and reminders ───────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Bell className="h-4 w-4 text-muted-foreground" />
-            Notifications &amp; Reminders
+            {t("settings.notifications")}
           </div>
           <Switch
             checked={settings.notificationsEnabled}
@@ -344,21 +373,19 @@ export function SettingsPage() {
               setNotificationPermission(permission);
               if (permission === "granted") {
                 updateSettings({ notificationsEnabled: true, remindersEnabled: true });
-                toast.success("Notifications enabled");
+                toast.success(t("settings.notificationsEnabledToast"));
               } else if (permission === "denied") {
                 updateSettings({ notificationsEnabled: false, remindersEnabled: false });
-                toast.error("Notifications are blocked in your browser settings");
+                toast.error(t("settings.permissionDeniedToast"));
               } else {
                 updateSettings({ notificationsEnabled: false, remindersEnabled: false });
-                toast.error("Notifications are not supported in this browser");
+                toast.error(t("settings.permissionUnsupportedToast"));
               }
             }}
-            aria-label="Toggle notifications and reminders"
+            aria-label={t("settings.toggleNotificationsAria")}
           />
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Control all scheduled habit reminders from one place.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("settings.notificationsDesc")}</p>
         <div className="mt-4 rounded-xl border border-border/70 bg-background/60 p-3">
           <div className="flex items-start gap-3">
             {notificationPermission === "granted" ? (
@@ -371,9 +398,9 @@ export function SettingsPage() {
             )}
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">
-                Browser permission:{" "}
+                {t("settings.browserPermission")}{" "}
                 {notificationPermission === "unsupported"
-                  ? "Not supported"
+                  ? t("settings.permissionNotSupported")
                   : notificationPermission}
               </p>
               {notificationPermission === "default" ? (
@@ -385,23 +412,22 @@ export function SettingsPage() {
                   onClick={async () => {
                     const permission = await requestNotificationPermission();
                     setNotificationPermission(permission);
-                    if (permission === "granted") toast.success("Browser permission granted");
+                    if (permission === "granted") toast.success(t("settings.permissionGrantedToast"));
                   }}
                 >
-                  <Bell className="mr-2 h-4 w-4" /> Request Browser Permission
+                  <Bell className="me-2 h-4 w-4" /> {t("settings.requestPermission")}
                 </Button>
               ) : notificationPermission === "denied" ? (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Notifications are blocked. Allow them for Cadence in your browser or device
-                  settings, then reload the app.
+                  {t("settings.permissionBlocked")}
                 </p>
               ) : notificationPermission === "granted" ? (
                 <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
-                  Notifications are ready to use.
+                  {t("settings.permissionGranted")}
                 </p>
               ) : (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  This browser does not provide web notifications.
+                  {t("settings.permissionUnsupported")}
                 </p>
               )}
             </div>
@@ -413,67 +439,60 @@ export function SettingsPage() {
             disabled={notificationPermission !== "granted"}
             onClick={async () => {
               const sent = await sendTestNotification();
-              if (sent) toast.success("Test notification sent");
-              else toast.error("Test notification could not be sent");
+              if (sent) toast.success(t("settings.testNotificationSent"));
+              else toast.error(t("settings.testNotificationFailed"));
             }}
           >
-            <ExternalLink className="mr-2 h-4 w-4" /> Send Test Notification
+            <ExternalLink className="me-2 h-4 w-4" /> {t("settings.sendTestNotification")}
           </Button>
         </div>
       </section>
 
-      {/* App */}
+      {/* ── App ──────────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Monitor className="h-4 w-4 text-muted-foreground" />
-          App
+          {t("settings.app")}
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Share Cadence with friends, or install it as a standalone app on your device.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("settings.appDesc")}</p>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" className="h-11 flex-1" onClick={handleShareApp}>
-            <Share2 className="mr-2 h-4 w-4" /> Share Cadence
+            <Share2 className="me-2 h-4 w-4" /> {t("settings.shareCadence")}
           </Button>
           {isInstallAvailable ? (
             <Button variant="outline" className="h-11 flex-1" onClick={handleInstallApp}>
-              <Download className="mr-2 h-4 w-4" /> Install App
+              <Download className="me-2 h-4 w-4" /> {t("settings.installApp")}
             </Button>
           ) : null}
         </div>
       </section>
 
-      {/* Data */}
+      {/* ── Data ─────────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Download className="h-4 w-4 text-muted-foreground" />
-          Data
+          {t("settings.data")}
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Export your data as a JSON file, import a previous backup, or clear everything to start
-          fresh.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("settings.dataDescription")}</p>
 
         <Alert className="mt-4 border-amber-200/50 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800/40">
           <AlertTitle className="text-amber-800 dark:text-amber-300">
-            Your data lives only on this device
+            {t("settings.dataAlert")}
           </AlertTitle>
           <AlertDescription className="text-amber-700 dark:text-amber-400">
-            Cadence is a 100% offline-first application. Your data is stored locally on this device
-            and is not synced to the cloud. To prevent data loss if your browser cache is cleared,
-            please export a backup of your data regularly.
+            {t("settings.dataAlertDesc")}
           </AlertDescription>
         </Alert>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" className="h-11 flex-1" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" /> Export data
+            <Download className="me-2 h-4 w-4" /> {t("settings.export")}
           </Button>
           <Button
             variant="outline"
             className="h-11 flex-1"
             onClick={() => importRef.current?.click()}
           >
-            <Upload className="mr-2 h-4 w-4" /> Import data
+            <Upload className="me-2 h-4 w-4" /> {t("settings.import")}
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -481,24 +500,23 @@ export function SettingsPage() {
                 variant="outline"
                 className="h-11 flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
               >
-                <Trash2 className="mr-2 h-4 w-4" /> Clear all data
+                <Trash2 className="me-2 h-4 w-4" /> {t("settings.clear")}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Clear all data?</AlertDialogTitle>
+                <AlertDialogTitle>{t("settings.clearConfirmTitle")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This permanently deletes all habits, logs, goals, routines, and settings. This
-                  cannot be undone. Consider exporting a backup first.
+                  {t("settings.clearConfirmDesc")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{t("settings.cancel")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleReset}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  Yes, clear everything
+                  {t("settings.clearConfirmYes")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -513,15 +531,13 @@ export function SettingsPage() {
         </div>
       </section>
 
-      {/* Help & Support */}
+      {/* ── Help & Support ───────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Bug className="h-4 w-4 text-muted-foreground" />
-          Help &amp; Support
+          {t("settings.help")}
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Found a bug or have feedback? We&apos;d love to hear from you.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("settings.helpDesc")}</p>
         <div className="mt-4">
           <a
             href="https://tally.so/r/VLgMGy"
@@ -530,7 +546,7 @@ export function SettingsPage() {
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Bug className="h-4 w-4 shrink-0" />
-            Report a Bug / Feedback
+            {t("settings.reportBug")}
             <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </a>
         </div>

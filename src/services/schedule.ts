@@ -48,30 +48,51 @@ export function scheduledDaysIn(habit: Habit, startKey: string, endKey: string):
   return rangeKeys(startKey, endKey).filter((key) => isScheduledOn(habit, key));
 }
 
-export function describeSchedule(schedule: Schedule): string {
+export function describeSchedule(
+  schedule: Schedule,
+  t?: (key: string, fallback?: string) => string,
+): string {
   switch (schedule.type) {
     case "daily":
-      return "Every day";
+      return t ? t("habit.everyDay", "Every day") : "Every day";
     case "weekdays": {
-      const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      if (schedule.days.length === 7) return "Every day";
+      const names = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      const fallbackNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      if (schedule.days.length === 7) return t ? t("habit.everyDay", "Every day") : "Every day";
       return schedule.days
         .slice()
         .sort((a, b) => a - b)
-        .map((d) => names[d])
+        .map((d) => (t ? t(`weekdays.${names[d]}`, fallbackNames[d]) : fallbackNames[d]))
         .join(", ");
     }
     case "timesPerWeek":
-      return `${schedule.count}× per week`;
-    case "monthDays":
-      return `Monthly on ${schedule.days
+      return t
+        ? t("schedule.timesPerWeek", `${schedule.count}× per week`).replace(
+            "{count}",
+            String(schedule.count),
+          )
+        : `${schedule.count}× per week`;
+    case "monthDays": {
+      const daysStr = schedule.days
         .slice()
         .sort((a, b) => a - b)
-        .join(", ")}`;
+        .join(", ");
+      return t
+        ? t("schedule.monthlyOn", `Monthly on ${daysStr}`).replace("{days}", daysStr)
+        : `Monthly on ${daysStr}`;
+    }
     case "interval":
-      return schedule.everyNDays === 1 ? "Every day" : `Every ${schedule.everyNDays} days`;
+      if (schedule.everyNDays === 1) {
+        return t ? t("habit.everyDay", "Every day") : "Every day";
+      }
+      return t
+        ? t("schedule.everyNDays", `Every ${schedule.everyNDays} days`).replace(
+            "{count}",
+            String(schedule.everyNDays),
+          )
+        : `Every ${schedule.everyNDays} days`;
     default:
-      return "Custom";
+      return t ? t("schedule.custom", "Custom") : "Custom";
   }
 }
 

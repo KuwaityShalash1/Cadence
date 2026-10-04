@@ -64,16 +64,16 @@ export function monthMatrix(year: number, month: number, weekStartsOn: 0 | 1 = 1
   return weeks;
 }
 
-export function formatDay(key: string): string {
-  return fromDateKey(key).toLocaleDateString(undefined, {
+export function formatDay(key: string, locale?: string): string {
+  return fromDateKey(key).toLocaleDateString(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
   });
 }
 
-export function formatLongDay(key: string): string {
-  return fromDateKey(key).toLocaleDateString(undefined, {
+export function formatLongDay(key: string, locale?: string): string {
+  return fromDateKey(key).toLocaleDateString(locale, {
     weekday: "long",
     month: "long",
     day: "numeric",

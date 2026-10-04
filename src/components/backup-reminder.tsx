@@ -1,6 +1,7 @@
 import { Download, ShieldCheck, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 
 interface BackupReminderProps {
   /** Controls banner visibility (driven by `useWeeklyBackupReminder`). */
@@ -30,13 +31,15 @@ export function BackupReminder({
   onDismiss,
   className,
 }: BackupReminderProps) {
+  const { t } = useTranslation();
+
   if (!visible) return null;
 
   return (
     <div
       role="status"
       aria-live="polite"
-      aria-label="Backup reminder"
+      aria-label={t("backup.ariaLabel")}
       className={cn(
         // Fixed floating placement — clears the mobile bottom nav via bottom offset.
         "fixed inset-x-0 bottom-20 z-40 px-4 md:bottom-6 md:px-6",
@@ -63,20 +66,19 @@ export function BackupReminder({
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold leading-5">Protect your habit history</p>
+              <p className="text-sm font-semibold leading-5">{t("backup.title")}</p>
               {/* Session-only close affordance. */}
               <button
                 type="button"
                 onClick={onDismiss}
-                aria-label="Dismiss backup reminder"
+                aria-label={t("backup.dismiss")}
                 className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
-              You haven&apos;t exported a JSON backup recently. Since Cadence is offline-first,
-              manual backups ensure your progress is never lost.
+              {t("backup.desc")}
             </p>
 
             {/* Action row: immediate export + 7-day snooze. */}
@@ -87,14 +89,14 @@ export function BackupReminder({
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 active:scale-[0.97]"
               >
                 <Download className="h-4 w-4" />
-                Export Backup (JSON)
+                {t("backup.export")}
               </button>
               <button
                 type="button"
                 onClick={onSnooze}
                 className="inline-flex h-9 items-center rounded-lg px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                Later
+                {t("backup.later")}
               </button>
             </div>
           </div>

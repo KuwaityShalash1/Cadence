@@ -114,7 +114,7 @@ export interface RoutineLog {
 }
 
 export type ThemeMode = "light" | "dark" | "system";
-export type LanguageCode = "en" | "ar" | "es" | "fr" | "de";
+export type LanguageCode = "en" | "ar";
 
 export interface AppSettings {
   id: "settings";

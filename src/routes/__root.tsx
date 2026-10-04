@@ -12,12 +12,13 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ThemeSync } from "@/components/theme-sync";
+import { HeadMetadataSync } from "@/components/head-metadata-sync";
 import { CommandPaletteLoader } from "@/components/command-palette-loader";
 import { BackupReminder } from "@/components/backup-reminder";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/stores/app-store";
-import { LanguageProvider } from "@/i18n/context";
+import { LanguageProvider, useTranslation } from "@/i18n/context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { checkDailyHabitReminder } from "@/lib/notifications";
 import { registerServiceWorker } from "@/lib/service-worker";
@@ -27,21 +28,25 @@ import { useApp } from "@/stores/app-store";
 import { useShortcuts } from "@/hooks/use-shortcuts";
 import appCss from "../styles.css?url";
 
-function NotFoundComponent() {
+function NotFoundContent() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          {t("notFound.title", "Page not found")}
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          {t("notFound.desc", "The page you're looking for doesn't exist or has been moved.")}
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            {t("notFound.goHome", "Go home")}
           </Link>
         </div>
       </div>
@@ -49,18 +54,27 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function NotFoundComponent() {
+  return (
+    <LanguageProvider>
+      <NotFoundContent />
+    </LanguageProvider>
+  );
+}
+
+function ErrorContent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          {t("errorPage.title", "This page didn't load")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          {t("errorPage.desc", "Something went wrong on our end. You can try refreshing or head back home.")}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -70,17 +84,25 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            {t("errorPage.tryAgain", "Try again")}
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            {t("errorPage.goHome", "Go home")}
           </a>
         </div>
       </div>
     </div>
+  );
+}
+
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  return (
+    <LanguageProvider>
+      <ErrorContent error={error} reset={reset} />
+    </LanguageProvider>
   );
 }
 
@@ -256,6 +278,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         // Emitted for every route except the 404 page so each document has
         // exactly one canonical URL pointing at its own address.
         ...(isRootOnlyMatch ? [] : [{ rel: "canonical" as const, href: canonicalUrl }]),
+        ...(isRootOnlyMatch
+          ? []
+          : [
+              { rel: "alternate" as const, hrefLang: "en", href: canonicalUrl },
+              { rel: "alternate" as const, hrefLang: "ar", href: canonicalUrl },
+              { rel: "alternate" as const, hrefLang: "x-default", href: canonicalUrl },
+            ]),
         { rel: "manifest", href: "/manifest.json?v=2" },
         { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=2" },
         { rel: "icon", href: "/favicon.ico?v=2", sizes: "48x48 32x32 16x16" },
@@ -320,6 +349,35 @@ function RootShell({ children }: { children: ReactNode }) {
             `,
           }}
         />
+        
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Apply the persisted language + RTL direction BEFORE first paint
+                  // to eliminate any flash of the wrong layout direction on reload.
+                  // Key must stay in sync with STORAGE_KEY in src/i18n/context.tsx.
+                  var lang = localStorage.getItem('cadence_language') || 'en';
+                  var rtlLangs = ['ar', 'he', 'fa', 'ur'];
+                  var isRtl = rtlLangs.indexOf(lang) !== -1;
+                  document.documentElement.lang = lang;
+                  document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+                  if (lang === 'ar') {
+                    document.documentElement.classList.add('font-arabic');
+                    if (!document.getElementById('cadence-arabic-font')) {
+                      var link = document.createElement('link');
+                      link.id = 'cadence-arabic-font';
+                      link.rel = 'stylesheet';
+                      link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap';
+                      document.head.appendChild(link);
+                    }
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -357,6 +415,10 @@ function RootShell({ children }: { children: ReactNode }) {
                 opacity: 0 !important;
                 visibility: hidden !important;
               }
+              /* Apply Cairo Arabic web font when Arabic locale is active */
+              html.font-arabic, html.font-arabic * {
+                font-family: Cairo, sans-serif !important;
+              }
             `,
           }}
         />
@@ -380,6 +442,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AppProvider>
         <LanguageProvider>
+          <HeadMetadataSync />
           <NotificationScheduler />
           <WeeklyBackupReminder />
           <ServiceWorkerBootstrap />

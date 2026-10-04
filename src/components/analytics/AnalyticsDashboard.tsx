@@ -20,6 +20,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { addDays, todayKey, rangeKeys, diffDays, formatDay, formatLongDay, fromDateKey, toDateKey } from "@/services/dates";
 import { isScheduledOn } from "@/services/schedule";
 import {
@@ -137,6 +138,8 @@ function computeModerationData(
   badHabits: BadHabit[],
   startKey: string,
   endKey: string,
+  withinLabel = "Within Limit",
+  overLabel = "Over Limit",
 ): ModerationSlice[] {
   let within = 0;
   let over = 0;
@@ -153,14 +156,14 @@ function computeModerationData(
 
   if (within === 0 && over === 0) {
     return [
-      { name: MODERATION_LABELS.within, value: 1, color: CHART_COLORS.withinLimit },
-      { name: MODERATION_LABELS.over, value: 0, color: CHART_COLORS.overLimit },
+      { name: withinLabel, value: 1, color: CHART_COLORS.withinLimit },
+      { name: overLabel, value: 0, color: CHART_COLORS.overLimit },
     ];
   }
 
   return [
-    { name: MODERATION_LABELS.within, value: within, color: CHART_COLORS.withinLimit },
-    { name: MODERATION_LABELS.over, value: over, color: CHART_COLORS.overLimit },
+    { name: withinLabel, value: within, color: CHART_COLORS.withinLimit },
+    { name: overLabel, value: over, color: CHART_COLORS.overLimit },
   ];
 }
 
@@ -205,6 +208,7 @@ function CompletionBarChart({
 }: {
   data: DayCompletionData[];
 }) {
+  const { t, language } = useTranslation();
   // Dense ranges (90 days, 1 year, wide custom) contain too many points for
   // sub-pixel bars on a ~340px mobile viewport, so render an area chart.
   // Short ranges (7 / 30 days and narrow custom ranges) stay as clean bars.
@@ -215,11 +219,11 @@ function CompletionBarChart({
   const formatCompactTick = useCallback(
     (value: string): string => {
       const date = fromDateKey(String(value));
-      const monthShort = date.toLocaleDateString("en-US", { month: "short" });
+      const monthShort = date.toLocaleDateString(language, { month: "short" });
       if (data.length > 180) return monthShort;
       return `${monthShort} ${date.getDate()}`;
     },
-    [data.length],
+    [data.length, language],
   );
 
   const sharedXAxisProps = {
@@ -266,7 +270,7 @@ function CompletionBarChart({
             <Area
               type="monotone"
               dataKey="completionRate"
-              name="Completed"
+              name={t("analytics.completed")}
               stroke="var(--color-chart-1)"
               strokeWidth={2}
               fill="url(#completionTrendFill)"
@@ -282,7 +286,7 @@ function CompletionBarChart({
             <Tooltip content={<CompletionTrendTooltip />} cursor={{ fill: "var(--muted)" }} />
             <Bar
               dataKey="completionRate"
-              name="Completed"
+              name={t("analytics.completed")}
               fill="var(--color-chart-1)"
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
@@ -304,18 +308,19 @@ function CompletionTrendTooltip({
   payload?: Array<{ value?: number | string }>;
   label?: string | number;
 }) {
+  const { t, language } = useTranslation();
   if (!active || !payload?.length || label == null) return null;
   const value = payload[0]?.value;
   return (
     <div className="grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
-      <div className="font-medium">{formatLongDay(String(label))}</div>
+      <div className="font-medium">{formatLongDay(String(label), language)}</div>
       <div className="flex w-full items-center justify-between gap-4">
         <span className="flex items-center gap-1.5 text-muted-foreground">
           <span
             className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
             style={{ backgroundColor: "var(--color-chart-1)" }}
           />
-          Completed
+          {t("analytics.completed")}
         </span>
         <span className="font-mono font-medium tabular-nums text-foreground">
           {typeof value === "number" ? `${value}%` : String(value ?? "—")}
@@ -360,6 +365,7 @@ function ModerationPieChart({ data }: { data: ModerationSlice[] }) {
 // ---------------------------------------------------------------------------
 
 function TimeRangeSelector({
+
   value,
   onChange,
   onCustomRangeChange,
@@ -368,6 +374,7 @@ function TimeRangeSelector({
   onChange: (range: TimeRange) => void;
   onCustomRangeChange: (range: TimeRange) => void;
 }) {
+  const { t } = useTranslation();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [customRange, setCustomRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
@@ -411,7 +418,7 @@ function TimeRangeSelector({
           onClick={() => handlePresetChange(option.days)}
           className="transition-all"
         >
-          {option.label}
+          {option.days === 7 ? t("analytics.range7Days") : option.days === 30 ? t("analytics.range30Days") : option.days === 90 ? t("analytics.range90Days") : t("analytics.range1Year")}
         </Button>
       ))}
 
@@ -422,8 +429,8 @@ function TimeRangeSelector({
             size="sm"
             className="transition-all"
           >
-            <CalendarRange className="mr-2 h-4 w-4" />
-            Custom Range
+            <CalendarRange className="me-2 h-4 w-4" />
+            {t("analytics.customRange")}
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -431,7 +438,7 @@ function TimeRangeSelector({
           align="start"
         >
           <div className="p-4">
-            <p className="text-sm font-medium text-foreground">Select Date Range</p>
+            <p className="text-sm font-medium text-foreground">{t("analytics.selectDateRange")}</p>
             <div className="mt-3 hidden md:block">
               <Calendar
                 mode="range"
@@ -452,14 +459,14 @@ function TimeRangeSelector({
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="outline" size="sm" onClick={handleCancelCustom}>
-                Cancel
+                {t("analytics.cancel")}
               </Button>
               <Button
                 size="sm"
                 onClick={handleApplyCustom}
                 disabled={!customRange.from || !customRange.to}
               >
-                Apply
+                {t("analytics.apply")}
               </Button>
             </div>
           </div>
@@ -482,6 +489,7 @@ function HabitBreakdownCard({
   stats: ReturnType<typeof habitStats>;
   customIcons?: Parameters<typeof HabitIcon>[0]["customIcons"];
 }) {
+  const { t } = useTranslation();
   const styles = colorStyles(habit.color);
 
   return (
@@ -500,34 +508,34 @@ function HabitBreakdownCard({
           </h3>
           <p
             className="text-xs text-muted-foreground truncate"
-            title={`${stats.scheduledDays} scheduled • ${stats.totalCompletions} total`}
+            title={`${stats.scheduledDays} ${t("analytics.scheduled")} • ${stats.totalCompletions} ${t("analytics.completions")}`}
           >
-            {stats.scheduledDays} scheduled · {stats.totalCompletions} completions
+            {stats.scheduledDays} {t("analytics.scheduled")} · {stats.totalCompletions} {t("analytics.completions")}
           </p>
         </div>
-        <div className="text-right shrink-0">
+        <div className="text-end shrink-0">
           <p className="numeric font-display text-xl">{stats.currentStreak}</p>
-          <p className="text-xs text-muted-foreground">current streak</p>
+          <p className="text-xs text-muted-foreground">{t("analytics.currentStreak")}</p>
         </div>
       </div>
       <div className="mt-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Completion rate</span>
+          <span className="text-muted-foreground">{t("analytics.completionRate")}</span>
           <span className="numeric font-medium">{Math.round(stats.completionRate * 100)}%</span>
         </div>
         <Progress
           value={Math.round(stats.completionRate * 100)}
-          aria-label="Completion rate"
+          aria-label={t("analytics.completionRate")}
           className="mt-1.5 h-2"
         />
       </div>
       <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
         <span>
-          Best streak:{" "}
+          {t("analytics.bestStreak")}:{" "}
           <span className="numeric font-medium text-foreground">{stats.bestStreak}</span>
         </span>
         <span>
-          Avg progress:{" "}
+          {t("analytics.avgProgress")}:{" "}
           <span className="numeric font-medium text-foreground">
             {Math.round(stats.averageProgress * 100)}%
           </span>
@@ -542,6 +550,7 @@ function HabitBreakdownCard({
 // ---------------------------------------------------------------------------
 
 export function AnalyticsDashboard() {
+  const { t, language } = useTranslation();
   const { habits, habitLogs, badHabits, ready, customIcons } = useApp();
   const [timeRange, setTimeRange] = useState<TimeRange>(() => {
     const endKey = todayKey();
@@ -588,8 +597,15 @@ export function AnalyticsDashboard() {
 
   // Heavy: aggregates moderation (limit) usage logs across the window.
   const moderationData = useMemo(
-    () => computeModerationData(badHabits, startKey, endKey),
-    [badHabits, startKey, endKey],
+    () =>
+      computeModerationData(
+        badHabits,
+        startKey,
+        endKey,
+        t("analytics.withinLimit"),
+        t("analytics.overLimit"),
+      ),
+    [badHabits, startKey, endKey, t],
   );
 
   // Derived totals — computed from the already-memoized `dayData` instead of
@@ -670,15 +686,18 @@ export function AnalyticsDashboard() {
 
   const rangeLabel = useMemo(() => {
     if (timeRange.type === "custom") {
-      return `Custom: ${formatDay(startKey)} — ${formatDay(endKey)}`;
+      return `${t("analytics.custom")}: ${formatDay(startKey, language)} — ${formatDay(endKey, language)}`;
     }
-    const option = TIMEFRAME_OPTIONS.find((o) => o.days === timeRange.days);
-    return option?.label ?? `${timeRange.days} days`;
-  }, [timeRange, startKey, endKey]);
+    if (timeRange.days === 7) return t("analytics.range7Days");
+    if (timeRange.days === 30) return t("analytics.range30Days");
+    if (timeRange.days === 90) return t("analytics.range90Days");
+    if (timeRange.days === 365) return t("analytics.range1Year");
+    return `${timeRange.days} ${t("common.days")}`;
+  }, [timeRange, startKey, endKey, language, t]);
 
   if (!ready) {
     return (
-      <div className="py-20 text-center text-sm text-muted-foreground">Loading analytics…</div>
+      <div className="py-20 text-center text-sm text-muted-foreground">{t("analytics.loading")}</div>
     );
   }
 
@@ -686,15 +705,13 @@ export function AnalyticsDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <header>
-        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Analytics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Visual breakdown of your habit completion and moderation adherence.
-        </p>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("analytics.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("analytics.subtitle")}</p>
       </header>
 
       {/* Time Range Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="font-display text-lg">Completion rate — {rangeLabel}</h2>
+        <h2 className="font-display text-lg">{t("analytics.completionRate")} — {rangeLabel}</h2>
         <TimeRangeSelector
           value={timeRange}
           onChange={setTimeRange}
@@ -706,76 +723,67 @@ export function AnalyticsDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           icon={<Target className="h-4 w-4" />}
-          label="Completion"
+          label={t("analytics.completion")}
           value={`${Math.round(overallCompletion)}%`}
-          hint={`${totalCompleted} of ${totalScheduled} scheduled`}
+          hint={t("analytics.scheduledOf").replace("{completed}", String(totalCompleted)).replace("{scheduled}", String(totalScheduled))}
         />
         <StatCard
           icon={<TrendingUp className="h-4 w-4" />}
-          label="Consistency"
+          label={t("analytics.consistency")}
           value={`${Math.round(consistency * 100)}%`}
-          hint="Recent weighted average"
+          hint={t("analytics.consistencyHint")}
         />
         <StatCard
           icon={<Flame className="h-4 w-4" />}
-          label="Best Streak"
+          label={t("analytics.bestStreak")}
           value={bestStreakAcross}
-          hint="Days"
+          hint={t("analytics.bestStreakHint")}
         />
         <StatCard
           icon={<Award className="h-4 w-4" />}
-          label="Perfect Days"
+          label={t("analytics.perfectDays")}
           value={perfectDays}
-          hint="100% completion days"
+          hint={t("analytics.perfectDaysHint")}
         />
         <StatCard
           icon={<ShieldCheck className="h-4 w-4" />}
-          label="Moderation"
+          label={t("analytics.moderation")}
           value={hasModerationData ? `${Math.round(moderationAdherence)}%` : "—"}
-          hint="Days within limits"
+          hint={t("analytics.moderationHint")}
         />
       </div>
 
       {/* Main Trend Chart */}
       <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-        <h2 className="font-display text-lg">Completion trend</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Percentage of scheduled habits completed each day.
-        </p>
+        <h2 className="font-display text-lg">{t("analytics.completionTrend")}</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">{t("analytics.completionTrendDesc")}</p>
         <div className="mt-4">
           {dayData.some((d) => d.scheduled > 0) ? (
             <CompletionBarChart data={dayData} />
           ) : (
-            <EmptyState>Complete at least one habit to see your completion chart.</EmptyState>
+            <EmptyState>{t("analytics.noDataChart")}</EmptyState>
           )}
         </div>
       </section>
 
       {/* Moderation Donut Chart */}
       <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-        <h2 className="font-display text-lg">Moderation adherence</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          How often you stay within your self-imposed daily limits on bad habits (limit strategy).
-        </p>
+        <h2 className="font-display text-lg">{t("analytics.moderationAdherence")}</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">{t("analytics.moderationAdherenceDesc")}</p>
         <div className="mt-4">
           {hasModerationData ? (
             <ModerationPieChart data={moderationData} />
           ) : (
-            <EmptyState>
-              Add a bad habit with a <span className="font-medium text-foreground">Limit</span>{" "}
-              strategy and start logging usage to see this chart.
-            </EmptyState>
+            <EmptyState>{t("analytics.noModerationChart")}</EmptyState>
           )}
         </div>
       </section>
 
       {/* Per-Habit Breakdown — restored from previous Statistics page */}
       <section className="space-y-3">
-        <h2 className="font-display text-lg">Per-habit breakdown</h2>
+        <h2 className="font-display text-lg">{t("analytics.perHabitBreakdown")}</h2>
         {activeHabits.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            No active habits yet.
-          </p>
+          <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t("analytics.noActiveHabits")}</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {habitBreakdownData.map(({ habit, stats }) => (

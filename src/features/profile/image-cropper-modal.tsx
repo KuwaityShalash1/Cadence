@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { getCroppedImg, type CropArea } from "@/lib/crop-image";
+import { useTranslation } from "@/i18n/context";
 
 interface ImageCropperModalProps {
   open: boolean;
@@ -23,6 +24,7 @@ interface ImageCropperModalProps {
 }
 
 export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: ImageCropperModalProps) {
+  const { t } = useTranslation();
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropArea | null>(null);
@@ -49,7 +51,7 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
 
   const handleSave = async () => {
     if (!imageSrc || !croppedAreaPixels) {
-      toast.error("Please wait for the image to load completely");
+      toast.error(t("cropper.waitImageLoad", "Please wait for the image to load completely"));
       return;
     }
 
@@ -60,7 +62,7 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
       onClose();
     } catch (err) {
       console.error("Error cropping image:", err);
-      toast.error("Failed to crop image. Please try again.");
+      toast.error(t("cropper.cropFailed", "Failed to crop image. Please try again."));
     } finally {
       setIsSaving(false);
     }
@@ -69,12 +71,12 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isSaving && !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md p-6 overflow-hidden gap-5">
-        <DialogHeader className="text-left space-y-1">
+        <DialogHeader className="text-start space-y-1">
           <DialogTitle className="font-display text-xl font-semibold tracking-tight">
-            Adjust Profile Picture
+            {t("cropper.title", "Adjust Profile Picture")}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Drag to position your photo and use the slider to zoom in or out.
+            {t("cropper.desc", "Drag to position your photo and use the slider to zoom in or out.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -100,7 +102,7 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
             />
           ) : (
             <div className="grid h-full place-items-center text-sm text-muted-foreground">
-              No image selected
+              {t("cropper.noImage", "No image selected")}
             </div>
           )}
         </div>
@@ -108,7 +110,7 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
         {/* Zoom and Reset Controls */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Zoom</span>
+            <span>{t("cropper.zoom", "Zoom")}</span>
             <div className="flex items-center gap-2">
               <span>{Math.round(zoom * 100)}%</span>
               <button
@@ -116,10 +118,10 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
                 onClick={handleReset}
                 disabled={zoom === 1 && crop.x === 0 && crop.y === 0}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                title="Reset crop and zoom"
+                title={t("cropper.resetTitle", "Reset crop and zoom")}
               >
                 <RotateCcw className="h-3 w-3" />
-                Reset
+                {t("cropper.reset", "Reset")}
               </button>
             </div>
           </div>
@@ -130,7 +132,7 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
               onClick={() => setZoom((prev) => Math.max(1, +(prev - 0.2).toFixed(2)))}
               disabled={zoom <= 1}
               className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none p-1"
-              aria-label="Zoom out"
+              aria-label={t("cropper.zoomOut", "Zoom out")}
             >
               <ZoomOut className="h-4 w-4" />
             </button>
@@ -139,16 +141,18 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
               min={1}
               max={3}
               step={0.02}
-              onValueChange={([val]) => setZoom(val)}
+              onValueChange={([val]) => {
+                if (val !== undefined) setZoom(val);
+              }}
               className="flex-1"
-              aria-label="Zoom level"
+              aria-label={t("cropper.zoomLevel", "Zoom level")}
             />
             <button
               type="button"
               onClick={() => setZoom((prev) => Math.min(3, +(prev + 0.2).toFixed(2)))}
               disabled={zoom >= 3}
               className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:pointer-events-none p-1"
-              aria-label="Zoom in"
+              aria-label={t("cropper.zoomIn", "Zoom in")}
             >
               <ZoomIn className="h-4 w-4" />
             </button>
@@ -164,7 +168,7 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
             disabled={isSaving}
             className="w-full sm:w-auto"
           >
-            Cancel
+            {t("common.cancel", "Cancel")}
           </Button>
           <Button
             type="button"
@@ -174,13 +178,13 @@ export function ImageCropperModal({ open, imageSrc, onClose, onCropSave }: Image
           >
             {isSaving ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving…
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                {t("cropper.saving", "Saving…")}
               </>
             ) : (
               <>
-                <Check className="mr-2 h-4 w-4" />
-                Crop & Save
+                <Check className="me-2 h-4 w-4" />
+                {t("cropper.cropAndSave", "Crop & Save")}
               </>
             )}
           </Button>

@@ -1,6 +1,34 @@
 import { isScheduledOn } from "@/services/schedule";
 import { isCompleteOn, streaks, type LogMap } from "@/services/stats";
 import type { Habit } from "@/types";
+import { dictionaries } from "@/i18n/dictionaries";
+import type { LanguageCode } from "@/i18n/types";
+
+function getActiveLanguage(): LanguageCode {
+  if (typeof window === "undefined") return "en";
+  try {
+    const stored = window.localStorage.getItem("cadence_language");
+    if (stored === "ar" || stored === "en") {
+      return stored;
+    }
+  } catch {
+    // fallback
+  }
+  return "en";
+}
+
+function getNotificationText(key: string, values?: Record<string, string | number>): string {
+  const lang = getActiveLanguage();
+  const dict = dictionaries[lang] || dictionaries.en;
+  let text = dict[key] || dictionaries.en[key] || key;
+  if (values) {
+    for (const [placeholder, val] of Object.entries(values)) {
+      text = text.replace(new RegExp(`\\{${placeholder}\\}`, "g"), String(val));
+    }
+  }
+  return text;
+}
+
 
 export type NotificationPermissionState = NotificationPermission | "unsupported";
 
@@ -76,6 +104,7 @@ export async function checkDailyHabitReminder(
           : [];
       for (const reminderTime of reminderTimes) {
         const [hours, minutes] = reminderTime.split(":").map(Number);
+        if (hours === undefined || minutes === undefined) continue;
         const reminderMinutes = hours * 60 + minutes;
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         const minutesSinceReminder = currentMinutes - reminderMinutes;
@@ -102,8 +131,9 @@ export async function checkDailyHabitReminder(
           currentTime,
         });
         const currentStreak = streaks(habit, logs).current;
+        const unit = currentStreak === 1 ? getNotificationText("common.day") : getNotificationText("common.days");
         dispatchNotification(habit.name, {
-          body: `Your current streak is ${currentStreak} day${currentStreak === 1 ? "" : "s"}. Keep it going!`,
+          body: getNotificationText("notification.streakBody", { streak: currentStreak, unit }),
           icon: "/pwa-192x192.png?v=2",
           tag: `cadence-reminder-${habit.id}-${dateKey}-${reminderTime}`,
         });
@@ -127,8 +157,8 @@ export async function sendTestNotification(): Promise<boolean> {
   }
 
   try {
-    dispatchNotification("Cadence test notification", {
-      body: "Notifications are working. Your reminders can reach you here.",
+    dispatchNotification(getNotificationText("notification.testTitle"), {
+      body: getNotificationText("notification.testBody"),
       icon: "/pwa-192x192.png?v=2",
       tag: "cadence-test-notification",
     });

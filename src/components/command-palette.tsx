@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ChartBar,
   Download,
+  Globe,
   Keyboard,
   ListChecks,
   Monitor,
@@ -297,7 +298,7 @@ export function CommandPalette({
 }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { settings, updateSettings, exportData } = useApp();
-  const { t } = useTranslation();
+  const { t, language, setLanguage } = useTranslation();
   const shortcutHint = useShortcutHint();
 
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
@@ -613,6 +614,55 @@ export function CommandPalette({
 
                   <CommandSeparator className="my-1" />
 
+                  {/* Language Group */}
+                  <CommandGroup heading={t("command.groupLanguage", "Language")}>
+                    <CommandItem
+                      value={`${t("command.switchArabic", "Switch to Arabic")} language arabic لغة عربية`}
+                      onSelect={() =>
+                        runCommand(() => {
+                          setLanguage("ar");
+                          updateSettings({ language: "ar" });
+                          toast.success(
+                            t("command.languageUpdatedArabic", "Switched to Arabic"),
+                          );
+                        })
+                      }
+                      className={COMMAND_ITEM_CLASSES}
+                    >
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <span>{t("command.switchArabic", "Switch to Arabic")}</span>
+                      {language === "ar" ? (
+                        <CommandShortcut className="text-[10px] font-medium text-primary">
+                          {t("command.active", "Active")}
+                        </CommandShortcut>
+                      ) : null}
+                    </CommandItem>
+
+                    <CommandItem
+                      value={`${t("command.switchEnglish", "Switch to English")} language english لغة إنجليزية`}
+                      onSelect={() =>
+                        runCommand(() => {
+                          setLanguage("en");
+                          updateSettings({ language: "en" });
+                          toast.success(
+                            t("command.languageUpdatedEnglish", "Switched to English"),
+                          );
+                        })
+                      }
+                      className={COMMAND_ITEM_CLASSES}
+                    >
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <span>{t("command.switchEnglish", "Switch to English")}</span>
+                      {language === "en" ? (
+                        <CommandShortcut className="text-[10px] font-medium text-primary">
+                          {t("command.active", "Active")}
+                        </CommandShortcut>
+                      ) : null}
+                    </CommandItem>
+                  </CommandGroup>
+
+                  <CommandSeparator className="my-1" />
+
                   {/* Help Group */}
                   <CommandGroup heading={t("command.groupHelp", "Help")}>
                     <CommandItem
@@ -663,13 +713,13 @@ export function CommandPalette({
                   <span className="flex items-center gap-1.5">
                     <Kbd>↑</Kbd>
                     <Kbd>↓</Kbd>
-                    <span className="ml-0.5">{t("command.footerNavigate", "to navigate")}</span>
+                    <span className="ms-0.5">{t("command.footerNavigate", "to navigate")}</span>
                     <Kbd>↵</Kbd>
-                    <span className="ml-0.5">{t("command.footerSelect", "to select")}</span>
+                    <span className="ms-0.5">{t("command.footerSelect", "to select")}</span>
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Kbd>Esc</Kbd>
-                    <span className="ml-0.5">{t("command.footerClose", "to close")}</span>
+                    <span className="ms-0.5">{t("command.footerClose", "to close")}</span>
                     <Kbd>{shortcutHint}</Kbd>
                   </span>
                 </div>

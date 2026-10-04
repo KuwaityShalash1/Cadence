@@ -40,12 +40,12 @@ export function ResponsiveSheet({
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="max-h-[92dvh]">
-          <DrawerHeader className="text-left">
+          <DrawerHeader className="text-start">
             <DrawerTitle className="font-display text-xl">{title}</DrawerTitle>
             {description ? <DrawerDescription>{description}</DrawerDescription> : null}
           </DrawerHeader>
           <div
-            className="safe-bottom w-full overflow-x-hidden overflow-y-auto px-6 pt-4 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            className="safe-bottom w-full overflow-y-auto px-6 pt-4 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             style={{ ["--safe-extra" as string]: "1.5rem" }}
           >
             {children}
@@ -63,11 +63,11 @@ export function ResponsiveSheet({
           className,
         )}
       >
-        <DialogHeader className="px-6 pt-6">
+        <DialogHeader className="px-6 pt-6 text-start">
           <DialogTitle className="font-display text-xl">{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        <div className="min-h-0 overflow-y-auto overflow-x-hidden px-6 py-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="min-h-0 overflow-y-auto px-6 py-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {children}
         </div>
       </DialogContent>

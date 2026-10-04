@@ -50,6 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { formatLongDay, todayKey } from "@/services/dates";
 import { isScheduledOn } from "@/services/schedule";
 import { dayCompletion, isCompleteOn } from "@/services/stats";
@@ -64,18 +65,23 @@ const FILTER_LABELS: Record<FilterMode, string> = {
   completed: "Done",
 };
 
-function greeting(name?: string): string {
+function getGreeting(t: (key: string, fallback?: string) => string, name?: string): string {
   const h = new Date().getHours();
-  const displayName = name?.trim() || "User";
-  if (h < 12) return `Good morning, ${displayName}`;
-  if (h < 18) return `Good afternoon, ${displayName}`;
-  return `Good evening, ${displayName}`;
+  const displayName = name?.trim() || t("nav.user", "User");
+  if (h < 12) {
+    return t("today.greetingMorning", "Good morning, {name}").replace("{name}", displayName);
+  }
+  if (h < 18) {
+    return t("today.greetingAfternoon", "Good afternoon, {name}").replace("{name}", displayName);
+  }
+  return t("today.greetingEvening", "Good evening, {name}").replace("{name}", displayName);
 }
 
 /** User's actual timezone detected via Intl — used for the header timezone label. */
 const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export function TodayPage() {
+  const { t } = useTranslation();
   const {
     habits,
     logMap,
@@ -199,7 +205,7 @@ export function TodayPage() {
   }, [activeId, due]);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading", "Loading…")}</div>;
   }
 
   return (
@@ -221,10 +227,9 @@ export function TodayPage() {
               unambiguous topic heading for the page.
             */}
             <h1 className="font-sans text-3xl font-bold tracking-tight sm:text-4xl">
-              {greeting(settings.displayName)}
+              {getGreeting(t, settings.displayName)}
               <span className="sr-only">
-                {" "}
-                — Cadence, a free offline habit tracker and daily routine planner
+                {t("today.srSuffix", " — Cadence, a free offline habit tracker and daily routine planner")}
               </span>
             </h1>
           </div>
@@ -236,15 +241,15 @@ export function TodayPage() {
               className="gap-2"
             >
               <Archive className="h-4 w-4" />
-              <span>Archived Habits</span>
+              <span>{t("today.archivedHabits", "Archived Habits")}</span>
               {archivedHabits.length > 0 && (
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
+                <Badge variant="secondary" className="ms-1 px-1.5 py-0.5 text-xs">
                   {archivedHabits.length}
                 </Badge>
               )}
             </Button>
             <Button className="hidden md:inline-flex" onClick={() => editor.open()}>
-              <Plus className="mr-1 h-4 w-4" /> New habit
+              <Plus className="me-1 h-4 w-4" /> {t("today.newHabit")}
             </Button>
           </div>
         </div>
@@ -252,7 +257,7 @@ export function TodayPage() {
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium">
-              {doneCount} of {due.length} done
+              {doneCount} {t("today.of")} {due.length} {t("today.done")}
             </span>
             <span className="text-muted-foreground">{completion}%</span>
           </div>
@@ -260,53 +265,47 @@ export function TodayPage() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          <Globe className="inline h-3 w-3 mr-1 -mt-0.5" aria-hidden="true" />
-          Times in <span className="font-medium">{USER_TIMEZONE}</span>
+          <Globe className="inline h-3 w-3 me-1 -mt-0.5" aria-hidden="true" />
+          {t("today.timesIn")} <span className="font-medium">{USER_TIMEZONE}</span>
         </p>
       </header>
 
       {!hasAnyHabits ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <h2 className="font-display text-xl">Welcome to Cadence</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-            Start by creating your first habit — pick a target and a schedule, and it will show up
-            here every day it&apos;s due.
-          </p>
+          <h2 className="font-display text-xl">{t("today.welcomeTitle")}</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("today.welcomeDesc")}</p>
           <Button className="mt-5" onClick={() => editor.open()}>
-            <Plus className="mr-1 h-4 w-4" /> Create your first habit
+            <Plus className="me-1 h-4 w-4" /> {t("today.createFirst")}
           </Button>
         </div>
       ) : due.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <h2 className="font-display text-xl">Nothing scheduled for today</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-            Your habits aren&apos;t due today. You can still create a new one or check back on your
-            scheduled days.
-          </p>
+          <h2 className="font-display text-xl">{t("today.nothingTitle")}</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("today.nothingDesc")}</p>
           <Button className="mt-5" onClick={() => editor.open()}>
-            <Plus className="mr-1 h-4 w-4" /> New habit
+            <Plus className="me-1 h-4 w-4" /> {t("today.newHabit")}
           </Button>
         </div>
       ) : (
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search habits…"
-                className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
-                aria-label="Search habits"
+                placeholder={t("today.searchPlaceholder")}
+                className="h-11 ps-10 [&::-webkit-search-cancel-button]:appearance-none"
+                aria-label={t("today.searchPlaceholder", "Search habits…")}
               />
               {query ? (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
-                  aria-label="Clear search"
+                  className="absolute end-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={t("today.clearSearch", "Clear search")}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -327,7 +326,7 @@ export function TodayPage() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  {FILTER_LABELS[mode]}
+                  {mode === "all" ? t("today.filterAll") : mode === "pending" ? t("today.filterPending") : t("today.filterDone")}
                 </button>
               ))}
             </div>
@@ -335,7 +334,7 @@ export function TodayPage() {
 
           {filtered.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              No habits match your search.
+              {t("today.noMatch")}
             </p>
           ) : (
             <DndContext
@@ -348,7 +347,7 @@ export function TodayPage() {
                 {filter !== "completed" && pending.length > 0 ? (
                   <section className="space-y-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      To do
+                      {t("today.sectionTodo")}
                     </h2>
                     <SortableContext
                       items={pending.map((h) => h.id)}
@@ -371,7 +370,7 @@ export function TodayPage() {
                 {filter !== "pending" && completed.length > 0 ? (
                   <section className="space-y-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Completed
+                      {t("today.sectionCompleted")}
                     </h2>
                     <ul className="cadence-stagger space-y-3">
                       {completed.map((habit) => (
@@ -394,13 +393,13 @@ export function TodayPage() {
       {/* Mobile FAB — floats above the bottom nav and the timer bar */}
       <button
         type="button"
-        aria-label="Create habit"
+        aria-label={t("habit.createHabit", "Create habit")}
         onClick={() => editor.open()}
         style={{
           bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
         }}
         className={cn(
-          "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
+          "fixed end-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
           "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
           "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
         )}
@@ -411,15 +410,15 @@ export function TodayPage() {
       <ResponsiveSheet
         open={archivedOpen}
         onOpenChange={setArchivedOpen}
-        title="Archived Habits"
-        description="Manage your archived habits. Restore them to active view or delete them permanently."
+        title={t("today.archivedHabits")}
+        description={t("today.archivedHabitsDesc")}
       >
         {archivedHabits.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             <Archive className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
-            <p className="font-medium text-foreground">No archived habits yet</p>
+            <p className="font-medium text-foreground">{t("today.noArchived")}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Habits you archive will appear here.
+              {t("today.noArchivedDesc")}
             </p>
           </div>
         ) : (
@@ -451,7 +450,7 @@ export function TodayPage() {
                           role="button"
                           tabIndex={0}
                           className="cursor-pointer truncate text-sm text-muted-foreground hover:text-foreground"
-                          title="Click to expand"
+                          title={t("today.clickToExpand", "Click to expand")}
                           onClick={(e) => {
                             const target = e.currentTarget;
                             target.classList.toggle("truncate");
@@ -476,11 +475,11 @@ export function TodayPage() {
                       size="sm"
                       onClick={() => {
                         archiveHabit(habit.id, false);
-                        toast.success("Habit restored");
+                        toast.success(t("today.habitRestored", "Habit restored"));
                       }}
                       className="gap-1.5 h-8 text-xs font-medium"
                     >
-                      <RotateCcw className="h-3.5 w-3.5" /> Restore
+                      <RotateCcw className="h-3.5 w-3.5" /> {t("today.restore")}
                     </Button>
                     <Button
                       variant="outline"
@@ -488,7 +487,7 @@ export function TodayPage() {
                       onClick={() => setHabitToDelete(habit)}
                       className="gap-1.5 h-8 text-xs font-medium text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
-                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                      <Trash2 className="h-3.5 w-3.5" /> {t("today.delete")}
                     </Button>
                   </div>
                 </li>
@@ -501,25 +500,22 @@ export function TodayPage() {
       <AlertDialog open={!!habitToDelete} onOpenChange={(open) => !open && setHabitToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Permanently delete habit?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete &quot;{habitToDelete?.name}&quot; and all its history
-              from IndexedDB. This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("today.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("today.deleteDesc").replace("{name}", habitToDelete?.name ?? "")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setHabitToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setHabitToDelete(null)}>{t("today.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (habitToDelete) {
                   removeHabit(habitToDelete.id);
-                  toast.success("Habit permanently deleted");
+                  toast.success(t("today.habitPermanentlyDeleted", "Habit permanently deleted"));
                   setHabitToDelete(null);
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete permanently
+              {t("today.deletePermanently")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

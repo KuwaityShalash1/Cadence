@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Plus, X } from "lucide-react";
 import { HexColorPicker } from "react-colorful";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { COLOR_NAMES, colorStyles } from "@/components/icon-map";
 import { useApp } from "@/stores/app-store";
+import { useTranslation } from "@/i18n/context";
 
 /** Matches user-entered HEX colours: `#abc`, `abc`, `#aabbcc`, `aabbcc`. */
 const HEX_INPUT_RE = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -42,11 +45,11 @@ export interface ColorPickerProps {
  */
 export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorPickerProps) {
   const { customColors: savedCustomColors, setCustomColors } = useApp();
+  const { t } = useTranslation();
 
   // Premium custom hex colour popover
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [customHexInput, setCustomHexInput] = useState("#FFFFFF");
-  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   // Track which custom color is in "reveal to delete" mode (touch long-press)
   const [showDeleteForId, setShowDeleteForId] = useState<string | null>(null);
@@ -150,25 +153,10 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Seed the hex field with the active colour each time the popover opens,
-  // and close it on outside click or Escape.
+  // Seed the hex field with the active colour each time the popover opens.
   useEffect(() => {
     if (!isColorPickerOpen) return;
     setCustomHexInput(color.startsWith("#") ? (normalizeHex(color) ?? "#FFFFFF") : "#FFFFFF");
-    function handlePointerDown(e: MouseEvent) {
-      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
-        setIsColorPickerOpen(false);
-      }
-    }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsColorPickerOpen(false);
-    }
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
     // `color` intentionally excluded: re-seeding mid-edit would fight the user's typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isColorPickerOpen]);
@@ -190,7 +178,7 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
 
   return (
     <fieldset className="space-y-2">
-      <legend className="mb-2 text-sm font-medium">Color</legend>
+      <legend className="mb-2 text-sm font-medium">{t("colorPicker.legend")}</legend>
       <div className="flex flex-wrap items-center gap-3 pb-2">
         {/* 1. Predefined Colors */}
         {colors.map((c) => (
@@ -199,7 +187,7 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
             type="button"
             onClick={() => setColor(c.id)}
             /// Colour-only swatch: the palette name is the accessible label.
-            aria-label={`Use ${c.id} color`}
+            aria-label={t("colorPicker.useColorAria", { color: c.id })}
             aria-pressed={color === c.id}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition hover:scale-110 active:scale-95 shrink-0 ${c.value}`}
           >
@@ -224,7 +212,7 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
               onClick={() => setColor(customHex)}
               style={{ backgroundColor: customHex }}
               /// Swatch has no text, so the saved HEX value names the button.
-              aria-label={`Use saved color ${customHex}`}
+              aria-label={t("colorPicker.useSavedColorAria", { hex: customHex })}
               aria-pressed={color === customHex}
               className="w-8 h-8 rounded-full flex items-center justify-center transition hover:scale-110 active:scale-95 shadow-sm border border-slate-200 dark:border-slate-700"
             >
@@ -241,50 +229,47 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
                 if (color === customHex) setColor(colors[0]?.id ?? "teal"); // Reset if deleting active color
               }}
               // Show delete button when: (1) desktop hover OR (2) touch long-press revealed it
-              className={`absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 hover:scale-110 ${
+              className={`absolute -top-1.5 -end-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 hover:scale-110 ${
                 showDeleteForId === customHex ? "opacity-100" : ""
               }`}
-              title="Delete color"
-              aria-label={`Delete saved color ${customHex}`}
+              title={t("colorPicker.deleteColor")}
+              aria-label={t("colorPicker.deleteColorAria", { hex: customHex })}
             >
               <X className="w-2.5 h-2.5" />
             </button>
           </div>
         ))}
 
-        {/* 3. Premium Custom Hex Colour Popover (theme-aware, no native OS dialog) */}
-        <div
-          ref={colorPickerRef}
-          className="relative shrink-0 flex items-center ml-1 pl-2 border-l border-slate-200 dark:border-slate-700"
-        >
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded={isColorPickerOpen}
-            aria-label="Add custom color"
-            onClick={() => setIsColorPickerOpen(!isColorPickerOpen)}
-            className="w-8 h-8 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-400 dark:hover:border-slate-400 transition-colors bg-transparent"
-            title="Add custom color"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+        {/* 3. Premium Custom Hex Colour Popover (Portaled to body, auto-colliding & boundary-aware) */}
+        <div className="shrink-0 flex items-center ms-1 ps-2 border-s border-slate-200 dark:border-slate-700">
+          <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={t("colorPicker.addCustomColor")}
+                className="w-8 h-8 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:border-slate-400 dark:hover:border-slate-400 transition-colors bg-transparent"
+                title={t("colorPicker.addCustomColor")}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </PopoverTrigger>
 
-          {/* PREMIUM INTERACTIVE COLOR POPOVER */}
-          {isColorPickerOpen && (
-            <div
-              role="dialog"
-              aria-label="Custom color picker"
-              className="absolute z-50 bottom-full mb-3 left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 w-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 flex flex-col gap-4"
+            <PopoverContent
+              side="top"
+              align="center"
+              sideOffset={8}
+              collisionPadding={16}
+              className="z-50 w-auto min-w-[240px] max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 fade-in duration-200"
             >
               {/* Header */}
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Pick a Color
+                  {t("colorPicker.pickAColor")}
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsColorPickerOpen(false)}
-                  aria-label="Close color picker"
+                  aria-label={t("colorPicker.closeColorPicker")}
                   className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors bg-slate-100 dark:bg-slate-800 rounded-full p-1"
                 >
                   <X className="w-4 h-4" />
@@ -320,7 +305,7 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
                   }}
                   spellCheck={false}
                   maxLength={7}
-                  aria-label="Custom hex color"
+                  aria-label={t("colorPicker.customHexColor")}
                   placeholder="#FF5733"
                   className="flex-1 w-full px-3 py-1.5 text-xs font-mono uppercase rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors"
                 />
@@ -333,13 +318,13 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
                 onClick={saveAndApplyCustomHex}
                 className="w-full py-2 text-xs font-bold rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 transition-opacity"
               >
-                Save & Apply
+                {t("colorPicker.saveAndApply")}
               </button>
 
-              {/* Triangle Arrow (Pointer) */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 sm:left-4 sm:translate-x-0 w-4 h-4 bg-white dark:bg-slate-900 border-b border-r border-slate-200 dark:border-slate-800 rotate-45" />
-            </div>
-          )}
+              {/* Popover Arrow */}
+              <PopoverPrimitive.Arrow className="fill-white dark:fill-slate-900" />
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* 4. Save Button (Only shows when picking a new unsaved color) */}
@@ -347,9 +332,9 @@ export function ColorPicker({ selectedColor: color, onChange: setColor }: ColorP
           <button
             type="button"
             onClick={() => setCustomColors([...savedCustomColors, color])}
-            className="text-[10px] font-bold bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity shrink-0 ml-1"
+            className="text-[10px] font-bold bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity shrink-0 ms-1"
           >
-            Save
+            {t("common.save", "Save")}
           </button>
         )}
       </div>

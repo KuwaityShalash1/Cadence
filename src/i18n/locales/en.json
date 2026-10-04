@@ -1,4 +1,4 @@
-export const en = {
+{
   "nav.today": "Today",
   "nav.calendar": "Calendar",
   "nav.stats": "Analytics",
@@ -368,11 +368,6 @@ export const en = {
   "command.themeUpdatedDark": "Switched to Dark Mode",
   "command.themeUpdatedLight": "Switched to Light Mode",
   "command.themeUpdatedSystem": "Switched to System theme",
-  "command.groupLanguage": "Language",
-  "command.switchArabic": "Switch to Arabic",
-  "command.switchEnglish": "Switch to English",
-  "command.languageUpdatedArabic": "Switched to Arabic",
-  "command.languageUpdatedEnglish": "Switched to English",
   "command.shortcutsHelp": "Keyboard Shortcuts Help",
   "command.active": "Active",
   "command.feedback": "Report a Bug / Feedback",
@@ -512,9 +507,7 @@ export const en = {
   "quitTracker.relapsePlural": "relapses",
   "quitTracker.lastRelapse": "Last",
   "quitTracker.streakWas": "Streak was",
-  "quitTracker.editTrackerAria": "Edit tracker",
   "quitTracker.deleteTrackerAria": "Delete tracker",
-  "quitTracker.noMatch": "No trackers match your search.",
   "quitTracker.minutes": "Minutes",
   "quitTracker.units": "Units",
   "quitTracker.todaysTotal": "Today's total",
@@ -807,23 +800,5 @@ export const en = {
   "quitSuggestion.compulsiveSnacking.name": "Compulsive Snacking",
   "quitSuggestion.compulsiveSnacking.badge": "Nutrition",
   "quitSuggestion.avoidingDifficultTasks.name": "Avoiding Difficult Tasks",
-  "quitSuggestion.avoidingDifficultTasks.badge": "Growth",
-  "seo.defaultTitle": "Cadence | Minimalist Habit Tracker",
-  "seo.defaultDesc": "Cadence is an offline-first habit tracker for building daily routines, tracking goals, and staying consistent without ads or account requirements.",
-  "seo.todayTitle": "Today — Cadence Habit Tracker",
-  "seo.todayDesc": "Track your daily habits, log progress, and build streaks with Cadence.",
-  "seo.calendarTitle": "Calendar — Cadence Habit Tracker",
-  "seo.calendarDesc": "Review your habit consistency with interactive calendar heatmaps and completion history.",
-  "seo.analyticsTitle": "Analytics — Cadence Habit Tracker",
-  "seo.analyticsDesc": "Visualize your habit completion rates, trends, and discipline scores with detailed analytics.",
-  "seo.goalsTitle": "Goals — Cadence Habit Tracker",
-  "seo.goalsDesc": "Set and achieve long-term milestones linked to your daily habits.",
-  "seo.routinesTitle": "Routines — Cadence Habit Tracker",
-  "seo.routinesDesc": "Chain habits into morning, afternoon, and evening routines for effortless flow.",
-  "seo.quitTrackerTitle": "Quit Tracker — Cadence Habit Tracker",
-  "seo.quitTrackerDesc": "Break unwanted habits with abstinence streaks or gradual reduction strategies.",
-  "seo.settingsTitle": "Settings — Cadence Habit Tracker",
-  "seo.settingsDesc": "Manage your profile, theme, language, notifications, and local Cadence data.",
-  "seo.aboutTitle": "About Us — Cadence Habit Tracker",
-  "seo.aboutDesc": "Learn about Cadence's mission for private, distraction-free habit building."
-};
+  "quitSuggestion.avoidingDifficultTasks.badge": "Growth"
+}

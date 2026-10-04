@@ -28,7 +28,7 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedTrigger) {
-      toast.error("Please select a trigger category");
+      toast.error(t("quitTracker.selectTriggerCategory"));
       return;
     }
 
@@ -41,10 +41,10 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
 
     recordRelapse(habitId, selectedTrigger, detailedReason);
     playFailureSound();
-    toast.success(`Relapse logged for "${habitTitle}". Timer reset. Stay strong! 💪`, {
+    toast.success(t("quitTracker.relapseLoggedToast", { title: habitTitle }), {
       action: trackerSnapshot
         ? {
-            label: t("common.undo", "Undo"),
+            label: t("common.undo"),
             onClick: () => undoLastRelapse(trackerSnapshot),
           }
         : undefined,
@@ -59,7 +59,7 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
     <ResponsiveSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={t("relapseModal.title", "Record Relapse & Analyze Trigger")}
+      title={t("relapseModal.title")}
       description={t(
         "relapseModal.description",
         `Acknowledge what happened with "${habitTitle}". Reflecting helps build iron will.`,
@@ -69,16 +69,13 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
         <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <p>
-            {t(
-              "relapseModal.banner",
-              "Relapsing is part of the journey. The key is understanding why it happened so you can prevent it next time.",
-            )}
+            {t("relapseModal.banner")}
           </p>
         </div>
 
         <div className="space-y-3">
           <Label className="text-base font-semibold">
-            {t("relapseModal.triggerPrompt", "1. Real Contextual Trigger")}
+            {t("relapseModal.triggerPrompt")}
           </Label>
           <div className="grid gap-2.5">
             {TRIGGER_OPTIONS.map((opt) => {
@@ -91,7 +88,7 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
                   type="button"
                   onClick={() => setSelectedTrigger(opt.id)}
                   className={cn(
-                    "flex items-start gap-3.5 rounded-xl border p-3.5 text-left transition-all",
+                    "flex items-start gap-3.5 rounded-xl border p-3.5 text-start transition-all",
                     active
                       ? "border-primary bg-primary/10 text-primary shadow-sm"
                       : "border-border bg-card text-card-foreground hover:bg-muted/50",
@@ -110,16 +107,13 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
 
         <div className="space-y-2">
           <Label htmlFor="detailed-reason" className="text-base font-semibold">
-            {t("relapseModal.reasonPrompt", "2. Detailed Notes / Specific Context (Optional)")}
+            {t("relapseModal.reasonPrompt")}
           </Label>
           <Textarea
             id="detailed-reason"
             value={detailedReason}
             onChange={(e) => setDetailedReason(e.target.value)}
-            placeholder={t(
-              "relapseModal.reasonPlaceholder",
-              "What exactly were you doing or feeling right before? E.g., working late on project X...",
-            )}
+            placeholder={t("relapseModal.reasonPlaceholder")}
             rows={3}
             className="resize-none"
           />
@@ -132,10 +126,10 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
             onClick={() => onOpenChange(false)}
             className="h-11"
           >
-            {t("settings.cancel", "Cancel")}
+            {t("common.cancel")}
           </Button>
           <Button type="submit" variant="destructive" className="h-11 sm:min-w-40 font-semibold">
-            {t("relapseModal.submit", "Reset Timer & Log")}
+            {t("relapseModal.submit")}
           </Button>
         </div>
       </form>

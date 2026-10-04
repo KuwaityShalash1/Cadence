@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Sparkles, BarChart2, ShieldAlert } from "lucide-react";
 
 import { Progress } from "@/components/ui/progress";
+import { useTranslation } from "@/i18n/context";
 import type { BadHabit } from "@/types";
 import { TRIGGER_OPTIONS } from "./constants";
 
@@ -10,6 +11,7 @@ interface TriggerInsightsCardProps {
 }
 
 export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
+  const { t } = useTranslation();
   const insights = useMemo(() => {
     const counts: Record<string, number> = {};
     let totalRelapses = 0;
@@ -50,9 +52,9 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
             <Sparkles className="h-5 w-5" />
           </span>
           <div>
-            <h3 className="font-display text-lg font-bold">Trigger Insights</h3>
+            <h3 className="font-display text-lg font-bold">{t("quitTracker.triggerInsights")}</h3>
             <p className="text-xs text-muted-foreground">
-              Log relapses to discover your personal trigger patterns and prevent setbacks.
+              {t("quitTracker.triggerInsightsDesc")}
             </p>
           </div>
         </div>
@@ -61,6 +63,9 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
   }
 
   const topTrigger = insights.items[0];
+  const topTriggerName = topTrigger
+    ? (t(`trigger.${topTrigger.id}` as any) || topTrigger.label).split("/")[0]?.trim()
+    : "";
 
   return (
     <div className="w-full space-y-5 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -70,10 +75,9 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
             <BarChart2 className="h-5 w-5" />
           </span>
           <div>
-            <h3 className="font-display text-lg font-bold">Relapse Trigger Insights</h3>
+            <h3 className="font-display text-lg font-bold">{t("quitTracker.relapseTriggerInsights")}</h3>
             <p className="text-xs text-muted-foreground">
-              Based on {insights.totalRelapses} total recorded relapse
-              {insights.totalRelapses === 1 ? "" : "s"}.
+              {t("quitTracker.basedOnRelapses", { count: insights.totalRelapses })}
             </p>
           </div>
         </div>
@@ -82,31 +86,37 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
           <div className="hidden sm:flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
             <ShieldAlert className="h-4 w-4 shrink-0" />
             <span>
-              Top Trigger: {topTrigger.percentage}% {topTrigger.label.split("/")[0]}
+              {t("quitTracker.topTrigger", {
+                percent: topTrigger.percentage,
+                name: topTriggerName,
+              })}
             </span>
           </div>
         )}
       </div>
 
       <div className="space-y-4 pt-1">
-        {insights.items.map((item) => (
-          <div key={item.id} className="space-y-1.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 font-medium">
-                <span>{item.emoji}</span>
-                <span>{item.label}</span>
-              </span>
-              <span className="font-semibold text-muted-foreground">
-                {item.count} ({item.percentage}%)
-              </span>
+        {insights.items.map((item) => {
+          const itemLabel = t(`trigger.${item.id}` as any) || item.label;
+          return (
+            <div key={item.id} className="space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 font-medium">
+                  <span>{item.emoji}</span>
+                  <span>{itemLabel}</span>
+                </span>
+                <span className="font-semibold text-muted-foreground">
+                  {item.count} ({item.percentage}%)
+                </span>
+              </div>
+              <Progress
+                value={item.percentage}
+                aria-label={t("quitTracker.relapseShareFor", { name: itemLabel })}
+                className="h-2.5"
+              />
             </div>
-            <Progress
-              value={item.percentage}
-              aria-label={`Relapse share for ${item.label}`}
-              className="h-2.5"
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

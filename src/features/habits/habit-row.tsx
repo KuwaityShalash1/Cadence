@@ -17,6 +17,7 @@ import { toast } from "sonner";
 
 import { HabitIcon, colorStyles } from "@/components/icon-map";
 import { useHabitEditor } from "@/features/habits/habit-editor";
+import { useTranslation } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -110,6 +111,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   },
   ref,
 ) {
+  const { t, isRtl } = useTranslation();
   const {
     logMap,
     incrementHabit,
@@ -248,10 +250,10 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   const progressText =
     habit.type === "boolean"
       ? isFrozen
-        ? "Frozen"
+        ? t("habitRow.frozen", "Frozen")
         : done
-          ? "Completed"
-          : "Pending"
+          ? t("habitRow.completed", "Completed")
+          : t("habitRow.pending", "Pending")
       : `${value} / ${target}${habit.unit ? ` ${habit.unit}` : ""}`;
   /** Numeric shorthand used by the mobile header ("0/30"). */
   const compactProgressText = habit.type === "boolean" ? progressText : `${value}/${target}`;
@@ -287,14 +289,16 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   /**
    * Dynamic progress fill — a full-height accent layer that grows with the
    * day's completion, kept faint (8% light / 12% dark) so text stays sharp.
+   * Uses logical `start-0` so the fill originates from the inline start in both
+   * LTR (left) and RTL (right) modes, preventing RTL background tearing.
    */
   const progressFillClass = cn(
-    "pointer-events-none absolute inset-y-0 left-0 bg-(--habit-color) transition-all duration-500 ease-out",
+    "pointer-events-none absolute inset-y-0 start-0 bg-(--habit-color) transition-all duration-500 ease-out",
     "opacity-[0.08] dark:opacity-[0.12]",
   );
-  /** Ambient accent glow — a blurred colour blob fading from the top-left corner. */
+  /** Ambient accent glow — a blurred colour blob fading from the top-start corner. */
   const accentGlowClass = cn(
-    "pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-(--habit-color) blur-3xl",
+    "pointer-events-none absolute -top-24 -start-24 h-64 w-64 rounded-full bg-(--habit-color) blur-3xl",
     "opacity-[0.06] dark:opacity-[0.1]",
   );
   /**
@@ -373,16 +377,16 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
    * animates smoothly as the value changes; width is pre-clamped by `pct`.
    */
   const progressBarTrackClass =
-    "w-full h-2 bg-slate-200 dark:bg-slate-800/90 rounded-full overflow-hidden my-3";
+    "w-full h-2 bg-slate-200 dark:bg-slate-800/90 rounded-full overflow-hidden my-3 flex";
   const progressBarFillClass = "h-full rounded-full transition-all duration-500 ease-out";
 
   function complete() {
     if (readOnlyMode) {
-      toast.info("You cannot log habits for future dates");
+      toast.info(t("habitRow.futureDateError", "You cannot log habits for future dates"));
       return;
     }
     if (isFrozen) {
-      toast.error("Habit is frozen for today");
+      toast.error(t("habitRow.frozenError", "Habit is frozen for today"));
       return;
     }
     toggleHabit(habit.id, date);
@@ -396,11 +400,11 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
 
   function handleIncrement(amount: number) {
     if (readOnlyMode) {
-      toast.info("You cannot log habits for future dates");
+      toast.info(t("habitRow.futureDateError", "You cannot log habits for future dates"));
       return;
     }
     if (isFrozen) {
-      toast.error("Habit is frozen for today");
+      toast.error(t("habitRow.frozenError", "Habit is frozen for today"));
       return;
     }
     incrementHabit(habit.id, date, amount);
@@ -408,19 +412,21 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
 
   function handleStartTimer() {
     if (readOnlyMode) {
-      toast.info("You cannot log habits for future dates");
+      toast.info(t("habitRow.futureDateError", "You cannot log habits for future dates"));
       return;
     }
     if (isFrozen) {
-      toast.error("Habit is frozen for today");
+      toast.error(t("habitRow.frozenError", "Habit is frozen for today"));
       return;
     }
     if (timer && timer.habitId !== habit.id) {
-      toast.error("Another timer is already running");
+      toast.error(t("habitRow.timerRunningError", "Another timer is already running"));
       return;
     }
     startTimer(habit.id);
-    toast.success(`Timer started for ${habit.name}`);
+    toast.success(
+      t("habitRow.timerStarted", "Timer started for {name}").replace("{name}", habit.name),
+    );
   }
 
   function cancelLongPress() {
@@ -487,7 +493,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
 
     const dx = t.clientX - start.x;
     const dy = Math.abs(t.clientY - start.y);
-    if (dx > 90 && dy < 50 && !done && !isFrozen) complete();
+    const isSwipeComplete = isRtl ? dx < -90 : dx > 90;
+    if (isSwipeComplete && dy < 50 && !done && !isFrozen) complete();
   }
 
   function handleTouchCancel() {
@@ -549,7 +556,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   const handleFreezeToggle = () => {
     // Future dates are preview-only: no freeze / skip / clear mutations allowed.
     if (readOnlyMode) {
-      toast.info("You cannot log habits for future dates");
+      toast.info(t("habitRow.futureDateError", "You cannot log habits for future dates"));
       return;
     }
     const result = freezeHabit(habit.id, date);
@@ -561,15 +568,19 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         daysUntilReset: result.daysUntilReset,
         ...(result.habitName ? { habitName: result.habitName } : {}),
       });
-      if (result.stoppedTimer) toast.info("Timer stopped — habit frozen");
+      if (result.stoppedTimer) toast.info(t("habitRow.timerStoppedFrozen", "Timer stopped — habit frozen"));
       return;
     }
     if (result.reason === "already-completed") {
-      toast.info("Already completed today — no freeze needed");
+      toast.info(t("habitRow.alreadyCompletedFreeze", "Already completed today — no freeze needed"));
     } else if (result.reason === "limit") {
-      toast.error(`No freezes left this month — ${result.used} of ${result.max} used`);
+      toast.error(
+        t("habitRow.noFreezesLeftMonth", "No freezes left this month — {used} of {max} used")
+          .replace("{used}", String(result.used))
+          .replace("{max}", String(result.max)),
+      );
     } else if (result.ok) {
-      toast.success("Streak unfrozen — back in action");
+      toast.success(t("habitRow.streakUnfrozen", "Streak unfrozen — back in action"));
     }
   };
 
@@ -584,10 +595,13 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     {
       key: "freeze",
       label: isFrozen
-        ? "Unfreeze Streak"
+        ? t("habitRow.unfreezeStreak", "Unfreeze Streak")
         : freezesExhausted
-          ? "No freezes left this month"
-          : `Freeze Streak (${freezeQuota.max - freezeQuota.used} left)`,
+          ? t("habitRow.noFreezesLeftShort", "No freezes left this month")
+          : t("habitRow.freezeStreakWithCount", "Freeze Streak ({count} left)").replace(
+              "{count}",
+              String(freezeQuota.max - freezeQuota.used),
+            ),
       Icon: Snowflake,
       iconClassName: "text-cyan-400",
       disabled: freezesExhausted || readOnlyMode,
@@ -603,27 +617,33 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     },
     {
       key: "edit",
-      label: "Edit habit",
+      label: t("habitRow.editHabit", "Edit habit"),
       Icon: Pencil,
       onSelect: () => editor.open(habit),
     },
     {
       key: "archive",
-      label: habit.archived ? "Unarchive habit" : "Archive habit",
+      label: habit.archived
+        ? t("habitRow.unarchiveHabit", "Unarchive habit")
+        : t("habitRow.archiveHabit", "Archive habit"),
       Icon: Archive,
       onSelect: () => {
         archiveHabit(habit.id, !habit.archived);
-        toast.success(habit.archived ? "Habit unarchived" : "Habit archived");
+        toast.success(
+          habit.archived
+            ? t("habitRow.habitUnarchived", "Habit unarchived")
+            : t("habitRow.habitArchived", "Habit archived"),
+        );
       },
     },
     {
       key: "skip",
-      label: "Skip today",
+      label: t("habitRow.skipToday", "Skip today"),
       Icon: SkipForward,
       disabled: readOnlyMode,
       onSelect: () => {
         if (readOnlyMode) {
-          toast.info("You cannot log habits for future dates");
+          toast.info(t("habitRow.futureDateError", "You cannot log habits for future dates"));
           return;
         }
         skipHabit(habit.id, date);
@@ -631,12 +651,12 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     },
     {
       key: "clear",
-      label: "Clear this day",
+      label: t("habitRow.clearDay", "Clear this day"),
       Icon: RotateCcw,
       disabled: readOnlyMode,
       onSelect: () => {
         if (readOnlyMode) {
-          toast.info("You cannot log habits for future dates");
+          toast.info(t("habitRow.futureDateError", "You cannot log habits for future dates"));
           return;
         }
         clearLog(habit.id, date);
@@ -644,7 +664,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
     },
     {
       key: "delete",
-      label: "Delete habit",
+      label: t("habitRow.deleteHabit", "Delete habit"),
       Icon: Trash2,
       destructive: true,
       onSelect: () => {
@@ -654,9 +674,9 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         const habitToRestore = structuredClone(habit);
         removeHabit(habit.id);
         playDeleteHabitSound();
-        toast.success("Habit deleted", {
+        toast.success(t("habitRow.habitDeleted", "Habit deleted"), {
           action: {
-            label: "Undo",
+            label: t("common.undo", "Undo"),
             onClick: () => restoreHabit(habitToRestore),
           },
           duration: 5000, // Give them 5 seconds to undo
@@ -680,7 +700,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             {...(disabled ? { disabled: true } : {})}
             onSelect={onSelect}
           >
-            <Icon className={cn("mr-2 h-4 w-4", iconClassName)} />
+            <Icon className={cn("me-2 h-4 w-4", iconClassName)} />
             {label}
           </Item>
         ))}
@@ -693,9 +713,11 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       size="sm"
       variant="outline"
       aria-label={
-        readOnlyMode ? "You cannot log habits for future dates" : "Start a timer for this habit"
+        readOnlyMode
+          ? t("habitRow.futureDateError", "You cannot log habits for future dates")
+          : t("habitRow.startTimerAria", "Start a timer for this habit")
       }
-      title={readOnlyMode ? "You cannot log habits for future dates" : undefined}
+      title={readOnlyMode ? t("habitRow.futureDateError", "You cannot log habits for future dates") : undefined}
       disabled={mutationsDisabled}
       className={cn(
         "flex h-11 px-7 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 text-sm font-semibold text-emerald-700 transition-all",
@@ -710,7 +732,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       }}
     >
       <Play className="h-4 w-4 fill-current" />
-      Timer
+      {t("habitRow.timer", "Timer")}
     </Button>
   );
 
@@ -725,7 +747,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         <Button
           size="icon"
           variant="ghost"
-          aria-label="Habit actions"
+          aria-label={t("habitRow.actionsAria", "Habit actions")}
           className={buttonClassName}
           onClick={(e) => {
             e.stopPropagation();
@@ -745,14 +767,14 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       disabled={mutationsDisabled}
       aria-label={
         readOnlyMode
-          ? "You cannot log habits for future dates"
+          ? t("habitRow.futureDateError", "You cannot log habits for future dates")
           : isFrozen
-            ? "Frozen for today"
+            ? t("habitRow.frozenTodayAria", "Frozen for today")
             : done
-              ? "Mark habit as not done"
-              : "Mark habit as complete"
+              ? t("habitRow.markNotDoneAria", "Mark habit as not done")
+              : t("habitRow.markCompleteAria", "Mark habit as complete")
       }
-      title={readOnlyMode ? "You cannot log habits for future dates" : undefined}
+      title={readOnlyMode ? t("habitRow.futureDateError", "You cannot log habits for future dates") : undefined}
       className={cn(
         "shrink-0 items-center gap-2 rounded-xl border-transparent font-semibold shadow-sm transition-all",
         isFrozen
@@ -774,7 +796,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       ) : (
         <Check className="h-4 w-4" />
       )}
-      {withLabel ? (readOnlyMode ? "Upcoming" : isFrozen ? "Frozen" : done ? "Completed" : "Complete") : null}
+      {withLabel ? (readOnlyMode ? t("habitRow.upcoming", "Upcoming") : isFrozen ? t("habitRow.frozen", "Frozen") : done ? t("habitRow.completed", "Completed") : t("habitRow.complete", "Complete")) : null}
     </Button>
   );
 
@@ -803,8 +825,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         size="sm"
         variant="outline"
         disabled={mutationsDisabled}
-        aria-label={readOnlyMode ? "You cannot log habits for future dates" : ariaLabel}
-        title={readOnlyMode ? "You cannot log habits for future dates" : undefined}
+        aria-label={readOnlyMode ? t("habitRow.futureDateError", "You cannot log habits for future dates") : ariaLabel}
+        title={readOnlyMode ? t("habitRow.futureDateError", "You cannot log habits for future dates") : undefined}
         className={cn(tone, readOnlyMode && "opacity-50 cursor-not-allowed")}
         onClick={(e) => {
           e.stopPropagation();
@@ -819,11 +841,15 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
   const renderCounterCluster = () => (
     <div className="flex items-center gap-3">
       {/* Left side — configured quick decrement jumps (e.g. -5, -10), then the standard −1. */}
-      {decrements.map((dec) => renderStepperButton(`-${dec}`, -dec, `Subtract ${dec}`))}
-      {renderStepperButton("-1", -1, "Subtract 1")}
+      {decrements.map((dec) =>
+        renderStepperButton(`-${dec}`, -dec, t("habitRow.subtractAmount", `Subtract ${dec}`).replace("{amount}", String(dec))),
+      )}
+      {renderStepperButton("-1", -1, t("habitRow.subtractOne", "Subtract 1"))}
       {/* Right side — the standard +1, then configured quick increment jumps (e.g. +5, +10). */}
-      {renderStepperButton("+1", 1, "Add 1")}
-      {increments.map((inc) => renderStepperButton(`+${inc}`, inc, `Add ${inc}`))}
+      {renderStepperButton("+1", 1, t("habitRow.addOne", "Add 1"))}
+      {increments.map((inc) =>
+        renderStepperButton(`+${inc}`, inc, t("habitRow.addAmount", `Add ${inc}`).replace("{amount}", String(inc))),
+      )}
     </div>
   );
 
@@ -863,7 +889,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           <span
             role="button"
             tabIndex={0}
-            aria-label={`Edit ${habit.name}`}
+            aria-label={t("habitRow.editNamedHabit").replace("{name}", habit.name)}
             className={cn(
               "flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-transform hover:scale-105",
               accentTileClass,
@@ -887,7 +913,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
                 role="button"
                 tabIndex={0}
                 aria-expanded={isDescriptionExpanded}
-                title={isDescriptionExpanded ? "Collapse description" : "Expand description"}
+                title={isDescriptionExpanded ? t("habitRow.collapseDescription") : t("habitRow.expandDescription")}
                 className={cn(
                   "text-xs md:text-sm font-normal text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 cursor-pointer transition hover:text-slate-600 dark:hover:text-slate-300",
                   isDescriptionExpanded && "line-clamp-none break-words",
@@ -908,7 +934,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
               </p>
             ) : (
               <p className="mt-1 truncate text-xs md:text-sm font-normal text-slate-500 dark:text-slate-400">
-                {describeSchedule(habit.schedule)}
+                {describeSchedule(habit.schedule, t)}
               </p>
             )}
 
@@ -916,18 +942,18 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <span
                 className={cn(streakBadgeClass, "cursor-pointer")}
-                title={`${currentStreak} ${currentStreak === 1 ? "day" : "days"} streak`}
+                title={currentStreak === 1 ? t("habitRow.oneDayStreak") : t("habitRow.daysStreak").replace("{count}", String(currentStreak))}
               >
-                🔥 {currentStreak} {currentStreak === 1 ? "day" : "days"}
+                🔥 {currentStreak} {currentStreak === 1 ? t("habitRow.day") : t("habitRow.days")}
               </span>
               {habit.description?.trim() ? (
-                <span className={recurrenceBadgeClass}>{describeSchedule(habit.schedule)}</span>
+                <span className={recurrenceBadgeClass}>{describeSchedule(habit.schedule, t)}</span>
               ) : null}
               {done && !skipped && !isFrozen ? (
-                <span className={doneBadgeClass}>✓ Done</span>
+                <span className={doneBadgeClass}>✓ {t("habitRow.done")}</span>
               ) : null}
-              {isFrozen ? <span className={frozenBadgeClass}>❄️ Frozen</span> : null}
-              {skipped ? <span className={recurrenceBadgeClass}>Skipped</span> : null}
+              {isFrozen ? <span className={frozenBadgeClass}>❄️ {t("habitRow.frozen")}</span> : null}
+              {skipped ? <span className={recurrenceBadgeClass}>{t("habitRow.skipped")}</span> : null}
             </div>
           </div>
         </div>
@@ -938,7 +964,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             aria-live="polite"
             className="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-300"
           >
-            {progressText}
+            <bdi>{progressText}</bdi>
           </span>
           {renderMenuButton()}
         </div>
@@ -947,7 +973,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       {/* Dedicated visual progress bar — accent fill, smooth width animation */}
       <div
         role="progressbar"
-        aria-label={`Progress for ${habit.name}`}
+        aria-label={t("habitRow.progressFor").replace("{name}", habit.name)}
         aria-valuemin={0}
         aria-valuemax={target}
         aria-valuenow={value}
@@ -966,8 +992,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           <div className="ms-auto flex items-center gap-3">{renderCompleteButton(true)}</div>
         ) : (
           <>
-            <div className="flex items-center gap-3">{renderCounterCluster()}</div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">{renderCounterCluster()}</div>
+            <div className="ms-auto flex items-center gap-3">
               {isTimerHabit ? renderTimerButton() : null}
               {renderCompleteButton(true)}
             </div>
@@ -990,21 +1016,21 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
       disabled={mutationsDisabled}
       aria-label={
         readOnlyMode
-          ? "You cannot log habits for future dates"
+          ? t("habitRow.futureDateError")
           : isFrozen
-            ? "Frozen for today"
+            ? t("habitRow.frozenTodayAria")
             : done
-              ? "Mark habit as not done"
-              : "Mark habit as complete"
+              ? t("habitRow.markNotDoneAria")
+              : t("habitRow.markCompleteAria")
       }
       title={
         readOnlyMode
-          ? "You cannot log habits for future dates"
+          ? t("habitRow.futureDateError")
           : isFrozen
-            ? "Frozen for today — streak protected"
+            ? t("habitRow.frozenProtectedTitle")
             : done
-              ? "Completed — tap to undo"
-              : "Mark complete"
+              ? t("habitRow.completedUndoTitle")
+              : t("habitRow.markCompleteTitle")
       }
       className={cn(
         "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold transition-all",
@@ -1045,11 +1071,11 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           {showMobileStepper ? (
             <>
               {decrements.map((dec) =>
-                renderStepperButton(`-${dec}`, -dec, `Subtract ${dec}`, true),
+                renderStepperButton(`-${dec}`, -dec, t("habitRow.subtractAmount").replace("{amount}", String(dec)), true),
               )}
-              {renderStepperButton("-1", -1, "Subtract 1", true)}
-              {renderStepperButton("+1", 1, "Add 1", true)}
-              {increments.map((inc) => renderStepperButton(`+${inc}`, inc, `Add ${inc}`, true))}
+              {renderStepperButton("-1", -1, t("habitRow.subtractOne"), true)}
+              {renderStepperButton("+1", 1, t("habitRow.addOne"), true)}
+              {increments.map((inc) => renderStepperButton(`+${inc}`, inc, t("habitRow.addAmount").replace("{amount}", String(inc)), true))}
             </>
           ) : null}
           {isTimerHabit ? renderTimerButton("h-10 px-4 text-xs font-semibold") : null}
@@ -1076,21 +1102,21 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         disabled={mutationsDisabled}
         aria-label={
           readOnlyMode
-            ? "You cannot log habits for future dates"
+            ? t("habitRow.futureDateError")
             : isFrozen
-              ? "Frozen for today"
+              ? t("habitRow.frozenTodayAria")
               : isUndo
-                ? "Completed — tap to undo"
-                : "Mark habit as complete"
+                ? t("habitRow.completedUndoTitle")
+                : t("habitRow.markCompleteAria")
         }
         title={
           readOnlyMode
-            ? "You cannot log habits for future dates"
+            ? t("habitRow.futureDateError")
             : isFrozen
-              ? "Frozen for today — streak protected"
+              ? t("habitRow.frozenProtectedTitle")
               : isUndo
-                ? "Completed — tap to undo"
-                : "Mark complete"
+                ? t("habitRow.completedUndoTitle")
+                : t("habitRow.markCompleteTitle")
         }
         className={cn(
           "relative z-10 mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98]",
@@ -1118,14 +1144,14 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           <Check className="h-4 w-4" />
         )}
         {readOnlyMode
-          ? "Upcoming"
+          ? t("habitRow.upcoming")
           : isFrozen
-            ? "Frozen"
+            ? t("habitRow.frozen")
             : isUndo
-              ? "Completed"
+              ? t("habitRow.completed")
               : skipped
-                ? "Skipped"
-                : "Complete"}
+                ? t("habitRow.skipped")
+                : t("habitRow.complete")}
       </button>
     );
   };
@@ -1171,7 +1197,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           <span
             role="button"
             tabIndex={0}
-            aria-label={`Edit ${habit.name}`}
+            aria-label={t("habitRow.editNamedHabit").replace("{name}", habit.name)}
             className={cn(
               "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-transform hover:scale-105",
               accentTileClass,
@@ -1187,7 +1213,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
           </span>
 
           {/* Left info column — never squeezed by the trailing action buttons */}
-          <div className="min-w-0 flex-1 pr-2">
+          <div className="min-w-0 flex-1 pe-2">
             <h3
               className="cursor-pointer truncate text-base md:text-lg font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-50"
               onClick={() => editor.open(habit)}
@@ -1201,7 +1227,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
                 role="button"
                 tabIndex={0}
                 aria-expanded={isDescriptionExpanded}
-                title={isDescriptionExpanded ? "Collapse description" : "Expand description"}
+                title={isDescriptionExpanded ? t("habitRow.collapseDescription") : t("habitRow.expandDescription")}
                 className={cn(
                   "text-xs md:text-sm font-normal text-slate-500 dark:text-slate-400 mt-1 cursor-pointer transition-colors hover:text-slate-600 dark:hover:text-slate-300",
                   isDescriptionExpanded ? "whitespace-normal break-words" : "line-clamp-1",
@@ -1226,7 +1252,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
               <span
                 className={cn(streakBadgeClass, "shrink-0 cursor-pointer")}
-                title={`${currentStreak} ${currentStreak === 1 ? "day" : "days"} streak`}
+                title={currentStreak === 1 ? t("habitRow.oneDayStreak") : t("habitRow.daysStreak").replace("{count}", String(currentStreak))}
               >
                 🔥 {currentStreak}
               </span>
@@ -1235,9 +1261,11 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
                 className="cursor-pointer truncate text-[11px] font-medium text-slate-500 dark:text-slate-400"
                 onClick={() => editor.open(habit)}
               >
-                {habit.type === "boolean"
-                  ? progressText
-                  : `${compactProgressText}${habit.unit ? ` ${habit.unit}` : ""} · ${describeSchedule(habit.schedule)}`}
+                <bdi>
+                  {habit.type === "boolean"
+                    ? progressText
+                    : `${compactProgressText}${habit.unit ? ` ${habit.unit}` : ""} · ${describeSchedule(habit.schedule, t)}`}
+                </bdi>
               </span>
             </div>
           </div>
@@ -1248,8 +1276,8 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
             <button
               type="button"
               aria-expanded={isExpanded}
-              aria-label={isExpanded ? "Hide quick actions" : "Show quick actions"}
-              title={isExpanded ? "Hide quick actions" : "Show quick actions"}
+              aria-label={isExpanded ? t("habitRow.hideQuickActions") : t("habitRow.showQuickActions")}
+              title={isExpanded ? t("habitRow.hideQuickActions") : t("habitRow.showQuickActions")}
               className={cn(
                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-all hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white",
                 isExpanded &&
@@ -1275,6 +1303,7 @@ export const HabitRow = forwardRef<HTMLLIElement, Props>(function HabitRow(
         {/* Dedicated visual progress bar — accent fill, smooth width animation */}
         <div
           role="progressbar"
+          aria-label={t("habitRow.progressFor").replace("{name}", habit.name)}
           aria-valuemin={0}
           aria-valuemax={target}
           aria-valuenow={value}

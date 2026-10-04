@@ -24,6 +24,7 @@ import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/stores/app-store";
+import { useTranslation } from "@/i18n/context";
 import { BadHabitCard } from "./bad-habit-card";
 import { TriggerInsightsCard } from "./trigger-insights-card";
 import { BadHabitEditor } from "./bad-habit-editor";
@@ -33,14 +34,15 @@ type TrackerFilter = "all" | "abstinence" | "moderation";
 
 const FILTER_TABS: Array<{
   id: TrackerFilter;
-  label: string;
+  labelKey: string;
 }> = [
-  { id: "all", label: "All" },
-  { id: "abstinence", label: "Abstinence" },
-  { id: "moderation", label: "Moderation" },
+  { id: "all", labelKey: "quitTracker.filterAll" },
+  { id: "abstinence", labelKey: "quitTracker.filterAbstinence" },
+  { id: "moderation", labelKey: "quitTracker.filterModeration" },
 ];
 
 export function QuitTrackerPage() {
+  const { t } = useTranslation();
   const { badHabits, ready, activeTimer, reorderTrackers } = useApp();
   const [editorOpen, setEditorOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -101,7 +103,7 @@ export function QuitTrackerPage() {
   const activeHabit = sortedHabits.find((habit) => habit.id === activeId);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   }
 
   // Unified layout shell: no max-width, margins, or horizontal padding here on
@@ -118,16 +120,15 @@ export function QuitTrackerPage() {
         <div>
           <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase mb-1">
             <ShieldAlert className="h-4 w-4" />
-            Quit & Abstinence Tracker
+            {t("quitTracker.badge")}
           </div>
-          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Quit Tracker</h1>
+          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("nav.quitTracker")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Monitor real-time clean streaks, analyze contextual relapse triggers, and build
-            unbreakable discipline.
+            {t("quitTracker.subtitle")}
           </p>
         </div>
         <Button className="hidden md:inline-flex" onClick={() => setEditorOpen(true)}>
-          <Plus className="mr-1 h-4 w-4" /> Add Tracker
+          <Plus className="me-1 h-4 w-4" /> {t("quitTracker.addTracker")}
         </Button>
       </header>
 
@@ -136,21 +137,21 @@ export function QuitTrackerPage() {
       {sortedHabits.length > 0 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search quit trackers…"
-              className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
-              aria-label="Search quit trackers"
+              placeholder={t("quitTracker.searchPlaceholder")}
+              className="h-11 ps-10 [&::-webkit-search-cancel-button]:appearance-none"
+              aria-label={t("quitTracker.searchPlaceholder")}
             />
             {query ? (
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
+                className="absolute end-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                aria-label={t("today.clearSearch")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -171,7 +172,7 @@ export function QuitTrackerPage() {
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             ))}
           </div>
@@ -184,35 +185,34 @@ export function QuitTrackerPage() {
             <Flame className="h-8 w-8" />
           </div>
           <div className="space-y-1">
-            <h2 className="font-display text-xl font-bold">No bad habit timers yet</h2>
+            <h2 className="font-display text-xl font-bold">{t("quitTracker.emptyTitle")}</h2>
             <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-              Take control of your habits. Start tracking your clean streak for smoking, junk food,
-              social media, or any addiction.
+              {t("quitTracker.emptyDesc")}
             </p>
           </div>
           <Button className="mt-2" onClick={() => setEditorOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" /> Start tracking your first habit
+            <Plus className="me-1 h-4 w-4" /> {t("quitTracker.startFirst")}
           </Button>
         </div>
       ) : filteredHabits.length === 0 ? (
         query ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            No trackers match your search.
+            {t("quitTracker.noMatch")}
           </p>
         ) : (
           <div className="rounded-2xl border border-dashed border-border p-10 text-center space-y-3">
             <p className="font-display text-lg font-bold">
               {activeFilter === "abstinence"
-                ? "No abstinence trackers yet"
-                : "No moderation trackers yet"}
+                ? t("quitTracker.noAbstinenceTitle")
+                : t("quitTracker.noModerationTitle")}
             </p>
             <p className="mx-auto max-w-sm text-sm text-muted-foreground">
               {activeFilter === "abstinence"
-                ? "Track a habit with total abstinence to see its live clean-streak timer here."
-                : "Track a habit with a daily limit to monitor moderation progress here."}
+                ? t("quitTracker.noAbstinenceDesc")
+                : t("quitTracker.noModerationDesc")}
             </p>
             <Button variant="outline" onClick={() => setActiveFilter("all")}>
-              <LayoutGrid className="mr-2 h-4 w-4" /> Show all trackers
+              <LayoutGrid className="me-2 h-4 w-4" /> {t("quitTracker.showAll")}
             </Button>
           </div>
         )
@@ -251,13 +251,13 @@ export function QuitTrackerPage() {
       {/* Mobile FAB — floats above the bottom nav and the timer bar */}
       <button
         type="button"
-        aria-label="New bad habit"
+        aria-label={t("quitTracker.new")}
         onClick={() => setEditorOpen(true)}
         style={{
           bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
         }}
         className={cn(
-          "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
+          "fixed end-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
           "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
           "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
         )}

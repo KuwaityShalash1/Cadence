@@ -1,4 +1,4 @@
-export type LanguageCode = "en" | "ar" | "es" | "fr" | "de";
+export type LanguageCode = "en" | "ar";
 
 export interface LanguageMeta {
   code: LanguageCode;

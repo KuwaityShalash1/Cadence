@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { HabitIcon, colorStyles, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { describeSchedule } from "@/services/schedule";
 import { useApp } from "@/stores/app-store";
 import type { CustomIcon, Habit, Routine } from "@/types";
@@ -25,6 +26,7 @@ export function RoutineCard({
   customIcons,
   onEdit,
 }: RoutineCardProps) {
+  const { t } = useTranslation();
   const { removeRoutine, restoreRoutine, toggleRoutineStep } = useApp();
   const cardTint = getColorStyle(routine.color ?? "teal", 0.14);
   const pct =
@@ -47,8 +49,7 @@ export function RoutineCard({
               {routine.name}
             </h3>
             <p className="truncate text-xs text-muted-foreground">
-              {describeSchedule(routine.schedule)} · {routine.steps.length} steps · {pct}% done
-              today
+              {describeSchedule(routine.schedule, t)} · {routine.steps.length} {t("routine.stepsCount")} · {pct}% {t("routine.doneToday")}
             </p>
           </div>
         </div>
@@ -58,7 +59,7 @@ export function RoutineCard({
             size="icon"
             className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             onClick={() => onEdit(routine)}
-            aria-label="Edit routine"
+            aria-label={t("routine.edit")}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -69,12 +70,12 @@ export function RoutineCard({
             onClick={() => {
               const routineToRestore = structuredClone(routine);
               removeRoutine(routine.id);
-              toast.success("Routine deleted", {
-                action: { label: "Undo", onClick: () => restoreRoutine(routineToRestore) },
+              toast.success(t("routine.deleted"), {
+                action: { label: t("common.undo"), onClick: () => restoreRoutine(routineToRestore) },
                 duration: 5000,
               });
             }}
-            aria-label="Delete routine"
+            aria-label={t("routine.deleteRoutineAria")}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -82,7 +83,7 @@ export function RoutineCard({
       </div>
 
       {routine.steps.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">No steps yet. Edit to add steps.</p>
+        <p className="mt-3 text-sm text-muted-foreground">{t("routine.noStepsYet")}</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {routine.steps.map((step) => {
@@ -97,7 +98,7 @@ export function RoutineCard({
                   type="button"
                   onClick={() => toggleRoutineStep(routine.id, step.id, date)}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 active:scale-[0.99]",
+                    "flex w-full items-center gap-3 rounded-xl border p-3 text-start transition-all duration-200 active:scale-[0.99]",
                     isDone ? "border-primary/40 bg-primary/5" : "border-border hover:bg-accent",
                   )}
                 >

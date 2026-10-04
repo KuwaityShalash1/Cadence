@@ -14,8 +14,6 @@ import {
   PanelLeftOpen,
   PanelLeft,
   Menu,
-  Moon,
-  Monitor,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -34,22 +32,27 @@ import { useTranslation } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
 import { OfflineIndicator } from "@/components/offline-indicator";
-import { playClickSound, playToggleSound } from "@/lib/sound";
+import { playToggleSound } from "@/lib/sound";
 
+/**
+ * Nav item definitions use translation key references rather than hardcoded
+ * English strings so the active label and aria-label both update on language
+ * change without any extra wiring.
+ */
 const NAV_ITEMS = [
-  { label: "Today", icon: Sun, to: "/" as const, exact: true },
-  { label: "Calendar", icon: CalendarDays, to: "/calendar" as const, exact: false },
-  { label: "Analytics", icon: BarChart3, to: "/stats" as const, exact: false },
-  { label: "Goals", icon: Target, to: "/goals" as const, exact: false },
-  { label: "Routines", icon: ListChecks, to: "/routines" as const, exact: false },
-  { label: "Quit Tracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
+  { labelKey: "nav.today",       icon: Sun,         to: "/" as const,            exact: true  },
+  { labelKey: "nav.calendar",    icon: CalendarDays, to: "/calendar" as const,   exact: false },
+  { labelKey: "nav.stats",       icon: BarChart3,    to: "/stats" as const,      exact: false },
+  { labelKey: "nav.goals",       icon: Target,       to: "/goals" as const,      exact: false },
+  { labelKey: "nav.routines",    icon: ListChecks,   to: "/routines" as const,   exact: false },
+  { labelKey: "nav.quitTracker", icon: ShieldAlert,  to: "/quit-tracker" as const, exact: false },
 ];
 
 const MOBILE_NAV = [
-  { label: "Today", icon: Sun, to: "/" as const, exact: true },
-  { label: "Routines", icon: ListChecks, to: "/routines" as const, exact: false },
-  { label: "Goals", icon: Target, to: "/goals" as const, exact: false },
-  { label: "Quit Tracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
+  { labelKey: "nav.today",       icon: Sun,        to: "/" as const,             exact: true  },
+  { labelKey: "nav.routines",    icon: ListChecks, to: "/routines" as const,    exact: false },
+  { labelKey: "nav.goals",       icon: Target,     to: "/goals" as const,        exact: false },
+  { labelKey: "nav.quitTracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
 ];
 
 function getInitials(name?: string): string {
@@ -119,6 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   const editor = useHabitEditor();
   const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
+  const { t, isRtl } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [enableSidebarTransition, setEnableSidebarTransition] = useState(false);
@@ -126,7 +130,6 @@ function Shell({ children }: { children: ReactNode }) {
   // The persisted collapsed state is applied after mount via useEffect.
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const displayName = settings.displayName?.trim() || "User";
-  const isRtl = false;
 
   const handleToggleSidebar = () => {
     playToggleSound(!isSidebarCollapsed);
@@ -156,21 +159,9 @@ function Shell({ children }: { children: ReactNode }) {
     }
   }, [isSidebarCollapsed]);
 
-  useEffect(() => {
-    if (!ready) return;
-    // Enable transitions one render after hydration so the first settled
-    // sidebar state is painted without animating from the SSR placeholder.
-    const frame = window.requestAnimationFrame(() => setEnableSidebarTransition(true));
-    return () => window.cancelAnimationFrame(frame);
-  }, [ready]);
-
-  useEffect(() => {
-    if (isSidebarCollapsed) {
-      document.documentElement.setAttribute("data-sidebar-collapsed", "true");
-    } else {
-      document.documentElement.removeAttribute("data-sidebar-collapsed");
-    }
-  }, [isSidebarCollapsed]);
+  // Tooltip side for collapsed sidebar nav items: opposite of the reading direction
+  // so the tooltip appears next to the icon in both LTR and RTL layouts.
+  const tooltipSide = isRtl ? "left" : "right";
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -178,7 +169,7 @@ function Shell({ children }: { children: ReactNode }) {
       <aside
         data-collapsed={isSidebarCollapsed ? "true" : "false"}
         className={cn(
-          "hidden md:flex flex-col h-screen border-r border-border bg-sidebar py-3 shrink-0 select-none overflow-hidden",
+          "hidden md:flex flex-col h-screen border-e border-border bg-sidebar py-3 shrink-0 select-none overflow-hidden",
           !(isMounted && ready) && "invisible",
           enableSidebarTransition && "transition-[width] duration-300 ease-in-out",
           isSidebarCollapsed ? "w-16 items-center" : "w-64 px-3",
@@ -198,16 +189,15 @@ function Shell({ children }: { children: ReactNode }) {
               onClick={handleToggleSidebar}
               type="button"
               className="group relative flex h-10 w-10 items-center justify-center rounded-xl text-primary hover:bg-accent/60 transition-all duration-200 overflow-hidden"
-              title="Expand Sidebar"
-              /// Icon-only control: the accessible name must not depend on `title`.
-              aria-label="Expand sidebar"
+              title={t("appShell.expandSidebar")}
+              aria-label={t("appShell.expandSidebar")}
               aria-expanded={false}
             >
               {/* Static Default Logo */}
               <div className="absolute inset-0 flex items-center justify-center transition-all duration-200 group-hover:opacity-0 group-hover:scale-75 pointer-events-none">
                 <CadenceLogo iconClassName="h-6 w-6 text-primary" showText={false} />
               </div>
-              {/* Hover Arrow */}
+              {/* Hover Arrow — direction-aware: PanelLeftOpen points the right way */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 pointer-events-none">
                 <PanelLeftOpen className="h-5 w-5 text-foreground" />
               </div>
@@ -223,9 +213,8 @@ function Shell({ children }: { children: ReactNode }) {
                 onClick={handleToggleSidebar}
                 type="button"
                 className="group relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200"
-                title="Collapse Sidebar"
-                /// Icon-only control: mirrors the collapsed header button above.
-                aria-label="Collapse sidebar"
+                title={t("appShell.collapseSidebar")}
+                aria-label={t("appShell.collapseSidebar")}
                 aria-expanded={true}
               >
                 <PanelLeft className="h-5 w-5 transition-all duration-200 group-hover:opacity-0 group-hover:scale-90 absolute" />
@@ -236,24 +225,21 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
 
         <nav
-          aria-label="Main navigation"
+          aria-label={t("nav.mainNavigation", "Main navigation")}
           className={cn(
             "flex flex-col gap-1.5 w-full flex-1",
             isSidebarCollapsed ? "items-center px-2" : "px-0",
           )}
         >
           {NAV_ITEMS.map((item) => {
+            const label = t(item.labelKey);
             const linkContent = (
               <Link
-                key={item.label}
+                key={item.labelKey}
                 to={item.to}
                 activeOptions={{ exact: item.exact }}
-                /// Collapsed rails render the icon alone, so the label doubles as
-                /// the accessible name of the link.
-                aria-label={item.label}
+                aria-label={label}
                 className={cn(
-                  // Active state: teal-800 clears 4.5:1 on the primary/10 tint
-                  // in light mode; the dark theme keeps the vivid primary colour.
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-teal-800 dark:data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
@@ -265,15 +251,15 @@ function Shell({ children }: { children: ReactNode }) {
                     isSidebarCollapsed && "hidden",
                   )}
                 >
-                  {item.label}
+                  {label}
                 </span>
               </Link>
             );
 
             return isSidebarCollapsed ? (
-              <Tooltip key={item.label}>
+              <Tooltip key={item.labelKey}>
                 <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side={isRtl ? "left" : "right"}>{item.label}</TooltipContent>
+                <TooltipContent side={tooltipSide}>{label}</TooltipContent>
               </Tooltip>
             ) : (
               linkContent
@@ -281,11 +267,11 @@ function Shell({ children }: { children: ReactNode }) {
           })}
 
           {(() => {
+            const settingsLabel = t("nav.settings");
             const settingsLink = (
               <Link
                 to="/settings"
-                /// Collapsed rails render the gear alone — keep a text name.
-                aria-label="Settings"
+                aria-label={settingsLabel}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-teal-800 dark:data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
@@ -298,7 +284,7 @@ function Shell({ children }: { children: ReactNode }) {
                     isSidebarCollapsed && "hidden",
                   )}
                 >
-                  Settings
+                  {settingsLabel}
                 </span>
               </Link>
             );
@@ -308,7 +294,7 @@ function Shell({ children }: { children: ReactNode }) {
                 {isSidebarCollapsed ? (
                   <Tooltip key="nav.settings">
                     <TooltipTrigger asChild>{settingsLink}</TooltipTrigger>
-                    <TooltipContent side={isRtl ? "left" : "right"}>Settings</TooltipContent>
+                    <TooltipContent side={tooltipSide}>{settingsLabel}</TooltipContent>
                   </Tooltip>
                 ) : (
                   settingsLink
@@ -320,9 +306,9 @@ function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <main className="flex-1 h-full overflow-y-auto min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {/* Top bar header with profile in top-right corner */}
+        {/* Top bar header with profile pill in the top-end corner */}
         {/* Safe area top padding ensures the header sits below the iOS status bar / dynamic island */}
-        {/* Horizontal gutter matches the page container so header and feed stay aligned: 16px on mobile, 24px from md up */}
+        {/* Horizontal gutter matches the page container so header and feed stay aligned */}
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 md:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur md:justify-end">
           <div className="md:hidden">
             <Link to="/" className="flex items-center">
@@ -334,6 +320,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             {/* Connectivity hint only; every feature keeps working offline. */}
             <OfflineIndicator />
+            {/* Profile pill — logical padding so it flips correctly in RTL */}
             <Link
               to="/settings"
               className="flex items-center gap-3 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
@@ -365,37 +352,40 @@ function Shell({ children }: { children: ReactNode }) {
       {/* Mobile bottom nav — a `nav` landmark so every link inside is contained
           by a landmark (Lighthouse "region" audit) without changing layout. */}
       <nav
-        aria-label="Primary navigation"
-        className="block md:hidden border-t border-border bg-background fixed bottom-0 left-0 right-0 z-50"
+        aria-label={t("nav.primaryNavigation", "Primary navigation")}
+        className="block md:hidden border-t border-border bg-background fixed bottom-0 start-0 end-0 z-50"
       >
         <div
           className="flex items-stretch justify-around px-2 pt-1"
           style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom, 0px))" }}
         >
-          {MOBILE_NAV.map((item) => (
-            <Link
-              key={item.label}
-              to={item.to}
-              activeOptions={{ exact: item.exact }}
-              className="flex min-h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-medium text-muted-foreground data-[status=active]:text-primary"
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          ))}
+          {MOBILE_NAV.map((item) => {
+            const label = t(item.labelKey);
+            return (
+              <Link
+                key={item.labelKey}
+                to={item.to}
+                activeOptions={{ exact: item.exact }}
+                className="flex min-h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-medium text-muted-foreground data-[status=active]:text-primary"
+              >
+                <item.icon className="h-5 w-5" />
+                {label}
+              </Link>
+            );
+          })}
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
             className="flex min-h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
-            aria-label="Open more navigation options"
+            aria-label={t("nav.moreOptionsAria")}
           >
             <Menu className="h-5 w-5" />
-            More
+            {t("nav.more")}
           </button>
         </div>
       </nav>
 
-      <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} title="More Navigation">
+      <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} title={t("nav.more")}>
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Link
@@ -404,7 +394,7 @@ function Shell({ children }: { children: ReactNode }) {
               className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-medium transition-colors hover:bg-accent"
             >
               <CalendarDays className="h-5 w-5 text-primary" />
-              Calendar
+              {t("nav.calendar")}
             </Link>
             <Link
               to="/stats"
@@ -412,7 +402,7 @@ function Shell({ children }: { children: ReactNode }) {
               className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-medium transition-colors hover:bg-accent"
             >
               <BarChart3 className="h-5 w-5 text-primary" />
-              Analytics
+              {t("nav.stats")}
             </Link>
             <Link
               to="/settings"
@@ -420,7 +410,7 @@ function Shell({ children }: { children: ReactNode }) {
               className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-medium transition-colors hover:bg-accent"
             >
               <Settings className="h-5 w-5 text-primary" />
-              Settings
+              {t("nav.settings")}
             </Link>
           </div>
         </div>

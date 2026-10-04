@@ -4,11 +4,22 @@ import { useMemo, useState } from "react";
 import { HabitRow } from "@/features/habits/habit-row";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { fromDateKey, monthMatrix, todayKey, WEEKDAY_LABELS } from "@/services/dates";
+import { fromDateKey, monthMatrix, todayKey } from "@/services/dates";
 import { isScheduledOn } from "@/services/schedule";
 import { dayCompletion, isCompleteOn, type LogMap } from "@/services/stats";
 import { useApp } from "@/stores/app-store";
+import { useTranslation } from "@/i18n/context";
 import type { Habit } from "@/types";
+
+const WEEKDAY_KEYS = [
+  "weekdays.sun",
+  "weekdays.mon",
+  "weekdays.tue",
+  "weekdays.wed",
+  "weekdays.thu",
+  "weekdays.fri",
+  "weekdays.sat",
+];
 
 function dayFillClass(habits: Habit[], logs: LogMap, date: string): string {
   const due = habits.filter((h) => !h.archived && isScheduledOn(h, date));
@@ -29,6 +40,7 @@ function hasFrozenHabitOnDay(habits: Habit[], date: string): boolean {
 }
 
 export function CalendarPage() {
+  const { t, language } = useTranslation();
   const { habits, logMap, ready, settings } = useApp();
   const today = todayKey();
   const [cursor, setCursor] = useState(() => {
@@ -45,11 +57,11 @@ export function CalendarPage() {
 
   const monthLabel = useMemo(
     () =>
-      new Date(cursor.year, cursor.month, 1).toLocaleDateString(undefined, {
+      new Date(cursor.year, cursor.month, 1).toLocaleDateString(language, {
         month: "long",
         year: "numeric",
       }),
-    [cursor],
+    [cursor, language],
   );
 
   function prevMonth() {
@@ -79,19 +91,19 @@ export function CalendarPage() {
   const isFutureDate = selected > today;
 
   const weekdayLabels = useMemo(() => {
-    if (weekStartsOn === 0) return WEEKDAY_LABELS;
-    return [...WEEKDAY_LABELS.slice(1), WEEKDAY_LABELS[0]];
-  }, [weekStartsOn]);
+    const keys = weekStartsOn === 0 ? WEEKDAY_KEYS : [...WEEKDAY_KEYS.slice(1), WEEKDAY_KEYS[0]];
+    return keys.map((k) => (k ? t(k) : ""));
+  }, [weekStartsOn, t]);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Calendar</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Browse your history and edit any day.</p>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("calendar.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("calendar.subtitle")}</p>
       </header>
 
       {/* Calendar grid */}
@@ -103,7 +115,7 @@ export function CalendarPage() {
             size="icon"
             className="h-8 w-8 rounded-lg"
             onClick={prevMonth}
-            aria-label="Previous month"
+            aria-label={t("calendar.prevMonth")}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -113,7 +125,7 @@ export function CalendarPage() {
             size="icon"
             className="h-8 w-8 rounded-lg"
             onClick={nextMonth}
-            aria-label="Next month"
+            aria-label={t("calendar.nextMonth")}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -147,18 +159,18 @@ export function CalendarPage() {
              * calendar usable with a screen reader.
              */
             const dayState = !inMonth
-              ? "outside this month"
+              ? t("calendar.outsideMonth")
               : isFrozen && !hasData
-                ? "frozen, nothing logged"
+                ? t("calendar.frozenNothingLogged")
                 : hasData
-                  ? "habits logged"
-                  : "nothing logged";
+                  ? t("calendar.habitsLogged")
+                  : t("calendar.nothingLogged");
             return (
               <button
                 key={dateKey}
                 type="button"
                 onClick={() => setSelected(dateKey)}
-                aria-label={`${d.toLocaleDateString(undefined, {
+                aria-label={`${d.toLocaleDateString(language, {
                   weekday: "long",
                   month: "long",
                   day: "numeric",
@@ -198,7 +210,7 @@ export function CalendarPage() {
                   {d.getDate()}
                 </span>
                 {isFrozen && !hasData && (
-                                    <span className="absolute bottom-1 right-1 flex h-3.5 w-3.5 items-center justify-center text-cyan-700 dark:text-cyan-400">
+                  <span className="absolute bottom-1 end-1 flex h-3.5 w-3.5 items-center justify-center text-cyan-700 dark:text-cyan-400">
                     <Snowflake className="h-3 w-3" />
                   </span>
                 )}
@@ -211,19 +223,19 @@ export function CalendarPage() {
       {/* Legend */}
       <div className="flex items-center gap-4 px-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-primary" /> Complete
+          <span className="h-3 w-3 rounded-full bg-primary" /> {t("calendar.legendComplete")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-primary/70" /> Partial
+          <span className="h-3 w-3 rounded-full bg-primary/70" /> {t("calendar.legendPartial")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-primary/20" /> Started
+          <span className="h-3 w-3 rounded-full bg-primary/20" /> {t("calendar.legendStarted")}
         </span>
         <span className="flex items-center gap-1.5">
-                    <span className="flex h-3 w-3 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-700 dark:text-cyan-400">
+          <span className="flex h-3 w-3 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-700 dark:text-cyan-400">
             <Snowflake className="h-2 w-2" />
           </span>{" "}
-          Frozen
+          {t("calendar.legendFrozen")}
         </span>
       </div>
 
@@ -231,14 +243,14 @@ export function CalendarPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-lg">
-            {fromDateKey(selected).toLocaleDateString(undefined, {
+            {fromDateKey(selected).toLocaleDateString(language, {
               weekday: "long",
               month: "long",
               day: "numeric",
             })}
           </h2>
           <span className="text-sm text-muted-foreground">
-            {selectedDone} of {selectedHabits.length} done · {selectedPct}%
+            {selectedDone} / {selectedHabits.length} {t("today.done")} · {selectedPct}%
           </span>
         </div>
 
@@ -246,16 +258,16 @@ export function CalendarPage() {
         {isFutureDate && selectedHabits.length > 0 ? (
           <p
             role="note"
-            title="You cannot log habits for future dates"
+            title={t("calendar.futureDateTitle")}
             className="rounded-2xl border border-dashed border-border bg-muted/40 p-4 text-center text-sm text-muted-foreground"
           >
-            Upcoming — preview only. You cannot log habits for future dates.
+            {t("calendar.futureDateNote")}
           </p>
         ) : null}
 
         {selectedHabits.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            No habits scheduled on this day.
+            {t("calendar.noHabitsScheduled")}
           </p>
         ) : (
           <ul className="space-y-3">

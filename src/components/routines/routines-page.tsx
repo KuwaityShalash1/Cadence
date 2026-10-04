@@ -18,6 +18,7 @@ import { useAddModalListener } from "@/hooks/use-shortcuts";
 import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { describeSchedule, scheduleMatches } from "@/services/schedule";
 import { todayKey } from "@/services/dates";
 import { useApp, uid } from "@/stores/app-store";
@@ -35,6 +36,7 @@ const ROUTINE_FILTER_LABELS: Record<RoutineFilterMode, string> = {
 };
 
 export function RoutinesPage() {
+  const { t } = useTranslation();
   const {
     routines,
     routineLogs,
@@ -130,53 +132,50 @@ export function RoutinesPage() {
   const activeRoutine = sortedRoutines.find((routine) => routine.id === activeId);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Routines</h1>
+          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("nav.routines")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Group habits into daily or weekly routines.
+            {t("routine.subtitle")}
           </p>
         </div>
         <Button className="hidden md:inline-flex" onClick={openNew}>
-          <Plus className="mr-1 h-4 w-4" /> New routine
+          <Plus className="me-1 h-4 w-4" /> {t("routine.new")}
         </Button>
       </header>
 
       {sortedRoutines.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-          <h2 className="font-display text-xl">No routines yet</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-            Create a routine like &quot;Morning Routine&quot; and add steps that link to your
-            habits.
-          </p>
+          <h2 className="font-display text-xl">{t("routine.emptyTitle")}</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("routine.emptyDesc")}</p>
           <Button className="mt-5" onClick={openNew}>
-            <Plus className="mr-1 h-4 w-4" /> Create your first routine
+            <Plus className="me-1 h-4 w-4" /> {t("routine.createFirst")}
           </Button>
         </div>
       ) : (
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search routines…"
-                className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
-                aria-label="Search routines"
+                placeholder={t("routine.searchPlaceholder")}
+                className="h-11 ps-10 [&::-webkit-search-cancel-button]:appearance-none"
+                aria-label={t("routine.searchPlaceholder")}
               />
               {query ? (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
-                  aria-label="Clear search"
+                  className="absolute end-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={t("today.clearSearch")}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -197,7 +196,7 @@ export function RoutinesPage() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  {ROUTINE_FILTER_LABELS[mode]}
+                  {mode === "all" ? t("routine.filterAll") : mode === "active" ? t("routine.filterActive") : t("routine.filterCompleted")}
                 </button>
               ))}
             </div>
@@ -205,7 +204,7 @@ export function RoutinesPage() {
 
           {filteredRoutines.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              No routines match your search.
+              {t("routine.noMatch")}
             </p>
           ) : (
             <DndContext
@@ -249,8 +248,8 @@ export function RoutinesPage() {
                                   {routine.name}
                                 </h3>
                                 <p className="truncate text-xs text-muted-foreground">
-                                  {describeSchedule(routine.schedule)} · {routine.steps.length}{" "}
-                                  steps · {pct}% done today
+                                  {describeSchedule(routine.schedule, t)} · {routine.steps.length}{" "}
+                                  {t("routine.stepsCount")} · {pct}% {t("routine.doneToday")}
                                 </p>
                               </div>
                             </div>
@@ -260,7 +259,7 @@ export function RoutinesPage() {
                                 size="icon"
                                 className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                                 onClick={() => openEdit(routine)}
-                                aria-label="Edit routine"
+                                aria-label={t("routine.edit")}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -273,15 +272,15 @@ export function RoutinesPage() {
                                   // Undo action can put it (steps included) back.
                                   const routineToRestore = structuredClone(routine);
                                   removeRoutine(routine.id);
-                                  toast.success("Routine deleted", {
+                                  toast.success(t("routine.deleted"), {
                                     action: {
-                                      label: "Undo",
+                                      label: t("common.undo"),
                                       onClick: () => restoreRoutine(routineToRestore),
                                     },
                                     duration: 5000, // Give them 5 seconds to undo
                                   });
                                 }}
-                                aria-label="Delete routine"
+                                aria-label={t("routine.deleteRoutineAria")}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -290,7 +289,7 @@ export function RoutinesPage() {
 
                           {routine.steps.length === 0 ? (
                             <p className="mt-3 text-sm text-muted-foreground">
-                              No steps yet. Edit to add steps.
+                              {t("routine.noStepsYet")}
                             </p>
                           ) : (
                             <ul className="mt-3 space-y-2">
@@ -306,7 +305,7 @@ export function RoutinesPage() {
                                       type="button"
                                       onClick={() => toggleRoutineStep(routine.id, step.id, today)}
                                       className={cn(
-                                        "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 active:scale-[0.99]",
+                                        "flex w-full items-center gap-3 rounded-xl border p-3 text-start transition-all duration-200 active:scale-[0.99]",
                                         isDone
                                           ? "border-primary/40 bg-primary/5"
                                           : "border-slate-200 bg-slate-50/70 hover:bg-white dark:border-slate-800 dark:bg-slate-800/30 dark:hover:bg-slate-800/60",
@@ -379,13 +378,13 @@ export function RoutinesPage() {
       {/* Mobile FAB — floats above the bottom nav and the timer bar */}
       <button
         type="button"
-        aria-label="Create routine"
+        aria-label={t("routine.new")}
         onClick={openNew}
         style={{
           bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
         }}
         className={cn(
-          "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
+          "fixed end-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
           "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
           "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
         )}
@@ -396,12 +395,8 @@ export function RoutinesPage() {
       <ResponsiveSheet
         open={isOpen}
         onOpenChange={setIsOpen}
-        title={editing ? "Edit routine" : "New routine"}
-        description={
-          editing
-            ? "Update your routine steps and schedule."
-            : "Create a routine with steps linked to habits."
-        }
+        title={editing ? t("routine.edit") : t("routine.new")}
+        description={editing ? t("routine.editDesc") : t("routine.newDesc")}
       >
         <RoutineForm
           key={editing?.id ?? "new"}
@@ -410,7 +405,7 @@ export function RoutinesPage() {
           onDone={() => setIsOpen(false)}
           onSave={(routine) => {
             upsertRoutine(routine);
-            toast.success(editing ? "Routine updated" : "Routine created");
+            toast.success(editing ? t("routine.updated") : t("routine.created"));
             setIsOpen(false);
           }}
         />

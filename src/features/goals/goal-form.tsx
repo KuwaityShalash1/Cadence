@@ -24,10 +24,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { useApp, uid } from "@/stores/app-store";
 import type { CustomIcon, Goal, Habit } from "@/types";
 
 interface GoalSuggestion {
+  key: string;
   name: string;
   /** Blurb that fills the description field along with the name. */
   description: string;
@@ -45,6 +47,7 @@ interface GoalSuggestion {
 /** Ready-made goal templates for the collapsible Quick Suggestions card list. */
 const GOAL_SUGGESTIONS: GoalSuggestion[] = [
   {
+    key: "read12Books",
     name: "Read 12 Books",
     description: "Finish one book every month",
     icon: "book",
@@ -55,6 +58,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "12 books",
   },
   {
+    key: "emergencyFund",
     name: "Emergency Fund",
     description: "Set aside a fixed amount every month",
     icon: "wallet",
@@ -65,6 +69,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "$1,000 target",
   },
   {
+    key: "run5KMarathon",
     name: "Run 5K Marathon",
     description: "Train consistently toward race day",
     icon: "activity",
@@ -75,6 +80,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "5 kilometers",
   },
   {
+    key: "learnCodingAI",
     name: "Learn Coding / AI",
     description: "Daily practice toward conversational fluency",
     icon: "code",
@@ -85,6 +91,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "50 hours",
   },
   {
+    key: "finishCourse",
     name: "Finish a Course",
     description: "Complete a structured course one lesson at a time",
     icon: "book-open",
@@ -95,6 +102,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "12 lessons",
   },
   {
+    key: "buildPortfolio",
     name: "Build a Portfolio Project",
     description: "Ship a practical project that demonstrates your skills",
     icon: "code-2",
@@ -105,6 +113,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "1 project",
   },
   {
+    key: "saveSafetyNet",
     name: "Save for a Safety Net",
     description: "Build an emergency fund through small regular deposits",
     icon: "wallet",
@@ -115,6 +124,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "$2,000 target",
   },
   {
+    key: "run10K",
     name: "Run a 10K",
     description: "Train gradually toward a confident race-day finish",
     icon: "footprints",
@@ -125,6 +135,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "10 kilometers",
   },
   {
+    key: "readMoreYear",
     name: "Read More This Year",
     description: "Make space for books that help you learn and recharge",
     icon: "book",
@@ -135,6 +146,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "24 books",
   },
   {
+    key: "calmMorning",
     name: "Create a Calm Morning",
     description: "Build a sustainable morning routine that starts gently",
     icon: "sun",
@@ -145,6 +157,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "30-day practice",
   },
   {
+    key: "improveSleep",
     name: "Improve Sleep Consistency",
     description: "Protect a reliable bedtime and wake-up rhythm",
     icon: "moon",
@@ -155,6 +168,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "30 nights",
   },
   {
+    key: "learnNewLanguage",
     name: "Learn a New Language",
     description: "Reach a useful conversational foundation through practice",
     icon: "languages",
@@ -165,6 +179,7 @@ const GOAL_SUGGESTIONS: GoalSuggestion[] = [
     badge: "500 words",
   },
   {
+    key: "timeForCreativity",
     name: "Make Time for Creativity",
     description: "Finish a body of writing, art, music, or design work",
     icon: "pen-tool",
@@ -191,6 +206,7 @@ export function GoalForm({
   onSave: (goal: Goal) => void;
   onLinkHabit: (habitId: string, goalId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(goal?.name ?? "");
   const [description, setDescription] = useState(goal?.description ?? "");
   const [icon, setIcon] = useState(goal?.icon || "target");
@@ -222,8 +238,10 @@ export function GoalForm({
 
   /** One-click template: fills name, description, icon and colour in a single tap. */
   function applySuggestion(suggestion: GoalSuggestion) {
-    setName(suggestion.name);
-    setDescription(suggestion.description);
+    const localizedName = t(`goalSuggestion.${suggestion.key}.name`, suggestion.name);
+    const localizedDesc = t(`goalSuggestion.${suggestion.key}.desc`, suggestion.description);
+    setName(localizedName);
+    setDescription(localizedDesc);
     setIcon(resolveIconName(suggestion.icon));
     setColor(suggestion.color);
     setGoalType(suggestion.type);
@@ -232,13 +250,23 @@ export function GoalForm({
   }
 
   /** Filter goal suggestions by the current search query (case-insensitive,
-    matches against the template name and badge text). */
+    matches against the template name, description, and badge text in both languages). */
   function filteredGoalSuggestions(): GoalSuggestion[] {
     const q = suggestionSearch.toLowerCase();
     if (!q) return GOAL_SUGGESTIONS;
-    return GOAL_SUGGESTIONS.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.badge.toLowerCase().includes(q),
-    );
+    return GOAL_SUGGESTIONS.filter((s) => {
+      const locName = t(`goalSuggestion.${s.key}.name`, s.name).toLowerCase();
+      const locDesc = t(`goalSuggestion.${s.key}.desc`, s.description).toLowerCase();
+      const locBadge = t(`goalSuggestion.${s.key}.badge`, s.badge).toLowerCase();
+      return (
+        s.name.toLowerCase().includes(q) ||
+        locName.includes(q) ||
+        s.description.toLowerCase().includes(q) ||
+        locDesc.includes(q) ||
+        s.badge.toLowerCase().includes(q) ||
+        locBadge.includes(q)
+      );
+    });
   }
 
   function toggleHabit(id: string) {
@@ -248,16 +276,16 @@ export function GoalForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error("Give the goal a name");
+      toast.error(t("goal.nameRequired"));
       return;
     }
     const parsedTargetValue = Number(targetValue);
     if (!Number.isFinite(parsedTargetValue) || parsedTargetValue <= 0) {
-      toast.error("Enter a target value greater than zero");
+      toast.error(t("goal.targetRequired"));
       return;
     }
     if (!unit.trim()) {
-      toast.error("Enter a unit for this goal");
+      toast.error(t("goal.unitRequired"));
       return;
     }
     const id = goal?.id ?? uid();
@@ -297,11 +325,11 @@ export function GoalForm({
               <div className="flex items-center gap-2">
                 <span className="text-xs">✨</span>
                 <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  Quick Suggestions
+                  {t("goal.quickSuggestions")}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Tap a template to prefill the form — you can still edit everything below.
+                {t("goal.quickSuggestionsDesc")}
               </p>
             </div>
 
@@ -310,7 +338,7 @@ export function GoalForm({
               type="button"
               onClick={toggleSuggestions}
               aria-expanded={isSuggestionsOpen}
-              aria-label={isSuggestionsOpen ? "Collapse suggestions" : "Expand suggestions"}
+              aria-label={isSuggestionsOpen ? t("habit.collapseSuggestions") : t("habit.expandSuggestions")}
               className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors shrink-0 cursor-pointer"
             >
               <ChevronDown
@@ -327,35 +355,38 @@ export function GoalForm({
               purely CSS-driven with zero layout thrash. */}
           {!isSuggestionsOpen && (
             <div className="grid grid-cols-2 gap-2 mt-2">
-              {GOAL_SUGGESTIONS.slice(0, 2).map((suggestion) => (
-                <button
-                  key={suggestion.name}
-                  type="button"
-                  aria-label={`Use template: ${suggestion.name}`}
-                  aria-pressed={name === suggestion.name}
-                  onClick={() => applySuggestion(suggestion)}
-                  className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition active:scale-95 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                      style={{
-                        backgroundColor: `${suggestion.color}20`,
-                        color: suggestion.color,
-                      }}
-                    >
-                      <RenderIcon
-                        className="w-4 h-4"
-                        name={suggestion.icon}
-                        style={{ color: suggestion.color }}
-                      />
+              {GOAL_SUGGESTIONS.slice(0, 2).map((suggestion) => {
+                const localizedName = t(`goalSuggestion.${suggestion.key}.name`, suggestion.name);
+                return (
+                  <button
+                    key={suggestion.key}
+                    type="button"
+                    aria-label={t("habit.useTemplateAria", "Use template: {name}", { name: localizedName })}
+                    aria-pressed={name === localizedName || name === suggestion.name}
+                    onClick={() => applySuggestion(suggestion)}
+                    className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition active:scale-95 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                        style={{
+                          backgroundColor: `${suggestion.color}20`,
+                          color: suggestion.color,
+                        }}
+                      >
+                        <RenderIcon
+                          className="w-4 h-4"
+                          name={suggestion.icon}
+                          style={{ color: suggestion.color }}
+                        />
+                      </div>
+                      <span className="min-w-0 flex-1 text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        {localizedName}
+                      </span>
                     </div>
-                    <span className="min-w-0 flex-1 text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                      {suggestion.name}
-                    </span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -371,61 +402,64 @@ export function GoalForm({
             <div className="overflow-hidden">
               <div className="relative mt-2">
                 <Search
-                  className="absolute top-2.5 left-3 h-4 w-4 text-slate-400"
+                  className="absolute top-2.5 start-3 h-4 w-4 text-slate-400"
                   aria-hidden="true"
                 />
                 <input
                   type="text"
-                  placeholder="Search goals..."
+                  placeholder={t("goal.searchGoals")}
                   value={suggestionSearch}
                   onChange={(e) => setSuggestionSearch(e.target.value)}
-                  aria-label="Search templates"
-                  className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-3 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-100"
+                  aria-label={t("goal.searchGoals")}
+                  className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pe-3 ps-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-100"
                 />
               </div>
               {filteredGoalSuggestions().length > 0 ? (
                 <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden mt-2">
-                  {filteredGoalSuggestions().map((suggestion) => (
-                    <button
-                      key={suggestion.name}
-                      type="button"
-                      aria-label={`Use template: ${suggestion.name}`}
-                      aria-pressed={name === suggestion.name}
-                      onClick={() => applySuggestion(suggestion)}
-                      style={
-                        name === suggestion.name
-                          ? {
-                              borderColor: suggestion.color,
-                              boxShadow: `0 0 0 1px ${suggestion.color}`,
-                            }
-                          : undefined
-                      }
-                      className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-slate-200/80 bg-white px-3 py-2 transition active:scale-[0.99] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:bg-slate-800/80"
-                    >
-                      <span className="flex min-w-0 flex-1 items-center gap-2.5">
-                        <span
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
-                          style={{
-                            backgroundColor: `${suggestion.color}20`,
-                            color: suggestion.color,
-                          }}
-                        >
-                          <RenderIcon
-                            className="h-4 w-4"
-                            name={suggestion.icon}
-                            style={{ color: suggestion.color }}
-                          />
+                  {filteredGoalSuggestions().map((suggestion) => {
+                    const localizedName = t(`goalSuggestion.${suggestion.key}.name`, suggestion.name);
+                    return (
+                      <button
+                        key={suggestion.key}
+                        type="button"
+                        aria-label={t("habit.useTemplateAria", "Use template: {name}", { name: localizedName })}
+                        aria-pressed={name === localizedName || name === suggestion.name}
+                        onClick={() => applySuggestion(suggestion)}
+                        style={
+                          name === localizedName || name === suggestion.name
+                            ? {
+                                borderColor: suggestion.color,
+                                boxShadow: `0 0 0 1px ${suggestion.color}`,
+                              }
+                            : undefined
+                        }
+                        className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-slate-200/80 bg-white px-3 py-2 transition active:scale-[0.99] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:bg-slate-800/80"
+                      >
+                        <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                          <span
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            style={{
+                              backgroundColor: `${suggestion.color}20`,
+                              color: suggestion.color,
+                            }}
+                          >
+                            <RenderIcon
+                              className="h-4 w-4"
+                              name={suggestion.icon}
+                              style={{ color: suggestion.color }}
+                            />
+                          </span>
+                          <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-slate-800 dark:text-slate-200">
+                            {localizedName}
+                          </span>
                         </span>
-                        <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-slate-800 dark:text-slate-200">
-                          {suggestion.name}
-                        </span>
-                      </span>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="py-4 text-center text-xs text-muted-foreground">
-                  No matching templates found
+                  {t("goal.noTemplates")}
                 </p>
               )}
             </div>
@@ -434,30 +468,30 @@ export function GoalForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="goal-name">Name</Label>
+        <Label htmlFor="goal-name">{t("goal.name")}</Label>
         <Input
           id="goal-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Read 12 books this year"
+          placeholder={t("goal.namePlaceholder")}
           autoComplete="off"
           maxLength={60}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="goal-desc">Description</Label>
+        <Label htmlFor="goal-desc">{t("goal.description")}</Label>
         <Textarea
           id="goal-desc"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Optional detail"
+          placeholder={t("goal.descriptionPlaceholder")}
           rows={2}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="goal-date">Target date</Label>
+        <Label htmlFor="goal-date">{t("goal.targetDate")}</Label>
         <Input
           id="goal-date"
           type="date"
@@ -467,26 +501,24 @@ export function GoalForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="goal-type">Tracking type</Label>
+        <Label htmlFor="goal-type">{t("goal.trackingType")}</Label>
         <Select value={goalType} onValueChange={(value) => setGoalType(value as Goal["type"])}>
           <SelectTrigger id="goal-type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="numeric">Numeric / Manual</SelectItem>
-            <SelectItem value="habit_milestone">Habit Milestone</SelectItem>
+            <SelectItem value="numeric">{t("goal.typeNumeric")}</SelectItem>
+            <SelectItem value="habit_milestone">{t("goal.typeMilestone")}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          {goalType === "numeric"
-            ? "Update progress manually. Linked habits are action-plan reminders."
-            : "Progress counts completed logs from the linked habits below."}
+          {goalType === "numeric" ? t("goal.numericHint") : t("goal.milestoneHint")}
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="goal-target-value">Target value</Label>
+          <Label htmlFor="goal-target-value">{t("goal.targetValue")}</Label>
           <Input
             id="goal-target-value"
             type="number"
@@ -494,32 +526,32 @@ export function GoalForm({
             step="any"
             value={targetValue}
             onChange={(e) => setTargetValue(e.target.value)}
-            placeholder="e.g. 12"
+            placeholder={t("goal.targetValuePlaceholder")}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="goal-unit">Unit</Label>
+          <Label htmlFor="goal-unit">{t("goal.unit")}</Label>
           <Input
             id="goal-unit"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            placeholder="books, kg, workouts"
+            placeholder={t("goal.unitPlaceholder")}
             maxLength={24}
           />
         </div>
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">Icon</legend>
+        <legend className="mb-2 text-sm font-medium">{t("goal.icon")}</legend>
         <IconPicker selectedIcon={icon} onChange={setIcon} activeTileStyle={activeIconTileStyle} />
       </fieldset>
 
       <ColorPicker selectedColor={color} onChange={setColor} />
 
       <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">Linked habits</legend>
+        <legend className="mb-2 text-sm font-medium">{t("goal.linkedHabits")}</legend>
         {activeHabits.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No active habits to link.</p>
+          <p className="text-muted-foreground text-sm">{t("goal.noActiveHabits")}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {activeHabits.map((habit) => {
@@ -559,10 +591,10 @@ export function GoalForm({
 
       <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" onClick={onDone} className="h-11">
-          Cancel
+          {t("goal.cancel")}
         </Button>
         <Button type="submit" className="h-11">
-          {goal ? "Save changes" : "Create goal"}
+          {goal ? t("goal.save") : t("goal.create")}
         </Button>
       </div>
     </form>

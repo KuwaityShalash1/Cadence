@@ -33,7 +33,7 @@ export interface HabitTemplate {
     | "Digital Wellbeing";
   type: "boolean" | "counter" | "timer";
   target: number;
-  unit: string;
+  unit?: string;
   iconName: string;
   colorName: string;
   colorHex: string;
@@ -247,6 +247,7 @@ export const HABIT_TEMPLATES: HabitTemplate[] = [
     category: "Finance",
     type: "boolean",
     target: 1,
+    unit: "check",
     iconName: "Wallet",
     colorName: "emerald",
     colorHex: "#10B981",

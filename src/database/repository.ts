@@ -111,7 +111,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
       ...DEFAULT_SETTINGS,
       ...storedSettings,
       notificationsEnabled:
-        storedSettings.notificationsEnabled ?? storedSettings.remindersEnabled ?? false,
+        Boolean((storedSettings as Record<string, unknown>)["notificationsEnabled"] ?? (storedSettings as Record<string, unknown>)["remindersEnabled"] ?? false),
     },
     timer: timer ?? null,
     customColors: Array.isArray(customColors?.customColors) ? customColors.customColors : [],
@@ -167,7 +167,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isRecordArray(value: unknown): value is Array<{ id: string }> {
   return (
     Array.isArray(value) &&
-    value.every((item) => isRecord(item) && typeof item.id === "string" && item.id.length > 0)
+    value.every((item) => isRecord(item) && typeof item["id"] === "string" && (item["id"] as string).length > 0)
   );
 }
 
@@ -192,13 +192,13 @@ function validateImportSnapshot(data: unknown): asserts data is Partial<Snapshot
     }
   }
 
-  if (data.settings !== undefined && !isRecord(data.settings)) {
+  if (data["settings"] !== undefined && !isRecord(data["settings"])) {
     throw new Error("Backup field 'settings' must be an object");
   }
-  if (data.customColors !== undefined && !Array.isArray(data.customColors)) {
+  if (data["customColors"] !== undefined && !Array.isArray(data["customColors"])) {
     throw new Error("Backup field 'customColors' must be an array");
   }
-  if (data.customIcons !== undefined && !isRecordArray(data.customIcons)) {
+  if (data["customIcons"] !== undefined && !isRecordArray(data["customIcons"])) {
     throw new Error("Backup field 'customIcons' must be an array of records");
   }
 }

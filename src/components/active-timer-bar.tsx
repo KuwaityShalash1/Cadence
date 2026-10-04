@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { normalizeQuickDecrements } from "@/services/quick-steps";
 import { useApp } from "@/stores/app-store";
+import { useTranslation } from "@/i18n/context";
 
 function format(ms: number): string {
   const total = Math.floor(ms / 1000);
@@ -17,6 +18,7 @@ function format(ms: number): string {
 
 export function ActiveTimerBar() {
   const { timer, habits, pauseTimer, resumeTimer, stopTimer, adjustTimer } = useApp();
+  const { t } = useTranslation();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -33,9 +35,15 @@ export function ActiveTimerBar() {
   useEffect(() => {
     if (timer && habit && reachedTarget && timer.startedAt) {
       stopTimer(true);
-      toast.success(`${habit.name} target reached — ${habit.target} ${habit.unit || "min"} logged`);
+      toast.success(
+        t("timer.targetReached", {
+          name: habit.name,
+          target: habit.target,
+          unit: habit.unit || t("common.minsShort", "min"),
+        }),
+      );
     }
-  }, [reachedTarget, timer, habit, stopTimer]);
+  }, [reachedTarget, timer, habit, stopTimer, t]);
 
   if (!timer || !habit) return null;
 
@@ -54,7 +62,7 @@ export function ActiveTimerBar() {
         <div className="flex flex-col gap-6">
           {/* Timer title & live duration count */}
           <div className="text-center">
-            <p className="text-sm text-muted-foreground">Timer · {habit.name}</p>
+            <p className="text-sm text-muted-foreground">{t("timer.title")} · {habit.name}</p>
             <p className="numeric font-display text-5xl font-semibold text-foreground tracking-tight">
               {format(elapsed)}
             </p>
@@ -96,7 +104,7 @@ export function ActiveTimerBar() {
                 size="lg"
                 variant="outline"
                 className="h-14 w-14 rounded-full"
-                aria-label="Pause timer"
+                aria-label={t("timer.pauseAria")}
                 onClick={pauseTimer}
               >
                 <Pause className="h-6 w-6" />
@@ -106,7 +114,7 @@ export function ActiveTimerBar() {
                 size="lg"
                 variant="outline"
                 className="h-14 w-14 rounded-full"
-                aria-label="Resume timer"
+                aria-label={t("timer.resumeAria")}
                 onClick={resumeTimer}
               >
                 <Play className="h-6 w-6" />
@@ -117,16 +125,16 @@ export function ActiveTimerBar() {
               className="h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 text-lg font-medium"
               onClick={() => {
                 stopTimer(true);
-                toast.success("Session saved");
+                toast.success(t("timer.sessionSaved"));
               }}
             >
-              <Square className="mr-2 h-5 w-5" /> Save
+              <Square className="me-2 h-5 w-5" /> {t("timer.save")}
             </Button>
             <Button
               size="lg"
               variant="ghost"
               className="h-14 w-14 rounded-full text-muted-foreground hover:text-foreground"
-              aria-label="Discard timer"
+              aria-label={t("timer.discardAria")}
               onClick={() => stopTimer(false)}
             >
               <X className="h-6 w-6" />

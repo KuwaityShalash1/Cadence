@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { HabitIcon, colorStyles } from "@/components/icon-map";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { addDays, rangeKeys, todayKey } from "@/services/dates";
 import { isScheduledOn } from "@/services/schedule";
 import {
@@ -48,6 +49,7 @@ function MetricCard({
 }
 
 export function StatsPage() {
+  const { t } = useTranslation();
   const { habits, logMap, ready, customIcons } = useApp();
   const [rangeIdx, setRangeIdx] = useState(1);
   const [isPending, startTransition] = useTransition();
@@ -107,23 +109,30 @@ export function StatsPage() {
     [trendPoints],
   );
 
+  const rangeLabel =
+    range.days === 7
+      ? t("analytics.range7Days")
+      : range.days === 30
+        ? t("analytics.range30Days")
+        : range.days === 90
+          ? t("analytics.range90Days")
+          : t("analytics.range1Year");
+
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Statistics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          See how you&apos;re doing across all habits.
-        </p>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("analytics.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("analytics.subtitle")}</p>
       </header>
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {RANGES.map((r, i) => (
           <button
-            key={r.label}
+            key={r.days === 7 ? t("analytics.range7Days") : r.days === 30 ? t("analytics.range30Days") : r.days === 90 ? t("analytics.range90Days") : t("analytics.range1Year")}
             type="button"
             onClick={() => {
               startTransition(() => {
@@ -138,7 +147,7 @@ export function StatsPage() {
                 : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
-            {r.label}
+            {r.days === 7 ? t("analytics.range7Days") : r.days === 30 ? t("analytics.range30Days") : r.days === 90 ? t("analytics.range90Days") : t("analytics.range1Year")}
           </button>
         ))}
       </div>
@@ -147,34 +156,34 @@ export function StatsPage() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard
           icon={Target}
-          label="Completion"
+          label={t("analytics.completion")}
           value={`${Math.round(overallCompletion * 100)}%`}
-          hint={`${range.label} average`}
+          hint={t("analytics.rangeAverage").replace("{range}", rangeLabel)}
         />
         <MetricCard
           icon={TrendingUp}
-          label="Consistency"
+          label={t("analytics.consistency")}
           value={`${Math.round(consistency * 100)}%`}
-          hint="Last 30 days"
+          hint={t("analytics.last30Days")}
         />
         <MetricCard
           icon={Flame}
-          label="Best streak"
+          label={t("analytics.bestStreak")}
           value={`${bestStreakAcross}`}
-          hint={bestStreakAcross === 1 ? "day" : "days"}
+          hint={bestStreakAcross === 1 ? t("habitRow.day") : t("habitRow.days")}
         />
         <MetricCard
           icon={Award}
-          label="Perfect days"
+          label={t("analytics.perfectDays")}
           value={`${totalCompletedDays}`}
-          hint="All habits done"
+          hint={t("analytics.allHabitsDone")}
         />
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="font-display text-lg">Completion trend</h2>
+        <h2 className="font-display text-lg">{t("analytics.completionTrend")}</h2>
         <p className="text-xs text-muted-foreground">
-          Daily completion over {range.label.toLowerCase()}
+          {t("analytics.dailyCompletionOver").replace("{range}", rangeLabel)}
         </p>
         <div className="mt-4 flex h-32 items-end gap-px">
           {trendPoints.map((p, i) => (
@@ -195,10 +204,10 @@ export function StatsPage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-display text-lg">Per-habit breakdown</h2>
+        <h2 className="font-display text-lg">{t("analytics.perHabitBreakdown")}</h2>
         {habitStatsList.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            No active habits yet.
+            {t("analytics.noActiveHabits")}
           </p>
         ) : (
           <div className="space-y-3">
@@ -222,36 +231,36 @@ export function StatsPage() {
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-sans text-base font-semibold">{habit.name}</h3>
                       <p className="text-xs text-muted-foreground">
-                        {stats.scheduledDays} scheduled · {stats.totalCompletions} total completions
+                        {stats.scheduledDays} {t("analytics.scheduled")} · {stats.totalCompletions} {t("analytics.completions")}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="numeric font-display text-xl">{stats.currentStreak}</p>
-                      <p className="text-xs text-muted-foreground">current streak</p>
+                      <p className="text-xs text-muted-foreground">{t("analytics.currentStreak")}</p>
                     </div>
                   </div>
                   <div className="mt-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Completion rate</span>
+                      <span className="text-muted-foreground">{t("analytics.completionRate")}</span>
                       <span className="numeric font-medium">
                         {Math.round(stats.completionRate * 100)}%
                       </span>
                     </div>
                     <Progress
                       value={Math.round(stats.completionRate * 100)}
-                      aria-label="Completion rate"
+                      aria-label={t("analytics.completionRate")}
                       className="mt-1.5 h-2"
                     />
                   </div>
                   <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
                     <span>
-                      Best streak:{" "}
+                      {t("analytics.bestStreak")}:{" "}
                       <span className="numeric font-medium text-foreground">
                         {stats.bestStreak}
                       </span>
                     </span>
                     <span>
-                      Avg progress:{" "}
+                      {t("analytics.avgProgress")}:{" "}
                       <span className="numeric font-medium text-foreground">
                         {Math.round(stats.averageProgress * 100)}%
                       </span>

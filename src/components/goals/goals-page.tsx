@@ -28,6 +28,7 @@ import { useAddModalListener } from "@/hooks/use-shortcuts";
 import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import { triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/context";
 import { fromDateKey } from "@/services/dates";
 import { completedLogCount } from "@/services/stats";
 import { useApp, uid } from "@/stores/app-store";
@@ -45,6 +46,7 @@ const GOAL_FILTER_LABELS: Record<GoalFilterMode, string> = {
 };
 
 export function GoalsPage() {
+  const { t, language } = useTranslation();
   const {
     goals,
     habits,
@@ -108,10 +110,7 @@ export function GoalsPage() {
     return { progress, currentValues };
   }, [goals, logMap]);
 
-  const sortedGoals = useMemo(
-    () => [...goals].sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt)),
-    [goals],
-  );
+  const sortedGoals = useMemo(() => [...goals].sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt)), [goals]);
 
   const filteredGoals = useMemo(() => {
     let list = sortedGoals;
@@ -164,53 +163,51 @@ export function GoalsPage() {
   }
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">Goals</h1>
+          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("nav.goals")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Set long-term targets and track progress across habits.
+            {t("goal.subtitle")}
           </p>
         </div>
         <Button className="hidden md:inline-flex" onClick={openNew}>
-          <Plus className="mr-1 h-4 w-4" /> New goal
+          <Plus className="me-1 h-4 w-4" /> {t("goal.new")}
         </Button>
       </header>
 
       {sortedGoals.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <Target className="mx-auto h-10 w-10 text-muted-foreground/40" />
-          <h2 className="mt-3 font-display text-xl">No goals yet</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-            Group habits into a goal to track long-term progress toward a target date.
-          </p>
+          <h2 className="mt-3 font-display text-xl">{t("goal.emptyTitle")}</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("goal.emptyDesc")}</p>
           <Button className="mt-5" onClick={openNew}>
-            <Plus className="mr-1 h-4 w-4" /> Create your first goal
+            <Plus className="me-1 h-4 w-4" /> {t("goal.createFirst")}
           </Button>
         </div>
       ) : (
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search goals…"
-                className="h-11 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
-                aria-label="Search goals"
+                placeholder={t("goal.searchPlaceholder")}
+                className="h-11 ps-10 [&::-webkit-search-cancel-button]:appearance-none"
+                aria-label={t("goal.searchPlaceholder")}
               />
               {query ? (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
-                  aria-label="Clear search"
+                  className="absolute end-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={t("today.clearSearch")}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -231,7 +228,7 @@ export function GoalsPage() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  {GOAL_FILTER_LABELS[mode]}
+                  {mode === "all" ? t("goal.filterAll") : mode === "in_progress" ? t("goal.filterInProgress") : t("goal.filterCompleted")}
                 </button>
               ))}
             </div>
@@ -239,7 +236,7 @@ export function GoalsPage() {
 
           {filteredGoals.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              No goals match your search.
+              {t("goal.noMatch")}
             </p>
           ) : (
             <DndContext
@@ -293,7 +290,7 @@ export function GoalsPage() {
                                 size="icon"
                                 className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                                 onClick={() => openEdit(goal)}
-                                aria-label="Edit goal"
+                                aria-label={t("goal.edit")}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
@@ -306,15 +303,15 @@ export function GoalsPage() {
                                   // Undo action can put it back exactly as it was.
                                   const goalToRestore = structuredClone(goal);
                                   removeGoal(goal.id);
-                                  toast.success("Goal deleted", {
+                                  toast.success(t("goal.deleted"), {
                                     action: {
-                                      label: "Undo",
+                                      label: t("common.undo"),
                                       onClick: () => restoreGoal(goalToRestore),
                                     },
                                     duration: 5000, // Give them 5 seconds to undo
                                   });
                                 }}
-                                aria-label="Delete goal"
+                                aria-label={t("goal.deleteGoalAria")}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -324,8 +321,8 @@ export function GoalsPage() {
                           {goal.targetDate ? (
                             <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                               <Calendar className="h-3.5 w-3.5" />
-                              Target:{" "}
-                              {fromDateKey(goal.targetDate).toLocaleDateString(undefined, {
+                              {t("goal.targetDate")}:{" "}
+                              {fromDateKey(goal.targetDate).toLocaleDateString(language, {
                                 month: "long",
                                 day: "numeric",
                                 year: "numeric",
@@ -336,13 +333,13 @@ export function GoalsPage() {
                           <div className="mt-3">
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">
-                                {linkedHabits.length} habits linked
+                                {linkedHabits.length} {t("goal.habitsLinked")}
                               </span>
                               <span className="numeric font-medium">{pct}%</span>
                             </div>
                             <Progress
                               value={pct}
-                              aria-label={`Goal progress for ${goal.name}`}
+                              aria-label={t("goal.goalProgressFor").replace("{name}", goal.name)}
                               className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
                             />
                           </div>
@@ -402,13 +399,13 @@ export function GoalsPage() {
       {/* Mobile FAB — floats above the bottom nav and the timer bar */}
       <button
         type="button"
-        aria-label="Create goal"
+        aria-label={t("goal.new")}
         onClick={openNew}
         style={{
           bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
         }}
         className={cn(
-          "fixed right-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
+          "fixed end-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
           "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
           "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
         )}
@@ -419,12 +416,8 @@ export function GoalsPage() {
       <ResponsiveSheet
         open={isOpen}
         onOpenChange={setIsOpen}
-        title={editing ? "Edit goal" : "New goal"}
-        description={
-          editing
-            ? "Update your goal details and linked habits."
-            : "Group habits into a long-term target."
-        }
+        title={editing ? t("goal.edit") : t("goal.new")}
+        description={editing ? t("goal.editDesc") : t("goal.newDesc")}
       >
         <GoalForm
           key={editing?.id ?? "new"}
@@ -434,7 +427,7 @@ export function GoalsPage() {
           onDone={() => setIsOpen(false)}
           onSave={(goal) => {
             upsertGoal(goal);
-            toast.success(editing ? "Goal updated" : "Goal created");
+            toast.success(editing ? t("goal.updated") : t("goal.created"));
             setIsOpen(false);
           }}
           onLinkHabit={(habitId, goalId) => {

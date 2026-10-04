@@ -1,4 +1,4 @@
-export const ar = {
+{
   "nav.today": "اليوم",
   "nav.calendar": "التقويم",
   "nav.stats": "التحليلات",
@@ -368,11 +368,6 @@ export const ar = {
   "command.themeUpdatedDark": "تم التبديل إلى الوضع الداكن",
   "command.themeUpdatedLight": "تم التبديل إلى الوضع الفاتح",
   "command.themeUpdatedSystem": "تم التبديل إلى مظهر النظام",
-  "command.groupLanguage": "اللغة",
-  "command.switchArabic": "التبديل إلى العربية",
-  "command.switchEnglish": "التبديل إلى الإنجليزية",
-  "command.languageUpdatedArabic": "تم التبديل إلى العربية",
-  "command.languageUpdatedEnglish": "تم التبديل إلى الإنجليزية",
   "command.shortcutsHelp": "مساعدة اختصارات لوحة المفاتيح",
   "command.active": "نشط",
   "command.feedback": "الإبلاغ عن خطأ / ملاحظات",
@@ -512,9 +507,7 @@ export const ar = {
   "quitTracker.relapsePlural": "انتكاسات",
   "quitTracker.lastRelapse": "آخرها",
   "quitTracker.streakWas": "كانت السلسلة",
-  "quitTracker.editTrackerAria": "تعديل المتتبع",
   "quitTracker.deleteTrackerAria": "حذف المتتبع",
-  "quitTracker.noMatch": "لا توجد متتبعات تطابق بحثك.",
   "quitTracker.minutes": "دقائق",
   "quitTracker.units": "وحدات",
   "quitTracker.todaysTotal": "إجمالي اليوم",
@@ -807,23 +800,5 @@ export const ar = {
   "quitSuggestion.compulsiveSnacking.name": "تناول الوجبات الخفيفة القهري",
   "quitSuggestion.compulsiveSnacking.badge": "التغذية",
   "quitSuggestion.avoidingDifficultTasks.name": "تجنب المهام الصعبة",
-  "quitSuggestion.avoidingDifficultTasks.badge": "تطوير الذات",
-  "seo.defaultTitle": "كادنس | متتبع العادات البسيط والفعّال",
-  "seo.defaultDesc": "كادنس هو متتبع عادات بسيط يعمل بالكامل دون اتصال بالإنترنت لمساعدتك على بناء روتين يومي، وتحقيق الأهداف، ومواصلة التقدم بخصوصية تامة وبدون إعلانات.",
-  "seo.todayTitle": "اليوم — متتبع العادات كادنس",
-  "seo.todayDesc": "تابع عاداتك اليومية وسجل إنجازاتك وحافظ على استمرارية سلاسل العادات بكل سهولة.",
-  "seo.calendarTitle": "التقويم — متتبع العادات كادنس",
-  "seo.calendarDesc": "استعرض مدى التزامك بالعادات عبر تقويم تفاعلي وخريطة حرارية وسجل إنجاز تاريخي.",
-  "seo.analyticsTitle": "التحليلات — متتبع العادات كادنس",
-  "seo.analyticsDesc": "حلل معدلات إنجاز عاداتك واتجاهاتك ومستوى انضباطك بإحصاءات ورسوم بيانية دقيقة.",
-  "seo.goalsTitle": "الأهداف — متتبع العادات كادنس",
-  "seo.goalsDesc": "حدد أهدافك وطموحاتك طويلة المدى واربطها بعاداتك اليومية للوصول إليها بنجاح.",
-  "seo.routinesTitle": "الروتين — متتبع العادات كادنس",
-  "seo.routinesDesc": "نظم عاداتك في روتين صباحي ومسائي متكامل لتعزيز تركيزك وإنتاجيتك اليومية.",
-  "seo.quitTrackerTitle": "متتبع الإقلاع — كادنس",
-  "seo.quitTrackerDesc": "تخلص من العادات غير المرغوبة عبر تتبع أيام الامتناع التام أو استراتيجيات التقليل التدريجي.",
-  "seo.settingsTitle": "الإعدادات — متتبع العادات كادنس",
-  "seo.settingsDesc": "إدارة ملفك الشخصي والمظهر واللغة والإشعارات وبياناتك المحلية المحفوظة بأمان على جهازك.",
-  "seo.aboutTitle": "من نحن — متتبع العادات كادنس",
-  "seo.aboutDesc": "تعرف على رؤية كادنس لتطوير الذات وبناء العادات بتركيز عالٍ وخصوصية تامة بدون تشتيت."
-};
+  "quitSuggestion.avoidingDifficultTasks.badge": "تطوير الذات"
+}
