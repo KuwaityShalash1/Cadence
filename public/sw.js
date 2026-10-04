@@ -24,7 +24,7 @@
 "use strict";
 
 /** Version of the caching scheme. Also part of every cache name. */
-const SW_VERSION = "1.0.2";
+const SW_VERSION = "1.0.3";
 
 const CACHE_NAMESPACE = "cadence";
 /** Core shell files (document + icons + manifest); never trimmed at runtime. */
@@ -46,6 +46,7 @@ const PRECACHE_URLS = [
   OFFLINE_URL,
   "/manifest.json",
   "/manifest.json?v=2",
+  "/manifest.json?v=3",
   "/favicon.ico",
   "/favicon.ico?v=2",
   "/logo.svg",
@@ -54,12 +55,24 @@ const PRECACHE_URLS = [
   "/apple-touch-icon.png?v=2",
   "/icon-192.png",
   "/icon-192.png?v=2",
+  "/icon-192.png?v=3",
+  "/icon-maskable-192.png",
+  "/icon-maskable-192.png?v=3",
   "/icon-512.png",
   "/icon-512.png?v=2",
+  "/icon-512.png?v=3",
+  "/icon-maskable-512.png",
+  "/icon-maskable-512.png?v=3",
   "/pwa-192x192.png",
   "/pwa-192x192.png?v=2",
+  "/pwa-192x192.png?v=3",
+  "/pwa-maskable-192x192.png",
+  "/pwa-maskable-192x192.png?v=3",
   "/pwa-512x512.png",
   "/pwa-512x512.png?v=2",
+  "/pwa-512x512.png?v=3",
+  "/pwa-maskable-512x512.png",
+  "/pwa-maskable-512x512.png?v=3",
 ];
 
 /**

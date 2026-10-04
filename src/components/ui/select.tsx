@@ -10,14 +10,14 @@ const Select = ({
   dir,
   ...props
 }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => {
-  const [resolvedDir, setResolvedDir] = React.useState<"ltr" | "rtl" | undefined>(dir);
+  const [resolvedDir, setResolvedDir] = React.useState<"ltr" | "rtl">(dir || "ltr");
 
   React.useEffect(() => {
     if (dir) {
       setResolvedDir(dir);
       return;
     }
-    const getDocDir = () =>
+    const getDocDir = (): "ltr" | "rtl" =>
       (document.documentElement.getAttribute("dir") as "ltr" | "rtl") || "ltr";
 
     setResolvedDir(getDocDir());

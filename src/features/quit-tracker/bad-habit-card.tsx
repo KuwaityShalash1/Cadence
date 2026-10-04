@@ -59,7 +59,9 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
   // Calculate today's usage for limit strategy
   const isLimitStrategy = habit.strategy === "limit";
   const todayUsage = isLimitStrategy
-    ? ((habit.usageLogs ?? []).filter((log: UsageLog) => log.date === todayKey()).reduce((sum, log) => sum + log.value, 0) || 0)
+    ? (habit.usageLogs ?? [])
+        .filter((log: UsageLog) => log.date === todayKey())
+        .reduce((sum, log) => sum + log.value, 0) || 0
     : 0;
   const limitValue = habit.limitValue ?? 0;
   const usagePercentage = limitValue > 0 ? Math.min(100, (todayUsage / limitValue) * 100) : 0;
@@ -98,14 +100,15 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
     // tracker (relapse history included) so the toast's Undo can restore it.
     const trackerToRestore = structuredClone(habit);
     removeBadHabit(habit.id);
-    toast.success(t("quitTracker.deletedToast"), {
+    toast.success(t("quitTracker.deletedToast", "Quit tracker deleted"), {
       action: {
-        label: t("common.undo"),
+        label: t("common.undo", "Undo"),
         onClick: () => restoreBadHabit(trackerToRestore),
       },
       duration: 5000, // Give them 5 seconds to undo
     });
   }
+
   // Single-column card: full row width with extra vertical breathing room on
   // desktop. min-w-0 + overflow-x-clip guarantee badges never bleed past borders.
   return (
@@ -123,11 +126,13 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
             />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="font-display text-lg font-bold tracking-tight leading-tight truncate">{habit.title}</h3>
+            <h3 className="font-display text-lg font-bold tracking-tight leading-tight truncate">
+              {habit.title}
+            </h3>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-              <span className="shrink-0">{t("quitTracker.quitDate")}:</span>
+              <span className="shrink-0">{t("quitTracker.quitDate", "Quit Date")}:</span>
               <span className="font-medium text-foreground whitespace-nowrap">
-                {new Date(habit.quitDate).toLocaleDateString(undefined, {
+                {new Date(habit.quitDate).toLocaleDateString(language, {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -216,16 +221,16 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                 </span>
               </div>
               <span className="shrink-0 text-sm font-semibold whitespace-nowrap tabular-nums">
-                {todayUsage} / {limitValue} {limitValue === 1 && habit.limitType === "count" ? t("quitTracker.unitSingular", "unit") : t("quitTracker.unitPlural", "units")}
+                {todayUsage} / {limitValue}{" "}
+                {limitValue === 1 && habit.limitType === "count"
+                  ? t("quitTracker.unitSingular", "unit")
+                  : t("quitTracker.unitPlural", "units")}
               </span>
             </div>
             <Progress
               value={usagePercentage}
               aria-label={t("quitTracker.dailyProgress", "Daily Progress")}
-              className={cn(
-                "h-2.5",
-                isLimitExceeded ? "bg-destructive/20" : "",
-              )}
+              className={cn("h-2.5", isLimitExceeded ? "bg-destructive/20" : "")}
             />
             {isLimitExceeded && (
               <div className="flex items-center gap-3 text-sm text-destructive font-medium">
@@ -238,13 +243,17 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
           {/* Responsive wrap: stack vertically on narrow screens, side-by-side on sm+. min-w-0 prevents overflow. */}
           <div className="flex min-w-0 flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="rounded-xl border bg-card px-3 py-2 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">{t("quitTracker.currentStreak")}</span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {t("quitTracker.currentStreak")}
+              </span>
               <span className="shrink-0 font-semibold text-foreground whitespace-nowrap tabular-nums">
                 {formatStreakDays(currentStreakHours)}
               </span>
             </div>
             <div className="rounded-xl border bg-card px-3 py-2 flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <span className="min-w-0 flex-1 truncate text-muted-foreground">{t("quitTracker.longestStreak")}</span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {t("quitTracker.longestStreak")}
+              </span>
               <span className="shrink-0 font-semibold text-primary flex items-center gap-1 whitespace-nowrap tabular-nums">
                 <ShieldCheck className="h-4 w-4 shrink-0" />
                 {formatStreakDays(longestStreakHours)}
@@ -256,7 +265,9 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
             className="w-full h-10 rounded-xl border-primary/30 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 hover:border-primary transition-colors"
             onClick={() => {
               if (todayUsage >= limitValue) {
-                toast.warning(t("quitTracker.limitAlreadyReached", "You've already reached your daily limit."));
+                toast.warning(
+                  t("quitTracker.limitAlreadyReached", "You've already reached your daily limit."),
+                );
                 return;
               }
               setUsageDialogOpen(true);
@@ -272,7 +283,9 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
         <div className="space-y-4 sm:space-y-5">
           {/* Abstinence footer: stacks on mobile, spreads on sm+. flex-wrap + min-w-0 stops badge overflow. */}
           <div className="rounded-xl border bg-card px-3 py-2 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
-            <span className="min-w-0 flex-1 truncate text-muted-foreground">{t("quitTracker.longestStreak")}</span>
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">
+              {t("quitTracker.longestStreak")}
+            </span>
             <span className="shrink-0 font-semibold text-primary flex items-center gap-1 whitespace-nowrap tabular-nums">
               <ShieldCheck className="h-4 w-4 shrink-0" />
               {formatStreakHours(longestStreakHours)}
@@ -282,13 +295,17 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 font-medium whitespace-nowrap">
                 <History className="h-3.5 w-3.5" />
-                {habit.history.length} {habit.history.length === 1 ? "relapse" : "relapses"}
+                {habit.history.length}{" "}
+                {habit.history.length === 1
+                  ? t("quitTracker.relapseSingular", "relapse")
+                  : t("quitTracker.relapsePlural", "relapses")}
               </span>
               <span className="truncate tabular-nums">
-                Last:{" "}
-                {new Date(
-                  Math.max(...habit.history.map((r) => r.relapsedAt)),
-                ).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                {t("quitTracker.lastRelapse", "Last")}:{" "}
+                {new Date(Math.max(...habit.history.map((r) => r.relapsedAt))).toLocaleDateString(
+                  language,
+                  { month: "short", day: "numeric", year: "numeric" },
+                )}
               </span>
             </div>
           )}
@@ -329,10 +346,18 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                     <div className="flex items-center justify-between font-medium">
                       <span className="flex items-center gap-1.5 text-foreground">
                         <span>{triggerObj?.emoji ?? "⚡"}</span>
-                        <span>{triggerObj?.label ?? record.triggerCategory}</span>
+                        <span>
+                          {record.triggerCategory
+                            ? t(
+                                `trigger.${record.triggerCategory}`,
+                                triggerObj?.label || record.triggerCategory,
+                              )
+                            : triggerObj?.label || ""}
+                        </span>
                       </span>
                       <span className="text-muted-foreground">
-                        Streak was: {formatStreakHours(record.streakDurationHours)}
+                        {t("quitTracker.streakWas", "Streak was")}:{" "}
+                        {formatStreakHours(record.streakDurationHours)}
                       </span>
                     </div>
                     {record.detailedReason && (
@@ -341,7 +366,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
                       </p>
                     )}
                     <div className="text-[10px] text-muted-foreground ps-6">
-                      {new Date(record.relapsedAt).toLocaleString()}
+                      {new Date(record.relapsedAt).toLocaleString(language)}
                     </div>
                   </div>
                 );
@@ -364,9 +389,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
       <Dialog open={usageDialogOpen} onOpenChange={setUsageDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {t("quitTracker.logUsage", "Log Usage")}
-            </DialogTitle>
+            <DialogTitle>{t("quitTracker.logUsage", "Log Usage")}</DialogTitle>
             <DialogDescription>
               {habit.limitType === "time"
                 ? t("quitTracker.logUsageTimeDesc", "How many minutes did you use today?")
@@ -386,15 +409,17 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
               setUsageValue("");
               toast.success(
                 habit.limitType === "time"
-                  ? t("quitTracker.usageLoggedTime", `Logged ${value} minutes`)
-                  : t("quitTracker.usageLoggedCount", `Logged ${value} units`),
+                  ? t("quitTracker.usageLoggedTime", `Logged ${value} minutes`, { value })
+                  : t("quitTracker.usageLoggedCount", `Logged ${value} units`, { value }),
               );
             }}
             className="space-y-4 py-2"
           >
             <div className="space-y-2">
               <Label htmlFor="usage-value">
-                {habit.limitType === "time" ? "Minutes" : "Units"}
+                {habit.limitType === "time"
+                  ? t("quitTracker.minutes", "Minutes")
+                  : t("quitTracker.units", "Units")}
               </Label>
               <Input
                 id="usage-value"
@@ -412,19 +437,30 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
               <p className="text-muted-foreground">
                 {habit.limitType === "time" ? (
                   <>
-                    Today's total: <strong>{todayUsage}</strong> / {limitValue} minutes
+                    {t("quitTracker.todaysTotal", "Today's total")}: <strong>{todayUsage}</strong> /{" "}
+                    {limitValue} {t("quitTracker.minutes", "minutes").toLowerCase()}
                     {todayUsage > 0 && (
                       <span className="block mt-1">
-                        Remaining: <strong>{Math.max(0, limitValue - todayUsage)}</strong> minutes
+                        {t("quitTracker.remaining", "Remaining")}:{" "}
+                        <strong>{Math.max(0, limitValue - todayUsage)}</strong>{" "}
+                        {t("quitTracker.minutes", "minutes").toLowerCase()}
                       </span>
                     )}
                   </>
                 ) : (
                   <>
-                    Today's total: <strong>{todayUsage}</strong> / {limitValue} units
+                    {t("quitTracker.todaysTotal", "Today's total")}: <strong>{todayUsage}</strong> /{" "}
+                    {limitValue}{" "}
+                    {limitValue === 1
+                      ? t("quitTracker.unitSingular", "unit")
+                      : t("quitTracker.unitPlural", "units")}
                     {todayUsage > 0 && (
                       <span className="block mt-1">
-                        Remaining: <strong>{Math.max(0, limitValue - todayUsage)}</strong> units
+                        {t("quitTracker.remaining", "Remaining")}:{" "}
+                        <strong>{Math.max(0, limitValue - todayUsage)}</strong>{" "}
+                        {limitValue === 1
+                          ? t("quitTracker.unitSingular", "unit")
+                          : t("quitTracker.unitPlural", "units")}
                       </span>
                     )}
                   </>
@@ -432,8 +468,13 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
               </p>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setUsageDialogOpen(false)} className="h-11">
-                {t("settings.cancel", "Cancel")}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setUsageDialogOpen(false)}
+                className="h-11"
+              >
+                {t("common.cancel", "Cancel")}
               </Button>
               <Button type="submit" className="h-11 sm:min-w-32 font-semibold">
                 {t("quitTracker.logUsage", "Log Usage")}

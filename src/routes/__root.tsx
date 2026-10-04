@@ -285,7 +285,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               { rel: "alternate" as const, hrefLang: "ar", href: canonicalUrl },
               { rel: "alternate" as const, hrefLang: "x-default", href: canonicalUrl },
             ]),
-        { rel: "manifest", href: "/manifest.json?v=2" },
+        { rel: "manifest", href: "/manifest.json?v=3" },
         { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=2" },
         { rel: "icon", href: "/favicon.ico?v=2", sizes: "48x48 32x32 16x16" },
         { rel: "icon", type: "image/svg+xml", href: "/logo.svg?v=2" },
