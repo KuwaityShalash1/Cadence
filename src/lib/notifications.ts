@@ -71,26 +71,18 @@ export async function dispatchNotification(
           badge: options.badge || "/pwa-192x192.png?v=2",
           data: { url: "/" },
         });
-        console.log(
-          "[NotificationScheduler] Dispatched via ServiceWorkerRegistration.showNotification",
-          { title },
-        );
         return;
       }
-    } catch (err) {
-      console.warn(
-        "[NotificationScheduler] ServiceWorker showNotification failed, trying window fallback",
-        err,
-      );
+    } catch {
+      // Fall through to window notification fallback
     }
   }
 
   // 2. Desktop fallback
   try {
     new Notification(title, options);
-    console.log("[NotificationScheduler] Dispatched via window.Notification", { title });
-  } catch (error) {
-    console.warn("[NotificationScheduler] Window notification failed", error);
+  } catch {
+    // Window notification failed or unsupported
   }
 }
 
@@ -113,11 +105,7 @@ export async function checkDailyHabitReminder(
   logs: LogMap,
   now = new Date(),
 ): Promise<boolean> {
-  const permission = getNotificationPermission();
-  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  console.log("[NotificationScheduler] Evaluating", { permission, currentTime });
   if (!canSendNotification()) {
-    console.log("[NotificationScheduler] Skipped: browser permission is not granted");
     return false;
   }
 
@@ -151,11 +139,6 @@ export async function checkDailyHabitReminder(
           continue;
         }
 
-        console.log("[NotificationScheduler] Matched habit reminder", {
-          habit: habit.name,
-          reminderTime,
-          currentTime,
-        });
         const currentStreak = streaks(habit, logs).current;
         const unit =
           currentStreak === 1
@@ -171,8 +154,7 @@ export async function checkDailyHabitReminder(
       }
     }
     return sent;
-  } catch (error) {
-    console.warn("[NotificationScheduler] Failed while evaluating reminders", error);
+  } catch {
     return false;
   }
 }
@@ -237,8 +219,8 @@ export async function syncRemindersToServiceWorker(
       type: "SYNC_REMINDERS",
       reminders: pendingReminders,
     });
-  } catch (err) {
-    console.warn("[NotificationScheduler] Failed to sync reminders to Service Worker", err);
+  } catch {
+    // Service Worker postMessage failed or worker unavailable
   }
 }
 
@@ -256,8 +238,8 @@ export async function triggerServiceWorkerNotificationCheck(): Promise<void> {
         timestamp: Date.now(),
       });
     }
-  } catch (err) {
-    console.warn("[NotificationScheduler] Failed to trigger SW notification check", err);
+  } catch {
+    // Service Worker notification check failed or worker unavailable
   }
 }
 
@@ -284,21 +266,17 @@ export async function registerPeriodicSync(): Promise<boolean> {
         await reg.periodicSync.register("check-notifications", {
           minInterval: 15 * 60 * 1000, // 15 minutes minimum supported by Chromium
         });
-        console.log("[NotificationScheduler] Periodic Background Sync registered");
       }
       return true;
     }
-  } catch (err) {
-    console.debug("[NotificationScheduler] PeriodicSync registration skipped/unsupported", err);
+  } catch {
+    // PeriodicSync registration skipped or unsupported
   }
   return false;
 }
 
 export async function sendTestNotification(): Promise<boolean> {
-  const permission = getNotificationPermission();
-  console.log("[NotificationScheduler] Test notification requested", { permission });
   if (!canSendNotification()) {
-    console.warn("[NotificationScheduler] Test notification skipped: permission is not granted");
     return false;
   }
 
@@ -309,8 +287,7 @@ export async function sendTestNotification(): Promise<boolean> {
       tag: "cadence-test-notification",
     });
     return true;
-  } catch (error) {
-    console.warn("[NotificationScheduler] Test notification failed", error);
+  } catch {
     return false;
   }
 }

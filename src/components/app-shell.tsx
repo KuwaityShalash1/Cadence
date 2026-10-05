@@ -34,6 +34,7 @@ import { ResponsiveSheet } from "@/components/responsive-sheet";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { playToggleSound } from "@/lib/sound";
 import { useBackupReminderStatus } from "@/hooks/use-weekly-backup";
+import { useAppBadge } from "@/hooks/use-app-badge";
 
 /**
  * Nav item definitions use translation key references rather than hardcoded
@@ -121,6 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function Shell({ children }: { children: ReactNode }) {
+  useAppBadge();
   const editor = useHabitEditor();
   const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
   const { isDue: isBackupDue } = useBackupReminderStatus();

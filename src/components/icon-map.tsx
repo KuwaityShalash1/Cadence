@@ -43,6 +43,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import type { CustomIcon } from "@/types";
+import DOMPurify from "dompurify";
 
 export const ICONS: Record<string, LucideIcon> = {
   Activity,
@@ -175,6 +176,27 @@ function inheritCssDeclarations(css: string): string {
 }
 
 /**
+ * Strictly sanitizes SVG markup using DOMPurify with the SVG profile.
+ * Strips script tags, event handlers (onload, onerror, onclick, etc.), javascript: URIs,
+ * and dangerous elements like <foreignObject> while keeping safe SVG vector paths and styles.
+ */
+function sanitizeSvgSecurity(raw: string): string {
+  if (typeof window !== "undefined" && DOMPurify.sanitize) {
+    return DOMPurify.sanitize(raw, {
+      USE_PROFILES: { svg: true, svgFilters: true },
+      ADD_TAGS: ["style"],
+      ADD_ATTR: ["target"],
+    });
+  }
+  // SSR defense-in-depth fallback if called outside of the browser:
+  return raw
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*(["'])[\s\S]*?\1/gi, "")
+    .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
+    .replace(/href\s*=\s*(["'])javascript:[\s\S]*?\1/gi, "");
+}
+
+/**
  * Normalises an uploaded / pasted SVG so it fills its wrapper AND inherits the
  * habit's colour, instead of painting itself a hardcoded colour.
  *
@@ -199,8 +221,11 @@ function inheritCssDeclarations(css: string): string {
  * solid black, which is what made uploaded icons render flat black.
  */
 export function sanitizeSvgIcon(raw: string): string {
-  // 1. Drop everything that is illegal inside an injected innerHTML fragment.
-  let svg = raw
+  // 1. Initial DOMPurify security sanitization pass to strip any scripts or malicious markup.
+  let svg = sanitizeSvgSecurity(raw);
+
+  // 2. Drop everything that is illegal inside an injected innerHTML fragment.
+  svg = svg
     .replace(/<\?xml[\s\S]*?\?>/gi, "") // XML prolog
     .replace(/<!DOCTYPE[^>[]*(\[[\s\S]*?\])?[^>]*>/gi, "") // DOCTYPE (incl. internal subset)
     .replace(/<!--[\s\S]*?-->/g, "") // comments
@@ -239,7 +264,7 @@ export function sanitizeSvgIcon(raw: string): string {
   );
 
   // 5..8. Rewrite only the root <svg ...> opening tag.
-  return svg.replace(/<svg\b[^>]*>/i, (tag) => {
+  const processed = svg.replace(/<svg\b[^>]*>/i, (tag) => {
     // Capture the intrinsic size BEFORE stripping it — needed for the viewBox.
     const widthMatch = tag.match(/\swidth\s*=\s*["']\s*([\d.]+)\s*(?:px)?\s*["']/i);
     const heightMatch = tag.match(/\sheight\s*=\s*["']\s*([\d.]+)\s*(?:px)?\s*["']/i);
@@ -290,6 +315,9 @@ export function sanitizeSvgIcon(raw: string): string {
 
     return `${openTag} ${attrs.join(" ")}${isSelfClosing ? "/" : ""}>`;
   });
+
+  // Final DOMPurify pass ensuring the output HTML string is strictly sanitized
+  return sanitizeSvgSecurity(processed);
 }
 
 /**
@@ -314,20 +342,19 @@ export function HabitIcon({
   const customIcon = findCustomIcon(customIcons, name);
 
   if (customIcon) {
+    const cleanSvg = sanitizeSvgIcon(customIcon.svgContent);
     return (
       <span
         className={cn("inline-flex items-center justify-center", className)}
         style={style}
         aria-hidden="true"
         /**
-         * Re-sanitised at render time as well as on save: icons persisted by an
-         * older build may still carry `<!DOCTYPE>`, comments or no `viewBox`,
-         * which is what made uploaded files render as a clipped opaque block.
-         * Sanitising here repairs them without a re-upload, and because it also
-         * forces `currentColor`, icons stored by the older build — which baked
-         * in a hardcoded black `fill` — pick up the habit colour immediately.
+         * Re-sanitised at render time with DOMPurify as well as on save: icons
+         * persisted by an older build may still carry scripts, malicious attributes,
+         * comments or missing viewBox. Sanitising here neutralises any XSS vectors
+         * and ensures the habit colour is inherited via currentColor.
          */
-        dangerouslySetInnerHTML={{ __html: sanitizeSvgIcon(customIcon.svgContent) }}
+        dangerouslySetInnerHTML={{ __html: cleanSvg }}
       />
     );
   }

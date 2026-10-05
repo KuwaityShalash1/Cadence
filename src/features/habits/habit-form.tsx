@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useProgressiveDisclosure } from "@/hooks/use-progressive-disclosure";
 import { toast } from "sonner";
 import {
@@ -40,8 +41,6 @@ import type { Habit, HabitType, Schedule } from "@/types";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/context";
 import { playAddHabitSound, playDeleteHabitSound } from "@/lib/sound";
-
-// TYPE_LABELS is mapped dynamically in HabitForm using t()
 
 const WEEKDAY_KEYS = [
   "weekdays.sun",
@@ -115,6 +114,29 @@ function TemplateRow({ template, selected, onSelect }: TemplateChipProps) {
   );
 }
 
+export interface HabitFormValues {
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  groupId: string;
+  goalId: string;
+  type: HabitType;
+  target: string;
+  unit: string;
+  scheduleType: Schedule["type"];
+  weekdays: number[];
+  timesPerWeek: string;
+  monthDays: string;
+  interval: string;
+  startDate: string;
+  endDate: string;
+  reminderEnabled: boolean;
+  reminderTimes: string[];
+  quickIncrements: number[];
+  quickDecrements: number[];
+}
+
 interface Props {
   habit?: Habit | undefined;
   onDone: () => void;
@@ -123,47 +145,86 @@ interface Props {
 export function HabitForm({ habit, onDone }: Props) {
   const { t } = useTranslation();
   const { groups, goals, createHabit, updateHabit, removeHabit } = useApp();
-  const [name, setName] = useState(habit?.name ?? "");
-  const [description, setDescription] = useState(habit?.description ?? "");
-  const [icon, setIcon] = useState(habit?.icon ?? "Target");
-  const [color, setColor] = useState(habit?.color ?? "teal");
-  const [groupId, setGroupId] = useState(habit?.groupId ?? "none");
-  const [goalId, setGoalId] = useState(habit?.goalId ?? "none");
-  const [type, setType] = useState<HabitType>(habit?.type ?? "boolean");
-  const [target, setTarget] = useState(String(habit?.target ?? 1));
-  const [unit, setUnit] = useState(habit?.unit ?? "");
-  const [scheduleType, setScheduleType] = useState<Schedule["type"]>(
-    habit?.schedule.type ?? "daily",
-  );
-  const [weekdays, setWeekdays] = useState<number[]>(
-    habit?.schedule.type === "weekdays" ? habit.schedule.days : [1, 2, 3, 4, 5],
-  );
-  const [timesPerWeek, setTimesPerWeek] = useState(
-    habit?.schedule.type === "timesPerWeek" ? String(habit.schedule.count) : "3",
-  );
-  const [monthDays, setMonthDays] = useState(
-    habit?.schedule.type === "monthDays" ? habit.schedule.days.join(", ") : "1, 15",
-  );
-  const [interval, setInterval] = useState(
-    habit?.schedule.type === "interval" ? String(habit.schedule.everyNDays) : "2",
-  );
-  const [startDate, setStartDate] = useState(habit?.startDate ?? todayKey());
-  const [endDate, setEndDate] = useState(habit?.endDate ?? "");
-  const [reminderEnabled, setReminderEnabled] = useState(
-    Boolean(habit?.reminderTimes?.length || habit?.reminder),
-  );
-  const [reminderTimes, setReminderTimes] = useState<string[]>(
-    habit?.reminderTimes?.length ? habit.reminderTimes : habit?.reminder ? [habit.reminder] : [],
-  );
+
+  const { register, handleSubmit, watch, setValue, reset } = useForm<HabitFormValues>({
+    defaultValues: {
+      name: habit?.name ?? "",
+      description: habit?.description ?? "",
+      icon: habit?.icon ?? "Target",
+      color: habit?.color ?? "teal",
+      groupId: habit?.groupId ?? "none",
+      goalId: habit?.goalId ?? "none",
+      type: habit?.type ?? "boolean",
+      target: String(habit?.target ?? 1),
+      unit: habit?.unit ?? "",
+      scheduleType: habit?.schedule.type ?? "daily",
+      weekdays: habit?.schedule.type === "weekdays" ? habit.schedule.days : [1, 2, 3, 4, 5],
+      timesPerWeek: habit?.schedule.type === "timesPerWeek" ? String(habit.schedule.count) : "3",
+      monthDays: habit?.schedule.type === "monthDays" ? habit.schedule.days.join(", ") : "1, 15",
+      interval: habit?.schedule.type === "interval" ? String(habit.schedule.everyNDays) : "2",
+      startDate: habit?.startDate ?? todayKey(),
+      endDate: habit?.endDate ?? "",
+      reminderEnabled: Boolean(habit?.reminderTimes?.length || habit?.reminder),
+      reminderTimes: habit?.reminderTimes?.length
+        ? habit.reminderTimes
+        : habit?.reminder
+          ? [habit.reminder]
+          : [],
+      quickIncrements: habit?.quickIncrements ?? [],
+      quickDecrements: normalizeQuickDecrements(habit?.quickDecrement),
+    },
+  });
+
+  // Keep form synchronized if habit prop updates
+  useEffect(() => {
+    if (habit) {
+      reset({
+        name: habit.name,
+        description: habit.description ?? "",
+        icon: habit.icon ?? "Target",
+        color: habit.color ?? "teal",
+        groupId: habit.groupId ?? "none",
+        goalId: habit.goalId ?? "none",
+        type: habit.type ?? "boolean",
+        target: String(habit.target ?? 1),
+        unit: habit.unit ?? "",
+        scheduleType: habit.schedule.type ?? "daily",
+        weekdays: habit.schedule.type === "weekdays" ? habit.schedule.days : [1, 2, 3, 4, 5],
+        timesPerWeek: habit.schedule.type === "timesPerWeek" ? String(habit.schedule.count) : "3",
+        monthDays: habit.schedule.type === "monthDays" ? habit.schedule.days.join(", ") : "1, 15",
+        interval: habit.schedule.type === "interval" ? String(habit.schedule.everyNDays) : "2",
+        startDate: habit.startDate ?? todayKey(),
+        endDate: habit.endDate ?? "",
+        reminderEnabled: Boolean(habit.reminderTimes?.length || habit.reminder),
+        reminderTimes: habit.reminderTimes?.length
+          ? habit.reminderTimes
+          : habit.reminder
+            ? [habit.reminder]
+            : [],
+        quickIncrements: habit.quickIncrements ?? [],
+        quickDecrements: normalizeQuickDecrements(habit.quickDecrement),
+      });
+    }
+  }, [habit, reset]);
+
+  // Form values watched for conditional UI sections
+  const name = watch("name");
+  const color = watch("color");
+  const icon = watch("icon");
+  const groupId = watch("groupId");
+  const goalId = watch("goalId");
+  const type = watch("type");
+  const scheduleType = watch("scheduleType");
+  const weekdays = watch("weekdays");
+  const reminderEnabled = watch("reminderEnabled");
+  const reminderTimes = watch("reminderTimes");
+  const quickIncrements = watch("quickIncrements");
+  const quickDecrements = watch("quickDecrements");
+
+  // Local states only for the ephemeral "add item" text inputs
   const [newReminderTime, setNewReminderTime] = useState("");
-  const [quickIncrements, setQuickIncrements] = useState<number[]>(habit?.quickIncrements ?? []);
-  const [quickDecrements, setQuickDecrements] = useState<number[]>(
-    normalizeQuickDecrements(habit?.quickDecrement),
-  );
   const [newIncrement, setNewIncrement] = useState("");
   const [newDecrement, setNewDecrement] = useState("");
-
-  const skipTypeDefaults = useRef(false);
 
   // Quick Suggestions: expandable template catalog with live search.
   const {
@@ -187,71 +248,86 @@ export function HabitForm({ habit, onDone }: Props) {
     );
   });
 
-  useEffect(() => {
-    if (skipTypeDefaults.current) {
-      skipTypeDefaults.current = false;
-      return;
-    }
+  function handleTypeChange(newType: HabitType) {
+    setValue("type", newType, { shouldDirty: true });
     if (!habit) {
-      setUnit(DEFAULT_UNITS[type]);
-      setTarget(type === "boolean" ? "1" : type === "duration" ? "30" : "8");
+      setValue("unit", DEFAULT_UNITS[newType], { shouldDirty: true });
+      setValue("target", newType === "boolean" ? "1" : newType === "duration" ? "30" : "8", {
+        shouldDirty: true,
+      });
     }
-  }, [type, habit]);
+  }
 
-  function buildSchedule(): Schedule {
-    switch (scheduleType) {
+  function handleTemplateSelect(tmpl: HabitTemplate) {
+    const habitType: HabitType = tmpl.type === "timer" ? "duration" : tmpl.type;
+    setValue("name", t(`habitTemplate.${tmpl.id}.name`, tmpl.name), { shouldDirty: true });
+    setValue("description", t(`habitTemplate.${tmpl.id}.desc`, tmpl.description), {
+      shouldDirty: true,
+    });
+    setValue("icon", tmpl.iconName, { shouldDirty: true });
+    setValue("color", tmpl.colorName, { shouldDirty: true });
+    setValue("type", habitType, { shouldDirty: true });
+    setValue("target", String(tmpl.target), { shouldDirty: true });
+    setValue(
+      "unit",
+      tmpl.unit ?? (habitType === "duration" ? "min" : habitType === "counter" ? "reps" : ""),
+      { shouldDirty: true },
+    );
+  }
+
+  function buildSchedule(values: HabitFormValues): Schedule {
+    switch (values.scheduleType) {
       case "weekdays":
-        return { type: "weekdays", days: weekdays.length ? weekdays : [1] };
+        return { type: "weekdays", days: values.weekdays.length ? values.weekdays : [1] };
       case "timesPerWeek":
-        return { type: "timesPerWeek", count: Math.max(1, Number(timesPerWeek) || 1) };
+        return { type: "timesPerWeek", count: Math.max(1, Number(values.timesPerWeek) || 1) };
       case "monthDays":
         return {
           type: "monthDays",
-          days: monthDays
+          days: values.monthDays
             .split(",")
             .map((d) => Number(d.trim()))
             .filter((d) => d >= 1 && d <= 31),
         };
       case "interval":
-        return { type: "interval", everyNDays: Math.max(1, Number(interval) || 1) };
+        return { type: "interval", everyNDays: Math.max(1, Number(values.interval) || 1) };
       default:
         return { type: "daily" };
     }
   }
 
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!name.trim()) {
+  const onSubmit = (values: HabitFormValues) => {
+    if (!values.name.trim()) {
       toast.error(t("habit.nameRequired"));
       return;
     }
-    const schedule = buildSchedule();
+    const schedule = buildSchedule(values);
     if (schedule.type === "monthDays" && schedule.days.length === 0) {
       toast.error(t("habit.monthDaysRequired"));
       return;
     }
-    if (reminderEnabled && reminderTimes.length === 0) {
+    if (values.reminderEnabled && values.reminderTimes.length === 0) {
       toast.error(t("habit.reminderTimeRequired"));
       return;
     }
     const payload = {
-      name: name.trim(),
-      description: description.trim() || undefined,
-      icon,
-      color,
-      groupId: groupId === "none" ? undefined : groupId,
-      goalId: goalId === "none" ? undefined : goalId,
-      type,
-      target: type === "boolean" ? 1 : Math.max(1, Number(target) || 1),
-      unit: type === "boolean" ? "" : unit.trim(),
+      name: values.name.trim(),
+      description: values.description.trim() || undefined,
+      icon: values.icon,
+      color: values.color,
+      groupId: values.groupId === "none" ? undefined : values.groupId,
+      goalId: values.goalId === "none" ? undefined : values.goalId,
+      type: values.type,
+      target: values.type === "boolean" ? 1 : Math.max(1, Number(values.target) || 1),
+      unit: values.type === "boolean" ? "" : values.unit.trim(),
       schedule,
-      startDate,
-      endDate: endDate || undefined,
-      reminderEnabled,
-      reminderTimes: reminderEnabled ? reminderTimes : [],
-      reminder: reminderEnabled ? reminderTimes[0] : undefined,
-      quickIncrements,
-      quickDecrement: quickDecrements,
+      startDate: values.startDate,
+      endDate: values.endDate || undefined,
+      reminderEnabled: values.reminderEnabled,
+      reminderTimes: values.reminderEnabled ? values.reminderTimes : [],
+      reminder: values.reminderEnabled ? values.reminderTimes[0] : undefined,
+      quickIncrements: values.quickIncrements,
+      quickDecrement: values.quickDecrements,
       freezesAllowedPerMonth: 3,
       freezesUsedThisMonth: 0,
       frozenDates: [],
@@ -259,7 +335,12 @@ export function HabitForm({ habit, onDone }: Props) {
     };
 
     if (habit) {
-      updateHabit({ ...habit, ...payload, /** ISO timestamp refreshed on every save. */ updatedAt: new Date().toISOString() });
+      updateHabit({
+        ...habit,
+        ...payload,
+        /** ISO timestamp refreshed on every save. */
+        updatedAt: new Date().toISOString(),
+      });
       toast.success(t("habit.saved"));
     } else {
       createHabit(payload);
@@ -267,20 +348,7 @@ export function HabitForm({ habit, onDone }: Props) {
       toast.success(t("habit.created"));
     }
     onDone();
-  }
-
-  function handleTemplateSelect(tmpl: HabitTemplate) {
-    skipTypeDefaults.current = true;
-    // Template types map onto app types: timer → duration.
-    const habitType: HabitType = tmpl.type === "timer" ? "duration" : tmpl.type;
-    setName(t(`habitTemplate.${tmpl.id}.name`, tmpl.name));
-    setDescription(t(`habitTemplate.${tmpl.id}.desc`, tmpl.description));
-    setIcon(tmpl.iconName);
-    setColor(tmpl.colorName);
-    setType(habitType);
-    setTarget(String(tmpl.target));
-    setUnit(tmpl.unit ?? (habitType === "duration" ? "min" : habitType === "counter" ? "reps" : ""));
-  }
+  };
 
   // Accent tint for the selected icon tile in the picker grid.
   const { tint: iconTileTint, rawColor: iconTileColor } = getColorStyle(color, 0.14);
@@ -293,13 +361,9 @@ export function HabitForm({ habit, onDone }: Props) {
   };
 
   return (
-    <form onSubmit={submit} className="w-full min-w-0 space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full min-w-0 space-y-5">
       {!habit ? (
         <fieldset className="space-y-2 rounded-xl border border-border bg-muted/40 p-3">
-          {/* Unified header: title + subtitle form one large click target that
-              toggles the section, and the chevron button on the right is a
-              PERMANENT toggle rendered in BOTH collapsed and expanded states —
-              only the body below this header toggles. */}
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="flex-1 cursor-pointer select-none" onClick={toggleSuggestions}>
               <div className="flex items-center gap-2">
@@ -313,12 +377,15 @@ export function HabitForm({ habit, onDone }: Props) {
               </p>
             </div>
 
-            {/* PERMANENT TOGGLE BUTTON */}
             <button
               type="button"
               onClick={toggleSuggestions}
               aria-expanded={isSuggestionsExpanded}
-              aria-label={isSuggestionsExpanded ? t("habit.collapseSuggestions", "Collapse suggestions") : t("habit.expandSuggestions", "Expand suggestions")}
+              aria-label={
+                isSuggestionsExpanded
+                  ? t("habit.collapseSuggestions", "Collapse suggestions")
+                  : t("habit.expandSuggestions", "Expand suggestions")
+              }
               className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors shrink-0 cursor-pointer"
             >
               <ChevronDown
@@ -330,9 +397,7 @@ export function HabitForm({ habit, onDone }: Props) {
               />
             </button>
           </div>
-          {/* Collapsed peek: two preview chips — hidden once the panel is open.
-              Expanded panel: CSS Grid height animation (0fr → 1fr) keeps this
-              purely CSS-driven with zero layout thrash. */}
+
           {!isSuggestionsExpanded && (
             <div className="grid grid-cols-2 gap-2 mt-2">
               {HABIT_TEMPLATES.slice(0, 2).map((template) => {
@@ -342,7 +407,9 @@ export function HabitForm({ habit, onDone }: Props) {
                   <button
                     key={template.id}
                     type="button"
-                    aria-label={t("habit.useTemplateAria", "Use template: {name}", { name: templateName })}
+                    aria-label={t("habit.useTemplateAria", "Use template: {name}", {
+                      name: templateName,
+                    })}
                     aria-pressed={name === templateName || name === template.name}
                     onClick={() => handleTemplateSelect(template)}
                     className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition active:scale-95 cursor-pointer"
@@ -371,9 +438,6 @@ export function HabitForm({ habit, onDone }: Props) {
             </div>
           )}
 
-          {/* Grid-based height animation — transition on grid-template-rows
-              from 0fr (fully collapsed, no height) to 1fr (natural height).
-              The inner div MUST have overflow-hidden for the clip to work. */}
           <div
             className={cn(
               "grid transition-[grid-template-rows] duration-300 ease-in-out",
@@ -420,8 +484,7 @@ export function HabitForm({ habit, onDone }: Props) {
         <Label htmlFor="habit-name">{t("habit.name")}</Label>
         <Input
           id="habit-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          {...register("name")}
           placeholder={t("habit.namePlaceholder")}
           autoComplete="off"
           maxLength={40}
@@ -430,17 +493,9 @@ export function HabitForm({ habit, onDone }: Props) {
 
       <div className="space-y-2">
         <Label htmlFor="habit-desc">{t("habit.description")}</Label>
-        {/**
-         * Hidden-scrollbar description field — vertical scrolling stays fully
-         * functional (wheel, trackpad, touch drag, keyboard); only the
-         * scrollbar chrome is removed: `scrollbar-width: none` covers Firefox,
-         * `-ms-overflow-style: none` covers legacy Edge/IE, and the WebKit
-         * pseudo-element rule covers Chrome / Safari / modern Edge.
-         */}
         <Textarea
           id="habit-desc"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          {...register("description")}
           placeholder={t("habit.descriptionPlaceholder")}
           rows={2}
           className={cn(
@@ -454,15 +509,25 @@ export function HabitForm({ habit, onDone }: Props) {
 
       <fieldset className="min-w-0 space-y-2">
         <legend className="mb-2 text-sm font-medium">{t("habit.icon")}</legend>
-        <IconPicker selectedIcon={icon} onChange={setIcon} activeTileStyle={activeIconTileStyle} />
+        <IconPicker
+          selectedIcon={icon}
+          onChange={(newIcon) => setValue("icon", newIcon, { shouldDirty: true })}
+          activeTileStyle={activeIconTileStyle}
+        />
       </fieldset>
 
-      <ColorPicker selectedColor={color} onChange={setColor} />
+      <ColorPicker
+        selectedColor={color}
+        onChange={(newColor) => setValue("color", newColor, { shouldDirty: true })}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="habit-group">{t("habit.group")}</Label>
-          <Select value={groupId} onValueChange={setGroupId}>
+          <Select
+            value={groupId}
+            onValueChange={(val) => setValue("groupId", val, { shouldDirty: true })}
+          >
             <SelectTrigger id="habit-group">
               <SelectValue />
             </SelectTrigger>
@@ -482,7 +547,10 @@ export function HabitForm({ habit, onDone }: Props) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="habit-goal">{t("habit.goal")}</Label>
-          <Select value={goalId} onValueChange={setGoalId}>
+          <Select
+            value={goalId}
+            onValueChange={(val) => setValue("goalId", val, { shouldDirty: true })}
+          >
             <SelectTrigger id="habit-goal">
               <SelectValue />
             </SelectTrigger>
@@ -500,7 +568,7 @@ export function HabitForm({ habit, onDone }: Props) {
 
       <div className="space-y-2">
         <Label htmlFor="habit-type">{t("habit.type")}</Label>
-        <Select value={type} onValueChange={(v) => setType(v as HabitType)}>
+        <Select value={type} onValueChange={(v) => handleTypeChange(v as HabitType)}>
           <SelectTrigger id="habit-type">
             <SelectValue />
           </SelectTrigger>
@@ -528,17 +596,17 @@ export function HabitForm({ habit, onDone }: Props) {
               type="number"
               min={1}
               inputMode="numeric"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
+              {...register("target")}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="habit-unit">{t("habit.unit")}</Label>
             <Input
               id="habit-unit"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              placeholder={type === "duration" ? t("habit.unitMinutes", "min") : t("habit.unitItems", "items")}
+              {...register("unit")}
+              placeholder={
+                type === "duration" ? t("habit.unitMinutes", "min") : t("habit.unitItems", "items")
+              }
             />
           </div>
         </div>
@@ -557,7 +625,13 @@ export function HabitForm({ habit, onDone }: Props) {
                   <span>+{inc}</span>
                   <button
                     type="button"
-                    onClick={() => setQuickIncrements((prev) => prev.filter((_, i) => i !== idx))}
+                    onClick={() =>
+                      setValue(
+                        "quickIncrements",
+                        quickIncrements.filter((_, i) => i !== idx),
+                        { shouldDirty: true },
+                      )
+                    }
                     className="ms-1 rounded-full p-0.5 hover:bg-primary/20"
                   >
                     <span className="sr-only">{t("habit.removeStep", "Remove")}</span>×
@@ -585,7 +659,9 @@ export function HabitForm({ habit, onDone }: Props) {
                           toast.info(t("habit.alreadyAdded"));
                           return;
                         }
-                        setQuickIncrements((prev) => [...prev, val].slice(0, 2));
+                        setValue("quickIncrements", [...quickIncrements, val].slice(0, 2), {
+                          shouldDirty: true,
+                        });
                         setNewIncrement("");
                       }
                     }}
@@ -607,7 +683,13 @@ export function HabitForm({ habit, onDone }: Props) {
                   <span>-{dec}</span>
                   <button
                     type="button"
-                    onClick={() => setQuickDecrements((prev) => prev.filter((_, i) => i !== idx))}
+                    onClick={() =>
+                      setValue(
+                        "quickDecrements",
+                        quickDecrements.filter((_, i) => i !== idx),
+                        { shouldDirty: true },
+                      )
+                    }
                     className="ms-1 rounded-full p-0.5 hover:bg-primary/20"
                   >
                     <span className="sr-only">{t("habit.removeStep", "Remove")}</span>×
@@ -635,7 +717,9 @@ export function HabitForm({ habit, onDone }: Props) {
                           toast.info(t("habit.alreadyAdded"));
                           return;
                         }
-                        setQuickDecrements((prev) => [...prev, val].slice(0, 2));
+                        setValue("quickDecrements", [...quickDecrements, val].slice(0, 2), {
+                          shouldDirty: true,
+                        });
                         setNewDecrement("");
                       }
                     }}
@@ -648,9 +732,15 @@ export function HabitForm({ habit, onDone }: Props) {
           </div>
         </div>
       )}
+
       <div className="space-y-2">
         <Label htmlFor="habit-schedule">{t("habit.schedule")}</Label>
-        <Select value={scheduleType} onValueChange={(v) => setScheduleType(v as Schedule["type"])}>
+        <Select
+          value={scheduleType}
+          onValueChange={(v) =>
+            setValue("scheduleType", v as Schedule["type"], { shouldDirty: true })
+          }
+        >
           <SelectTrigger id="habit-schedule">
             <SelectValue />
           </SelectTrigger>
@@ -674,11 +764,12 @@ export function HabitForm({ habit, onDone }: Props) {
                 key={label}
                 type="button"
                 aria-pressed={active}
-                onClick={() =>
-                  setWeekdays((prev) =>
-                    prev.includes(index) ? prev.filter((d) => d !== index) : [...prev, index],
-                  )
-                }
+                onClick={() => {
+                  const next = weekdays.includes(index)
+                    ? weekdays.filter((d) => d !== index)
+                    : [...weekdays, index];
+                  setValue("weekdays", next, { shouldDirty: true });
+                }}
                 className={cn(
                   "h-11 min-w-11 rounded-xl border px-3 text-sm font-medium",
                   active
@@ -696,62 +787,33 @@ export function HabitForm({ habit, onDone }: Props) {
       {scheduleType === "timesPerWeek" ? (
         <div className="space-y-2">
           <Label htmlFor="habit-times">{t("habit.timesPerWeekLabel")}</Label>
-          <Input
-            id="habit-times"
-            type="number"
-            min={1}
-            max={7}
-            value={timesPerWeek}
-            onChange={(e) => setTimesPerWeek(e.target.value)}
-          />
+          <Input id="habit-times" type="number" min={1} max={7} {...register("timesPerWeek")} />
         </div>
       ) : null}
 
       {scheduleType === "monthDays" ? (
         <div className="space-y-2">
           <Label htmlFor="habit-monthdays">{t("habit.monthDaysLabel")}</Label>
-          <Input
-            id="habit-monthdays"
-            value={monthDays}
-            onChange={(e) => setMonthDays(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            {t("habit.monthDaysHint")}
-          </p>
+          <Input id="habit-monthdays" {...register("monthDays")} />
+          <p className="text-xs text-muted-foreground">{t("habit.monthDaysHint")}</p>
         </div>
       ) : null}
 
       {scheduleType === "interval" ? (
         <div className="space-y-2">
           <Label htmlFor="habit-interval">{t("habit.everyNDaysLabel")}</Label>
-          <Input
-            id="habit-interval"
-            type="number"
-            min={1}
-            value={interval}
-            onChange={(e) => setInterval(e.target.value)}
-          />
+          <Input id="habit-interval" type="number" min={1} {...register("interval")} />
         </div>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="habit-start">{t("habit.startDate")}</Label>
-          <Input
-            id="habit-start"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
+          <Input id="habit-start" type="date" {...register("startDate")} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="habit-end">{t("habit.endDate")}</Label>
-          <Input
-            id="habit-end"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
+          <Input id="habit-end" type="date" {...register("endDate")} />
         </div>
       </div>
 
@@ -763,7 +825,9 @@ export function HabitForm({ habit, onDone }: Props) {
           </div>
           <Switch
             checked={reminderEnabled}
-            onCheckedChange={setReminderEnabled}
+            onCheckedChange={(checked) =>
+              setValue("reminderEnabled", checked, { shouldDirty: true })
+            }
             aria-label={t("habit.toggleRemindersAria", "Toggle reminders for this habit")}
           />
         </div>
@@ -780,7 +844,13 @@ export function HabitForm({ habit, onDone }: Props) {
                   <span>{time}</span>
                   <button
                     type="button"
-                    onClick={() => setReminderTimes((prev) => prev.filter((item) => item !== time))}
+                    onClick={() =>
+                      setValue(
+                        "reminderTimes",
+                        reminderTimes.filter((item) => item !== time),
+                        { shouldDirty: true },
+                      )
+                    }
                     className="ms-1 rounded-full p-0.5 hover:bg-primary/20"
                     aria-label={t("habit.removeReminderAria", "Remove {time} reminder", { time })}
                   >
@@ -804,8 +874,12 @@ export function HabitForm({ habit, onDone }: Props) {
                   className="h-9"
                   disabled={!newReminderTime || reminderTimes.includes(newReminderTime)}
                   onClick={() => {
-                    setReminderTimes((prev) =>
-                      [...prev, newReminderTime].sort((left, right) => left.localeCompare(right)),
+                    setValue(
+                      "reminderTimes",
+                      [...reminderTimes, newReminderTime].sort((left, right) =>
+                        left.localeCompare(right),
+                      ),
+                      { shouldDirty: true },
                     );
                     setNewReminderTime("");
                   }}
@@ -816,9 +890,7 @@ export function HabitForm({ habit, onDone }: Props) {
             </div>
             <div className="flex items-start gap-2 rounded-lg border border-border/70 bg-background/60 p-3 text-xs text-muted-foreground">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <p>
-                {t("habit.reminderOfflineHint")}
-              </p>
+              <p>{t("habit.reminderOfflineHint")}</p>
             </div>
           </div>
         ) : null}

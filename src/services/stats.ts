@@ -287,3 +287,27 @@ export function trend(habits: Habit[], logs: LogMap, days: number): TrendPoint[]
   }
   return points;
 }
+
+/**
+ * Determines whether a habit is currently pending for a given date.
+ * A habit is pending if it is active (not archived), scheduled on that date,
+ * and has not been completed, skipped, or frozen.
+ */
+export function isHabitPendingOn(habit: Habit, logs: LogMap, date: string): boolean {
+  if (habit.archived) return false;
+  if (!isScheduledOn(habit, date)) return false;
+  const log = getLog(logs, habit.id, date);
+  if (log?.status === "skipped" || log?.status === "frozen") return false;
+  return !isCompleteOn(habit, logs, date);
+}
+
+/**
+ * Calculates the number of pending habits for today (scheduled for today and NOT yet completed or skipped).
+ */
+export function getPendingTodayCount(
+  habits: Habit[],
+  logs: LogMap,
+  date: string = todayKey(),
+): number {
+  return habits.filter((habit) => isHabitPendingOn(habit, logs, date)).length;
+}
