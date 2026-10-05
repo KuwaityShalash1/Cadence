@@ -3,8 +3,8 @@
  *
  * Browsers block automatic file downloads without a user gesture, so Cadence
  * cannot silently write a backup file. Instead we store the last successful
- * backup timestamp in `localStorage` and surface a floating banner reminder
- * with an "Export Backup" action once the backup becomes stale (> 7 days old).
+ * backup timestamp in `localStorage` and surface an inline reminder with an
+ * "Export Backup" action once the backup becomes stale (> 7 days old).
  *
  * This module performs no network I/O and is safe to import during SSR. Every
  * function that touches `window` / `localStorage` / `document` guards against
@@ -14,11 +14,30 @@
 /** LocalStorage key holding the last successful backup timestamp. */
 export const LAST_BACKUP_STORAGE_KEY = "cadence_last_backup_date";
 
-/** LocalStorage key holding the snooze timestamp for the backup reminder banner. */
+/** LocalStorage key holding the snooze timestamp for the backup reminder. */
 export const BACKUP_SNOOZE_STORAGE_KEY = "cadence_backup_reminder_snoozed_until";
 
 /** How long a backup is considered fresh (7 days in milliseconds). */
 export const WEEKLY_BACKUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Default snooze duration: 7 days in milliseconds (configurable up to 14 days). */
+export const DEFAULT_SNOOZE_DAYS = 7;
+
+/** Event dispatched to synchronize backup status across components without page refresh. */
+export const BACKUP_STATUS_CHANGED_EVENT = "cadence:backup-status-changed";
+
+/**
+ * Dispatch a custom event to notify all listeners that backup state has changed
+ * (e.g., backup downloaded, reminder snoozed or dismissed).
+ */
+export function notifyBackupStatusChanged(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(new CustomEvent(BACKUP_STATUS_CHANGED_EVENT));
+  } catch {
+    // Fail quietly if CustomEvent or window is unavailable.
+  }
+}
 
 /**
  * Read the last backup timestamp from `localStorage`.
@@ -67,6 +86,43 @@ export function isWeeklyBackupDue(
 }
 
 /**
+ * Check if the user hasn't exported the JSON backup file (either never exported,
+ * or older than 7 days). This powers the yellow indicator dot on the Settings icon.
+ * Unlike the inline Settings banner, this indicator does not get hidden by snooze:
+ * it stays active as a subtle badge until the user actually exports their JSON file.
+ */
+export function isBackupExportNeeded(nowMs: number = Date.now()): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const lastBackup = getLastBackupTime();
+    return isWeeklyBackupDue(lastBackup, nowMs);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if the backup reminder is due right now, taking both the snooze timestamp
+ * and the last backup time into account.
+ *
+ * @param nowMs - Current epoch ms (defaults to `Date.now()`).
+ * @returns `true` if a backup is due and not currently snoozed.
+ */
+export function isBackupReminderDue(nowMs: number = Date.now()): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const snoozedUntil = getBackupSnoozedUntil();
+    if (snoozedUntil !== null && snoozedUntil > nowMs) {
+      return false;
+    }
+    const lastBackup = getLastBackupTime();
+    return isWeeklyBackupDue(lastBackup, nowMs);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Record a successful backup so the reminder stays quiet for the next 7 days.
  * Failures (private mode, blocked storage) are swallowed — the reminder will
  * simply appear again on the next visit, which is the safe fallback.
@@ -75,6 +131,7 @@ export function markBackupComplete(nowMs: number = Date.now()): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(LAST_BACKUP_STORAGE_KEY, String(nowMs));
+    notifyBackupStatusChanged();
   } catch {
     // Intentionally ignored: offline-first reminder degrades to always-due.
   }
@@ -99,19 +156,23 @@ export function getBackupSnoozedUntil(): number | null {
 }
 
 /**
- * Snooze the backup reminder banner for 7 days.
+ * Snooze the backup reminder for 7-14 days. Persists a timestamp in localStorage
+ * so that dismissing or clicking "Later" suppresses the reminder.
  *
+ * @param days - Number of days to snooze (default: 7).
  * @param nowMs - Current epoch ms (defaults to `Date.now()`; injectable for tests).
  */
-export function snoozeBackupReminder(nowMs: number = Date.now()): void {
+export function snoozeBackupReminder(
+  days: number = DEFAULT_SNOOZE_DAYS,
+  nowMs: number = Date.now(),
+): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(
-      BACKUP_SNOOZE_STORAGE_KEY,
-      String(nowMs + WEEKLY_BACKUP_INTERVAL_MS),
-    );
+    const snoozeDurationMs = Math.max(1, days) * 24 * 60 * 60 * 1000;
+    window.localStorage.setItem(BACKUP_SNOOZE_STORAGE_KEY, String(nowMs + snoozeDurationMs));
+    notifyBackupStatusChanged();
   } catch {
-    // Intentionally ignored: the banner simply reappears next visit.
+    // Intentionally ignored: the reminder simply reappears next visit.
   }
 }
 
@@ -122,6 +183,7 @@ export function clearBackupSnooze(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem(BACKUP_SNOOZE_STORAGE_KEY);
+    notifyBackupStatusChanged();
   } catch {
     // Intentionally ignored.
   }
@@ -160,3 +222,4 @@ export function downloadJsonBackup(json: string, fileName?: string): void {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }
+

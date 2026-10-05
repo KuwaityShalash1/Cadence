@@ -22,7 +22,7 @@ import { TimerDock } from "@/components/timer-dock";
 import { Button } from "@/components/ui/button";
 import { CadenceLogo } from "@/components/ui/CadenceLogo";
 
-const LogoIcon = (props: { className?: string; [key: string]: any }) => (
+const LogoIcon = (props: { className?: string; [key: string]: unknown }) => (
   <CadenceLogo showText={false} iconClassName={props.className} {...props} />
 );
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { ResponsiveSheet } from "@/components/responsive-sheet";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { playToggleSound } from "@/lib/sound";
+import { useBackupReminderStatus } from "@/hooks/use-weekly-backup";
 
 /**
  * Nav item definitions use translation key references rather than hardcoded
@@ -40,18 +41,18 @@ import { playToggleSound } from "@/lib/sound";
  * change without any extra wiring.
  */
 const NAV_ITEMS = [
-  { labelKey: "nav.today",       icon: Sun,         to: "/" as const,            exact: true  },
-  { labelKey: "nav.calendar",    icon: CalendarDays, to: "/calendar" as const,   exact: false },
-  { labelKey: "nav.stats",       icon: BarChart3,    to: "/stats" as const,      exact: false },
-  { labelKey: "nav.goals",       icon: Target,       to: "/goals" as const,      exact: false },
-  { labelKey: "nav.routines",    icon: ListChecks,   to: "/routines" as const,   exact: false },
-  { labelKey: "nav.quitTracker", icon: ShieldAlert,  to: "/quit-tracker" as const, exact: false },
+  { labelKey: "nav.today", icon: Sun, to: "/" as const, exact: true },
+  { labelKey: "nav.calendar", icon: CalendarDays, to: "/calendar" as const, exact: false },
+  { labelKey: "nav.stats", icon: BarChart3, to: "/stats" as const, exact: false },
+  { labelKey: "nav.goals", icon: Target, to: "/goals" as const, exact: false },
+  { labelKey: "nav.routines", icon: ListChecks, to: "/routines" as const, exact: false },
+  { labelKey: "nav.quitTracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
 ];
 
 const MOBILE_NAV = [
-  { labelKey: "nav.today",       icon: Sun,        to: "/" as const,             exact: true  },
-  { labelKey: "nav.routines",    icon: ListChecks, to: "/routines" as const,    exact: false },
-  { labelKey: "nav.goals",       icon: Target,     to: "/goals" as const,        exact: false },
+  { labelKey: "nav.today", icon: Sun, to: "/" as const, exact: true },
+  { labelKey: "nav.routines", icon: ListChecks, to: "/routines" as const, exact: false },
+  { labelKey: "nav.goals", icon: Target, to: "/goals" as const, exact: false },
   { labelKey: "nav.quitTracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
 ];
 
@@ -122,6 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   const editor = useHabitEditor();
   const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
+  const { isDue: isBackupDue } = useBackupReminderStatus();
   const { t, isRtl } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -277,14 +279,30 @@ function Shell({ children }: { children: ReactNode }) {
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
               >
-                <Settings className="h-[22px] w-[22px] shrink-0" />
+                <div className="relative inline-flex items-center justify-center h-[22px] w-[22px] shrink-0">
+                  <Settings className="h-[22px] w-[22px]" />
+                  {isBackupDue && (
+                    <span
+                      data-badge="true"
+                      className="absolute z-10 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-sidebar shadow-xs pointer-events-none"
+                      style={{ top: -2, insetInlineEnd: -2 }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
                 <span
                   className={cn(
-                    "text-sm font-medium sidebar-label",
+                    "text-sm font-medium sidebar-label flex-1 flex items-center justify-between",
                     isSidebarCollapsed && "hidden",
                   )}
                 >
-                  {settingsLabel}
+                  <span>{settingsLabel}</span>
+                  {isBackupDue && (
+                    <span
+                      className="h-2 w-2 rounded-full bg-yellow-400 dark:bg-yellow-300 shrink-0"
+                      aria-label={t("backup.badgeAria", "Backup recommended")}
+                    />
+                  )}
                 </span>
               </Link>
             );
@@ -294,7 +312,11 @@ function Shell({ children }: { children: ReactNode }) {
                 {isSidebarCollapsed ? (
                   <Tooltip key="nav.settings">
                     <TooltipTrigger asChild>{settingsLink}</TooltipTrigger>
-                    <TooltipContent side={tooltipSide}>{settingsLabel}</TooltipContent>
+                    <TooltipContent side={tooltipSide}>
+                      {isBackupDue
+                        ? `${settingsLabel} • ${t("backup.badgeAria", "Backup recommended")}`
+                        : settingsLabel}
+                    </TooltipContent>
                   </Tooltip>
                 ) : (
                   settingsLink
@@ -324,12 +346,25 @@ function Shell({ children }: { children: ReactNode }) {
             <Link
               to="/settings"
               className="flex items-center gap-3 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
+              aria-label={
+                isBackupDue
+                  ? `${displayName} - ${t("backup.badgeAria", "Backup recommended")}`
+                  : displayName
+              }
             >
-              <UserAvatar
-                avatar={settings.avatar}
-                name={settings.displayName}
-                className="h-7 w-7"
-              />
+              <div className="relative shrink-0">
+                <UserAvatar
+                  avatar={settings.avatar}
+                  name={settings.displayName}
+                  className="h-7 w-7"
+                />
+                {isBackupDue && (
+                  <span
+                    className="absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-card shadow-xs"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
               <span className="max-w-32 truncate text-sm font-medium">{displayName}</span>
             </Link>
           </div>
@@ -379,7 +414,15 @@ function Shell({ children }: { children: ReactNode }) {
             className="flex min-h-14 min-w-16 flex-col items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground"
             aria-label={t("nav.moreOptionsAria")}
           >
-            <Menu className="h-5 w-5" />
+            <div className="relative">
+              <Menu className="h-5 w-5" />
+              {isBackupDue && (
+                <span
+                  className="absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-background shadow-xs"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
             {t("nav.more")}
           </button>
         </div>
@@ -409,8 +452,22 @@ function Shell({ children }: { children: ReactNode }) {
               onClick={() => setMoreOpen(false)}
               className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-medium transition-colors hover:bg-accent"
             >
-              <Settings className="h-5 w-5 text-primary" />
-              {t("nav.settings")}
+              <div className="relative">
+                <Settings className="h-5 w-5 text-primary" />
+                {isBackupDue && (
+                  <span
+                    className="absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-card shadow-xs"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+              <span className="flex-1">{t("nav.settings")}</span>
+              {isBackupDue && (
+                <span
+                  className="h-2 w-2 rounded-full bg-yellow-400 dark:bg-yellow-300 shrink-0"
+                  aria-label={t("backup.badgeAria", "Backup recommended")}
+                />
+              )}
             </Link>
           </div>
         </div>

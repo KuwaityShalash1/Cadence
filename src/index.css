@@ -28,10 +28,13 @@ aside[data-collapsed="true"] .sidebar-label {
   pointer-events: none !important;
 }
 
-/* Force hide ALL text spans inside aside when html or aside is collapsed, or when aside has w-16 */
-html[data-sidebar-collapsed="true"] aside span,
-aside[data-collapsed="true"] span,
-aside.w-16 span {
+/* Force hide text labels inside aside when html or aside is collapsed, preserving notification badges */
+html[data-sidebar-collapsed="true"] aside span.sidebar-label,
+html[data-sidebar-collapsed="true"] aside span:not([data-badge]),
+aside[data-collapsed="true"] span.sidebar-label,
+aside[data-collapsed="true"] span:not([data-badge]),
+aside.w-16 span.sidebar-label,
+aside.w-16 span:not([data-badge]) {
   display: none !important;
   visibility: hidden !important;
   width: 0 !important;

@@ -3,122 +3,147 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n/context";
 
 import {
+  BACKUP_STATUS_CHANGED_EVENT,
+  DEFAULT_SNOOZE_DAYS,
   downloadJsonBackup,
-  getBackupSnoozedUntil,
-  getLastBackupTime,
-  isWeeklyBackupDue,
+  isBackupExportNeeded,
+  isBackupReminderDue,
   markBackupComplete,
   snoozeBackupReminder,
 } from "@/lib/backup";
 
-/** Delay before showing the reminder so the app shell has mounted. */
-const DEFAULT_REMINDER_DELAY_MS = 2000;
-
 interface UseWeeklyBackupReminderOptions {
   /** Skip the check (e.g. while the store is still loading). Defaults to true. */
   enabled?: boolean;
-  /** Delay before the banner appears. Defaults to 2000ms. */
-  delayMs?: number;
 }
 
 export interface WeeklyBackupReminderState {
-  /** True when the floating banner should be visible. */
+  /** True when a backup is due and not currently snoozed. */
+  isDue: boolean;
+  /** Backwards compatibility alias for `isDue`. */
   visible: boolean;
-  /** Export the Dexie snapshot to JSON, refresh the timestamp, and hide the banner. */
+  /** Export the Dexie snapshot to JSON, refresh the timestamp, and dismiss the reminder. */
   exportBackup: () => void;
-  /** Snooze the banner for 7 days and hide it. */
-  snoozeReminder: () => void;
-  /** Hide the banner for this session without persisting anything. */
-  dismissReminder: () => void;
+  /** Snoozes the reminder for 7-14 days via local-storage timestamp. */
+  snoozeReminder: (days?: number) => void;
+  /** Dismisses the reminder, persisting the dismissal for 7-14 days. */
+  dismissReminder: (days?: number) => void;
+  /** Manually re-check backup staleness and snooze status. */
+  refreshStatus: () => void;
 }
 
 /**
- * Smart Weekly Auto-Backup reminder for the offline-first IndexedDB database.
+ * Hook providing reactive backup status for the navigation bar badge.
+ * Subscribes to window events so state updates instantly across the app.
+ * Returns `isDue: true` whenever the user has not exported a JSON backup
+ * (or it is older than 7 days). This powers the yellow dot on the Settings icon.
+ */
+export function useBackupReminderStatus() {
+  const [isDue, setIsDue] = useState(false);
+
+  const checkStatus = useCallback(() => {
+    setIsDue(isBackupExportNeeded());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    checkStatus();
+
+    window.addEventListener(BACKUP_STATUS_CHANGED_EVENT, checkStatus);
+    window.addEventListener("storage", checkStatus);
+    window.addEventListener("focus", checkStatus);
+    window.addEventListener("pageshow", checkStatus);
+    return () => {
+      window.removeEventListener(BACKUP_STATUS_CHANGED_EVENT, checkStatus);
+      window.removeEventListener("storage", checkStatus);
+      window.removeEventListener("focus", checkStatus);
+      window.removeEventListener("pageshow", checkStatus);
+    };
+  }, [checkStatus]);
+
+  return { isDue, checkStatus };
+}
+
+/**
+ * Smart Weekly Auto-Backup reminder hook for the Settings page inline banner.
  *
- * Checks `localStorage` (`cadence_last_backup_date`) on the client after mount.
- * When no backup exists yet, or the last one is older than 7 days — and the
- * banner is not snoozed (`cadence_backup_reminder_snoozed_until`) — it flips
- * `visible` to true so the floating `BackupReminder` banner can render.
+ * Checks `localStorage` on the client after mount. When no backup exists yet,
+ * or the last one is older than 7 days — and the reminder is not snoozed — it flags
+ * `isDue` to true.
  *
- * The download only runs inside the `exportBackup` click handler, which
- * satisfies browser auto-download policies that block programmatic downloads
- * without a user gesture. After a successful download the timestamp is
- * refreshed so the reminder stays quiet for another 7 days.
+ * When dismissed or snoozed, the inline banner is suppressed for 7-14 days so
+ * it doesn't bother the user inside Settings.
  *
- * SSR-safe: all storage work happens inside `useEffect`; the initial render
- * is always hidden so server and client HTML match.
+ * SSR-safe: storage checks happen inside `useEffect`; initial render is false.
  *
  * @param exportData - Serializer returning the full JSON snapshot (store's `exportData()`).
- * @param options - Optional `enabled` flag and `delayMs` banner delay.
+ * @param options - Optional `enabled` flag.
  */
 export function useWeeklyBackupReminder(
-  exportData: () => string,
+  exportData?: () => string,
   options?: UseWeeklyBackupReminderOptions,
 ): WeeklyBackupReminderState {
   const enabled = options?.enabled ?? true;
-  const delayMs = options?.delayMs ?? DEFAULT_REMINDER_DELAY_MS;
-  const [visible, setVisible] = useState(false);
+  const [isDue, setIsDue] = useState(false);
+  const { t } = useTranslation();
 
-  // Keep the latest serializer without re-subscribing the effect on every render.
+  const checkStatus = useCallback(() => {
+    setIsDue(isBackupReminderDue());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    checkStatus();
+
+    window.addEventListener(BACKUP_STATUS_CHANGED_EVENT, checkStatus);
+    window.addEventListener("storage", checkStatus);
+    window.addEventListener("focus", checkStatus);
+    window.addEventListener("pageshow", checkStatus);
+    return () => {
+      window.removeEventListener(BACKUP_STATUS_CHANGED_EVENT, checkStatus);
+      window.removeEventListener("storage", checkStatus);
+      window.removeEventListener("focus", checkStatus);
+      window.removeEventListener("pageshow", checkStatus);
+    };
+  }, [checkStatus]);
+
+  const snooze = useCallback((days: number = DEFAULT_SNOOZE_DAYS) => {
+    snoozeBackupReminder(days);
+    setIsDue(false);
+  }, []);
+
+  const dismiss = useCallback((days: number = DEFAULT_SNOOZE_DAYS) => {
+    snoozeBackupReminder(days);
+    setIsDue(false);
+  }, []);
+
   const exportDataRef = useRef(exportData);
   useEffect(() => {
     exportDataRef.current = exportData;
   }, [exportData]);
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !enabled) return;
-
-    // Bail out unless a backup is actually due — fresh backups stay silent.
-    let lastBackup: number | null;
-    let snoozedUntil: number | null;
-    try {
-      lastBackup = getLastBackupTime();
-      snoozedUntil = getBackupSnoozedUntil();
-    } catch {
-      lastBackup = null;
-      snoozedUntil = null;
-    }
-    // Respect an active 7-day snooze before checking staleness.
-    if (snoozedUntil !== null && snoozedUntil > Date.now()) return;
-    if (!isWeeklyBackupDue(lastBackup)) return;
-
-    // Small delay lets the app shell mount first so the entrance feels calm.
-    const timerId = window.setTimeout(() => {
-      setVisible(true);
-    }, delayMs);
-
-    return () => window.clearTimeout(timerId);
-  }, [enabled, delayMs]);
-
-  const { t } = useTranslation();
-
-  // Export immediately from the user gesture, then dismiss the banner.
+  // Export immediately from user gesture, then mark backup complete and refresh state.
   const exportBackup = useCallback(() => {
     try {
+      if (!exportDataRef.current) {
+        throw new Error("No export serializer provided");
+      }
       const json = exportDataRef.current();
       downloadJsonBackup(json);
       markBackupComplete();
-      setVisible(false);
       toast.success(t("backup.success"));
     } catch {
       toast.error(t("backup.error"));
     }
   }, [t]);
 
-  // Persist a 7-day snooze timestamp and hide the banner quietly.
-  const snoozeReminder = useCallback(() => {
-    try {
-      snoozeBackupReminder();
-    } catch {
-      // Storage failures degrade to a session-only dismiss below.
-    }
-    setVisible(false);
-  }, []);
-
-  // Session-only hide (e.g. close affordance); nothing is persisted.
-  const dismissReminder = useCallback(() => {
-    setVisible(false);
-  }, []);
-
-  return { visible, exportBackup, snoozeReminder, dismissReminder };
+  return {
+    isDue: enabled ? isDue : false,
+    visible: enabled ? isDue : false,
+    exportBackup,
+    snoozeReminder: snooze,
+    dismissReminder: dismiss,
+    refreshStatus: checkStatus,
+  };
 }
+

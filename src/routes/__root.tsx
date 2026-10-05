@@ -14,7 +14,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ThemeSync } from "@/components/theme-sync";
 import { HeadMetadataSync } from "@/components/head-metadata-sync";
 import { CommandPaletteLoader } from "@/components/command-palette-loader";
-import { BackupReminder } from "@/components/backup-reminder";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/stores/app-store";
@@ -23,7 +22,6 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { checkDailyHabitReminder } from "@/lib/notifications";
 import { registerServiceWorker } from "@/lib/service-worker";
 import { useOnlineStatus } from "@/hooks/use-online-status";
-import { useWeeklyBackupReminder } from "@/hooks/use-weekly-backup";
 import { useApp } from "@/stores/app-store";
 import { useShortcuts } from "@/hooks/use-shortcuts";
 import appCss from "../styles.css?url";
@@ -74,7 +72,10 @@ function ErrorContent({ error, reset }: { error: unknown; reset: () => void }) {
           {t("errorPage.title", "This page didn't load")}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {t("errorPage.desc", "Something went wrong on our end. You can try refreshing or head back home.")}
+          {t(
+            "errorPage.desc",
+            "Something went wrong on our end. You can try refreshing or head back home.",
+          )}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -350,6 +351,7 @@ function RootShell({ children }: { children: ReactNode }) {
           }}
         />
         
+
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -408,7 +410,7 @@ function RootShell({ children }: { children: ReactNode }) {
               html[data-sidebar-collapsed="true"] aside {
                 width: 4rem !important;
               }
-              html[data-sidebar-collapsed="true"] aside span,
+              html[data-sidebar-collapsed="true"] aside span:not([data-badge]),
               html[data-sidebar-collapsed="true"] aside p,
               html[data-sidebar-collapsed="true"] aside .sidebar-label {
                 display: none !important;
@@ -444,7 +446,6 @@ function RootComponent() {
         <LanguageProvider>
           <HeadMetadataSync />
           <NotificationScheduler />
-          <WeeklyBackupReminder />
           <ServiceWorkerBootstrap />
           <ClientAnalytics />
           <ClientSpeedInsights />
@@ -514,35 +515,6 @@ function ServiceWorkerBootstrap() {
   }, []);
 
   return null;
-}
-
-/**
- * Smart Weekly Auto-Backup reminder for the offline-first IndexedDB database.
- *
- * Runs inside `AppProvider` so it can call the store's canonical `exportData()`
- * serializer when the user taps "Export Backup (JSON)". The hook itself is
- * SSR-safe (all `localStorage` work happens in `useEffect`) and respects browser
- * auto-download policies by only downloading from the banner button gesture.
- * Renders the floating `BackupReminder` banner; the bottom navigation and top
- * header layouts are untouched.
- */
-function WeeklyBackupReminder() {
-  const { exportData, ready } = useApp();
-
-  // Wait until the Dexie snapshot has loaded so the export contains real data.
-  const { visible, exportBackup, snoozeReminder, dismissReminder } = useWeeklyBackupReminder(
-    exportData,
-    { enabled: ready },
-  );
-
-  return (
-    <BackupReminder
-      visible={visible}
-      onExport={exportBackup}
-      onSnooze={snoozeReminder}
-      onDismiss={dismissReminder}
-    />
-  );
 }
 
 function NotificationScheduler() {

@@ -51,9 +51,12 @@ import {
   type NotificationPermissionState,
 } from "@/lib/notifications";
 import { buildBackupFileName, downloadJsonBackup, markBackupComplete } from "@/lib/backup";
+import { BackupReminder } from "@/components/backup-reminder";
+import { useWeeklyBackupReminder } from "@/hooks/use-weekly-backup";
 import { usePWA } from "@/hooks/use-pwa";
 import { useApp } from "@/stores/app-store";
 import { useTranslation, LANGUAGES } from "@/i18n/context";
+import { LanguageFlag } from "@/components/language-flag";
 import type { ThemeMode } from "@/types";
 
 const THEME_OPTIONS: {
@@ -62,7 +65,7 @@ const THEME_OPTIONS: {
   icon: React.ComponentType<{ className?: string }>;
 }[] = [
   { value: "light", labelKey: "settings.themeLight", icon: Sun },
-  { value: "dark",  labelKey: "settings.themeDark",  icon: Moon },
+  { value: "dark", labelKey: "settings.themeDark", icon: Moon },
   { value: "system", labelKey: "settings.themeSystem", icon: Monitor },
 ];
 
@@ -71,6 +74,11 @@ const AVATAR_EMOJIS = ["😀", "😎", "🦊", "🐱", "🌟", "🚀", "📚", "
 export function SettingsPage() {
   const { settings, ready, updateSettings, toggleSoundSettings, exportData, importData, resetAll } =
     useApp();
+  const {
+    isDue: isBackupDue,
+    snoozeReminder,
+    dismissReminder,
+  } = useWeeklyBackupReminder(exportData);
   const { shareApp, isInstallAvailable, triggerInstall } = usePWA();
   const { t, language, setLanguage, isRtl } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
@@ -86,7 +94,11 @@ export function SettingsPage() {
   }, []);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading", "Loading…")}</div>;
+    return (
+      <div className="py-20 text-center text-sm text-muted-foreground">
+        {t("common.loading", "Loading…")}
+      </div>
+    );
   }
 
   function handleExport() {
@@ -168,6 +180,16 @@ export function SettingsPage() {
         <p className="mt-1 text-sm text-muted-foreground">{t("settings.subtitle")}</p>
       </header>
 
+      {/* Inline Backup Reminder — rendered exclusively here and never overlaps or blocks interactions */}
+      {isBackupDue && (
+        <BackupReminder
+          visible={isBackupDue}
+          onExport={handleExport}
+          onSnooze={snoozeReminder}
+          onDismiss={dismissReminder}
+        />
+      )}
+
       {/* ── Profile ──────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-sm font-medium">
@@ -181,7 +203,11 @@ export function SettingsPage() {
             <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-border">
               {settings.avatar ? (
                 settings.avatar.startsWith("data:") ? (
-                  <img src={settings.avatar} alt={t("settings.profile")} className="h-full w-full object-cover" />
+                  <img
+                    src={settings.avatar}
+                    alt={t("settings.profile")}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <span className="text-4xl">{settings.avatar}</span>
                 )
@@ -223,7 +249,9 @@ export function SettingsPage() {
 
         {/* Emoji picker */}
         <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">{t("settings.chooseEmoji")}</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            {t("settings.chooseEmoji")}
+          </p>
           <div className="flex flex-wrap gap-2">
             {AVATAR_EMOJIS.map((emoji) => (
               <button
@@ -285,16 +313,24 @@ export function SettingsPage() {
             dir={isRtl ? "rtl" : "ltr"}
           >
             <SelectTrigger className="h-11 w-full text-start">
-              <SelectValue />
+              <div className="flex items-center gap-2.5">
+                <LanguageFlag code={language} />
+                <span>{LANGUAGES.find((l) => l.code === language)?.nativeName}</span>
+                {LANGUAGES.find((l) => l.code === language)?.dir === "rtl" && (
+                  <span className="text-xs text-muted-foreground">(RTL)</span>
+                )}
+              </div>
             </SelectTrigger>
             <SelectContent>
               {LANGUAGES.map((lang) => (
                 <SelectItem key={lang.code} value={lang.code} className="text-start">
-                  <span className="me-2">{lang.flag}</span>
-                  {lang.nativeName}
-                  {lang.dir === "rtl" && (
-                    <span className="ms-1.5 text-xs text-muted-foreground">(RTL)</span>
-                  )}
+                  <div className="flex items-center gap-2.5">
+                    <LanguageFlag code={lang.code} />
+                    <span>{lang.nativeName}</span>
+                    {lang.dir === "rtl" && (
+                      <span className="text-xs text-muted-foreground">(RTL)</span>
+                    )}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -412,7 +448,8 @@ export function SettingsPage() {
                   onClick={async () => {
                     const permission = await requestNotificationPermission();
                     setNotificationPermission(permission);
-                    if (permission === "granted") toast.success(t("settings.permissionGrantedToast"));
+                    if (permission === "granted")
+                      toast.success(t("settings.permissionGrantedToast"));
                   }}
                 >
                   <Bell className="me-2 h-4 w-4" /> {t("settings.requestPermission")}
