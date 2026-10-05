@@ -338,6 +338,11 @@ export function HabitForm({ habit, onDone }: Props) {
       updateHabit({
         ...habit,
         ...payload,
+        // Explicitly preserve existing streak freeze records and quotas
+        freezesAllowedPerMonth: habit.freezesAllowedPerMonth ?? 3,
+        freezesUsedThisMonth: habit.freezesUsedThisMonth ?? 0,
+        frozenDates: Array.isArray(habit.frozenDates) ? habit.frozenDates : [],
+        lastFreezeResetDate: habit.lastFreezeResetDate ?? todayKey().slice(0, 7),
         /** ISO timestamp refreshed on every save. */
         updatedAt: new Date().toISOString(),
       });

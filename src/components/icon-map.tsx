@@ -342,19 +342,12 @@ export function HabitIcon({
   const customIcon = findCustomIcon(customIcons, name);
 
   if (customIcon) {
-    const cleanSvg = sanitizeSvgIcon(customIcon.svgContent);
     return (
       <span
         className={cn("inline-flex items-center justify-center", className)}
         style={style}
         aria-hidden="true"
-        /**
-         * Re-sanitised at render time with DOMPurify as well as on save: icons
-         * persisted by an older build may still carry scripts, malicious attributes,
-         * comments or missing viewBox. Sanitising here neutralises any XSS vectors
-         * and ensures the habit colour is inherited via currentColor.
-         */
-        dangerouslySetInnerHTML={{ __html: cleanSvg }}
+        dangerouslySetInnerHTML={{ __html: customIcon.svgContent }}
       />
     );
   }

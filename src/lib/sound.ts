@@ -91,11 +91,9 @@ export const playClickSound = () => {
 
 // 2. Distinct Toggle Sound (Pitch Slide for Sidebar Open/Close)
 export const playToggleSound = (isOpen: boolean) => {
-  if (!checkSoundEnabled()) return;
+  const ctx = getContext();
+  if (!ctx) return;
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -121,12 +119,23 @@ export const playSuccessSound = () => {
   playCompleteHabitSound();
 };
 
-const getContext = () => {
+// Lazy, reusable AudioContext singleton to prevent hitting browser hardware context limits (typically 6).
+let sharedAudioCtx: AudioContext | null = null;
+
+const getContext = (): AudioContext | null => {
   if (!checkSoundEnabled()) return null;
   if (isServer) return null;
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    return AudioContext ? new AudioContext() : null;
+    if (!sharedAudioCtx) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        sharedAudioCtx = new AudioContextClass();
+      }
+    }
+    if (sharedAudioCtx && sharedAudioCtx.state === "suspended") {
+      void sharedAudioCtx.resume().catch(() => {});
+    }
+    return sharedAudioCtx;
   } catch (e) {
     return null;
   }
@@ -248,12 +257,9 @@ export const playFailureSound = () => {
 
 // SSR-Safe Freeze Habit Sound (Soft, smooth, elegant crystalline glass chime)
 export const playFreezeSound = () => {
-  if (!checkSoundEnabled()) return;
-  if (typeof window === "undefined") return;
+  const ctx = getContext();
+  if (!ctx) return;
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
     const now = ctx.currentTime;
 
     const osc = ctx.createOscillator();

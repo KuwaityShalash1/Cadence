@@ -12,6 +12,7 @@ import type {
 } from "@/types";
 import { clearStore, getAll, getOne, put, putMany, remove } from "./idb";
 import { todayKey } from "@/services/dates";
+import { sanitizeSvgIcon } from "@/components/icon-map";
 
 export interface Snapshot {
   habits: Habit[];
@@ -208,6 +209,11 @@ export async function importSnapshot(data: unknown): Promise<void> {
   const previous = await loadSnapshot();
   try {
     await wipeAll();
+    const sanitizedCustomIcons: CustomIcon[] = (data.customIcons ?? []).map((icon) => ({
+      ...icon,
+      svgContent: typeof icon.svgContent === "string" ? sanitizeSvgIcon(icon.svgContent) : "",
+    }));
+
     await Promise.all([
       putMany("habits", data.habits ?? []),
       putMany("habitLogs", data.habitLogs ?? []),
@@ -218,7 +224,7 @@ export async function importSnapshot(data: unknown): Promise<void> {
       putMany("badHabits", data.badHabits ?? []),
       put("meta", { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) }),
       put("meta", { id: "customColors", customColors: data.customColors ?? [] }),
-      put("meta", { id: "customIcons", customIcons: data.customIcons ?? [] }),
+      put("meta", { id: "customIcons", customIcons: sanitizedCustomIcons }),
     ]);
   } catch (error) {
     // Restore the previous snapshot when any store write fails. IndexedDB
