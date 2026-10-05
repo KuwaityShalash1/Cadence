@@ -87,18 +87,25 @@ export function SettingsPage() {
     snoozeReminder,
     dismissReminder,
   } = useWeeklyBackupReminder(exportData);
-  const { shareApp, isInstallAvailable, triggerInstall } = usePWA();
+  const { shareApp, isInstallAvailable, isStandalone, triggerInstall } = usePWA();
   const { t, language, setLanguage, isRtl } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>("unsupported");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNotificationPermission(getNotificationPermission());
+    if (typeof navigator !== "undefined") {
+      const isIosDevice =
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      setIsIOS(Boolean(isIosDevice));
+    }
   }, []);
 
   if (!ready) {
@@ -504,6 +511,14 @@ export function SettingsPage() {
             </Button>
           ) : null}
         </div>
+        {isIOS && !isStandalone && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t(
+              "settings.iosInstallInstruction",
+              "To install on iOS: tap the Share button, then 'Add to Home Screen'",
+            )}
+          </p>
+        )}
       </section>
 
       {/* ── Data ─────────────────────────────────────────────────────────── */}
@@ -546,9 +561,7 @@ export function SettingsPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{t("settings.clearConfirmTitle")}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("settings.clearConfirmDesc")}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{t("settings.clearConfirmDesc")}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t("settings.cancel")}</AlertDialogCancel>

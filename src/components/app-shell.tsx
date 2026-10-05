@@ -242,7 +242,7 @@ function Shell({ children }: { children: ReactNode }) {
                 activeOptions={{ exact: item.exact }}
                 aria-label={label}
                 className={cn(
-                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-teal-800 dark:data-[status=active]:text-primary",
+                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
               >
@@ -275,7 +275,7 @@ function Shell({ children }: { children: ReactNode }) {
                 to="/settings"
                 aria-label={settingsLabel}
                 className={cn(
-                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-teal-800 dark:data-[status=active]:text-primary",
+                  "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
                   isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
               >

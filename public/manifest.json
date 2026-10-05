@@ -1,7 +1,11 @@
 {
+  "id": "/",
   "name": "Cadence - Habit Tracker",
   "short_name": "Cadence",
   "description": "Calm, offline-first habit and routine tracker.",
+  "lang": "en",
+  "dir": "auto",
+  "categories": ["lifestyle", "productivity", "utilities"],
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

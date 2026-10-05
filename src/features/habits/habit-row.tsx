@@ -207,7 +207,7 @@ export const HabitRow = memo(
     const decrements = Array.from(new Set(normalizeQuickDecrements(habit.quickDecrement)))
       .filter((dec) => dec > 1)
       .slice(0, 2);
-    const currentStreak = useMemo(() => streaks(habit, logMap).current, [habit, logMap]);
+    const currentStreak = useMemo(() => streaks(habit, logMap ?? {}).current, [habit, logMap]);
     /** The timer CTA is strictly reserved for timed / time-based habits. */
     const isTimerHabit = TIMER_HABIT_TYPES.includes(habit.type);
     /** Counter / numeric habits get the generous stepper; boolean habits never do. */

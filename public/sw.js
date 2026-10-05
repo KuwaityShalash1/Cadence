@@ -180,10 +180,8 @@ async function trimCache(cacheName, maxEntries) {
   const keys = await cache.keys();
   if (keys.length <= maxEntries) return;
   const excess = keys.length - maxEntries;
-  for (let index = 0; index < excess; index += 1) {
-    const key = keys[index];
-    if (key) await cache.delete(key);
-  }
+  const deletions = keys.slice(0, excess).map((key) => cache.delete(key));
+  await Promise.all(deletions);
 }
 
 /* ---------------------------------------------------------------- precaching */

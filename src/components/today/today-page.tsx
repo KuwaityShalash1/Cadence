@@ -472,10 +472,9 @@ export function TodayPage() {
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <h4 className="truncate font-sans text-sm font-semibold">{habit.name}</h4>
                       {habit.description ? (
-                        <p
-                          role="button"
-                          tabIndex={0}
-                          className="cursor-pointer truncate text-sm text-muted-foreground hover:text-foreground"
+                        <button
+                          type="button"
+                          className="block w-full text-start cursor-pointer truncate text-sm text-muted-foreground hover:text-foreground"
                           title={t("today.clickToExpand", "Click to expand")}
                           onClick={(e) => {
                             const target = e.currentTarget;
@@ -491,7 +490,7 @@ export function TodayPage() {
                           }}
                         >
                           {habit.description}
-                        </p>
+                        </button>
                       ) : null}
                     </div>
                   </div>

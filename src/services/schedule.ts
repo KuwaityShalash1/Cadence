@@ -1,5 +1,5 @@
 import type { Habit, Schedule } from "@/types";
-import { fromDateKey, startOfWeekKey, diffDays, rangeKeys } from "./dates";
+import { fromDateKey, startOfWeekKey, diffDays, rangeKeys, addDays } from "./dates";
 
 /** Does the schedule itself fall on this day (ignoring start/end dates)? */
 export function scheduleMatches(schedule: Schedule, dateKey: string, anchorKey: string): boolean {
@@ -99,17 +99,5 @@ export function describeSchedule(
 /** Week window (inclusive) containing dateKey. */
 export function weekWindow(dateKey: string, weekStartsOn: 0 | 1 = 1): [string, string] {
   const start = startOfWeekKey(dateKey, weekStartsOn);
-  const end = rangeKeys(start, start)[0];
-  void end;
-  const endKey = addWeek(start);
-  return [start, endKey];
-}
-
-function addWeek(startKey: string): string {
-  const date = fromDateKey(startKey);
-  date.setDate(date.getDate() + 6);
-  const y = date.getFullYear();
-  const m = `${date.getMonth() + 1}`.padStart(2, "0");
-  const d = `${date.getDate()}`.padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return [start, addDays(start, 6)];
 }

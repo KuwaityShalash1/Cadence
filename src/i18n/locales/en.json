@@ -61,6 +61,7 @@
   "settings.appDesc": "Share Cadence with friends, or install it as a standalone app on your device.",
   "settings.shareCadence": "Share Cadence",
   "settings.installApp": "Install App",
+  "settings.iosInstallInstruction": "To install on iOS: tap the Share button, then 'Add to Home Screen'",
   "settings.dataAlert": "Your data lives only on this device",
   "settings.dataAlertDesc": "Cadence is a 100% offline-first application. Your data is stored locally on this device and is not synced to the cloud. To prevent data loss if your browser cache is cleared, please export a backup of your data regularly.",
   "settings.help": "Help & Support",
