@@ -72,8 +72,16 @@ const THEME_OPTIONS: {
 const AVATAR_EMOJIS = ["😀", "😎", "🦊", "🐱", "🌟", "🚀", "📚", "💪", "🎯", "🔥", "🌱", "⚡"];
 
 export function SettingsPage() {
-  const { settings, ready, updateSettings, toggleSoundSettings, exportData, importData, resetAll } =
-    useApp();
+  const {
+    settings,
+    ready,
+    isImporting,
+    updateSettings,
+    toggleSoundSettings,
+    exportData,
+    importData,
+    resetAll,
+  } = useApp();
   const {
     isDue: isBackupDue,
     snoozeReminder,
@@ -135,16 +143,10 @@ export function SettingsPage() {
       return;
     }
 
-    // Intercept image selection: read as data URL and open cropper modal without saving yet
-    const reader = new FileReader();
-    reader.onload = () => {
-      setSelectedImage(reader.result as string);
-      setIsCropperOpen(true);
-    };
-    reader.onerror = () => {
-      toast.error(t("settings.imageReadError"));
-    };
-    reader.readAsDataURL(file);
+    // Intercept image selection: create an object URL and open cropper modal
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedImage(objectUrl);
+    setIsCropperOpen(true);
 
     // Reset input so re-selecting the same file works
     if (fileRef.current) fileRef.current.value = "";
@@ -527,6 +529,7 @@ export function SettingsPage() {
           <Button
             variant="outline"
             className="h-11 flex-1"
+            disabled={isImporting}
             onClick={() => importRef.current?.click()}
           >
             <Upload className="me-2 h-4 w-4" /> {t("settings.import")}
@@ -594,6 +597,9 @@ export function SettingsPage() {
         open={isCropperOpen}
         imageSrc={selectedImage}
         onClose={() => {
+          if (selectedImage && selectedImage.startsWith("blob:")) {
+            URL.revokeObjectURL(selectedImage);
+          }
           setIsCropperOpen(false);
           setSelectedImage(null);
         }}

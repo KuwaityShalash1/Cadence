@@ -136,7 +136,7 @@ export function habitStats(habit: Habit, logs: LogMap, fromKey: string, toKey: s
   }
 
   const totalCompletions = Object.values(logs).filter(
-    (l) => l.habitId === habit.id && (l.status === "skipped" || l.value >= l.target),
+    (l) => l.habitId === habit.id && l.status === "complete",
   ).length;
 
   const { current, best } = streaks(habit, logs);

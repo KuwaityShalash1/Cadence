@@ -14,7 +14,7 @@ import * as repo from "@/database/repository";
 import type { Snapshot } from "@/database/repository";
 import { diffDays, toDateKey, todayKey } from "@/services/dates";
 import { buildLogMap, logKey, type LogMap } from "@/services/stats";
-import { playCompleteHabitSound } from "@/lib/sound";
+import { playCompleteHabitSound, setSoundEnabled } from "@/lib/sound";
 import type {
   BadHabit,
   AppSettings,
@@ -141,6 +141,7 @@ function daysUntilMonthlyReset(): number {
 
 interface AppState extends Snapshot {
   ready: boolean;
+  isImporting: boolean;
   logMap: LogMap;
   isSidebarCollapsed: boolean;
   isCollapsed: boolean;
@@ -277,6 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return EMPTY;
   });
   const [ready, setReady] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(getInitialCollapsed);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -363,6 +365,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // a custom icon id would fall back to the default Lucide glyph.
           customIcons: Array.isArray(snapshot?.customIcons) ? snapshot.customIcons : [],
         });
+
+        // Sync initial sound setting to in-memory sound cache
+        if (snapshot?.settings) {
+          const soundVal =
+            snapshot.settings.isSoundEnabled ?? !(snapshot.settings.isMuted ?? false);
+          setSoundEnabled(soundVal);
+        }
 
         // Sync theme to cadence-storage on initial load
         try {
@@ -535,8 +544,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           document.documentElement.classList.toggle("dark", dark);
         }
 
-        // Always update localStorage and cadence-storage with latest settings
+        // Always update in-memory sound cache and localStorage with latest settings
         const soundVal = settings.isSoundEnabled ?? !(settings.isMuted ?? false);
+        setSoundEnabled(soundVal);
         localStorage.setItem("isSoundEnabled", String(soundVal));
         localStorage.setItem("isMuted", String(!soundVal));
         localStorage.setItem("cadence_sound_enabled", String(soundVal));
@@ -1419,10 +1429,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
       },
       async importData(json) {
-        const parsed: unknown = JSON.parse(json);
-        await repo.importSnapshot(parsed);
-        const snapshot = await repo.loadSnapshot();
-        setState(snapshot);
+        setIsImporting(true);
+        try {
+          const parsed: unknown = JSON.parse(json);
+          await repo.importSnapshot(parsed);
+          const snapshot = await repo.loadSnapshot();
+          setState(snapshot);
+          setIsImporting(false);
+        } catch (error) {
+          setIsImporting(false);
+          console.error("Failed to import data:", error);
+          throw error;
+        }
       },
       setCollapsed,
       toggleCollapse,
@@ -1474,13 +1492,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       customColors: Array.isArray(state.customColors) ? state.customColors : [],
       customIcons: Array.isArray(state.customIcons) ? state.customIcons : [],
       ready,
+      isImporting,
       logMap,
       isSidebarCollapsed: isCollapsed,
       isCollapsed,
       collapsed: isCollapsed,
       ...actions,
     }),
-    [state, ready, logMap, isCollapsed, actions],
+    [state, ready, isImporting, logMap, isCollapsed, actions],
   );
 
   return (

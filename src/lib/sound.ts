@@ -2,7 +2,7 @@
 
 const isServer = typeof window === "undefined";
 
-const checkSoundEnabled = (): boolean => {
+const readSoundEnabledFromStorage = (): boolean => {
   if (isServer) return false;
   try {
     const saved = localStorage.getItem("cadence-storage");
@@ -31,6 +31,35 @@ const checkSoundEnabled = (): boolean => {
     }
   } catch (e) {}
   return true;
+};
+
+// Module-level cached variable to prevent main-thread latency from synchronous localStorage reads
+let isSoundEnabledCache: boolean = readSoundEnabledFromStorage();
+
+/**
+ * Update the in-memory sound cache when the setting is toggled.
+ */
+export const setSoundEnabled = (enabled: boolean): void => {
+  isSoundEnabledCache = enabled;
+};
+
+// Keep cache synchronized if another tab modifies storage
+if (!isServer) {
+  window.addEventListener("storage", (e) => {
+    if (
+      e.key === "isSoundEnabled" ||
+      e.key === "cadence_sound_enabled" ||
+      e.key === "cadence-storage" ||
+      e.key === "isMuted"
+    ) {
+      isSoundEnabledCache = readSoundEnabledFromStorage();
+    }
+  });
+}
+
+export const checkSoundEnabled = (): boolean => {
+  if (isServer) return false;
+  return isSoundEnabledCache;
 };
 
 // 1. Crisp Soft Mechanical Click (For general buttons & nav links)
