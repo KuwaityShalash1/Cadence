@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import {
   Clock,
   Flame,
@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { HabitIcon, getColorStyle } from "@/components/icon-map";
 import { cn } from "@/lib/utils";
-import { useApp } from "@/stores/app-store";
+import { useApp, useAppActions } from "@/stores/app-store";
 import { useTranslation } from "@/i18n/context";
 import { todayKey } from "@/services/dates";
 import type { BadHabit, UsageLog } from "@/types";
@@ -36,25 +36,88 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
+interface LiveTimerProps {
+  quitDate: number;
+}
+
+/**
+ * Isolated live duration counter for cold-turkey abstinence tracking.
+ * Confines 1-second timer state ticks to this sub-component so the parent
+ * BadHabitCard and other cards remain completely static.
+ */
+export function LiveTimer({ quitDate }: LiveTimerProps) {
+  const { t } = useTranslation();
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const elapsedMs = Math.max(0, now - quitDate);
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const days = Math.floor(totalSeconds / (3600 * 24));
+  const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return (
+    <div className="rounded-xl bg-muted/40 border border-border/60 p-3 text-center space-y-2">
+      <div className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
+        {t("quitTracker.currentAbstinenceStreak", "Current Abstinence Streak")}
+      </div>
+      <div className="grid grid-cols-4 gap-1.5 max-w-md mx-auto">
+        <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+          <span className="font-display text-xl font-extrabold text-foreground numeric">
+            {days}
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("common.days", "Days")}
+          </span>
+        </div>
+        <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+          <span className="font-display text-xl font-extrabold text-foreground numeric">
+            {String(hours).padStart(2, "0")}
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("common.hours", "Hours")}
+          </span>
+        </div>
+        <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+          <span className="font-display text-xl font-extrabold text-foreground numeric">
+            {String(minutes).padStart(2, "0")}
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("common.mins", "Mins")}
+          </span>
+        </div>
+        <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
+          <span className="font-display text-xl font-extrabold text-primary numeric animate-pulse">
+            {String(seconds).padStart(2, "0")}
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("common.secs", "Secs")}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface BadHabitCardProps {
   habit: BadHabit;
 }
 
-export function BadHabitCard({ habit }: BadHabitCardProps) {
-  const { removeBadHabit, restoreBadHabit, customIcons, logUsage } = useApp();
+export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardProps) {
+  const { customIcons } = useApp();
+  const { removeBadHabit, restoreBadHabit, logUsage } = useAppActions();
   const { t, language } = useTranslation();
-  const [now, setNow] = useState<number>(Date.now());
   const [relapseOpen, setRelapseOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   // Limit strategy: track usage dialog state
   const [usageDialogOpen, setUsageDialogOpen] = useState(false);
   const [usageValue, setUsageValue] = useState<string>("");
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Calculate today's usage for limit strategy
   const isLimitStrategy = habit.strategy === "limit";
@@ -67,13 +130,8 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
   const usagePercentage = limitValue > 0 ? Math.min(100, (todayUsage / limitValue) * 100) : 0;
   const isLimitExceeded = todayUsage > limitValue;
 
-  const elapsedMs = Math.max(0, now - habit.quitDate);
-  const totalSeconds = Math.floor(elapsedMs / 1000);
-  const days = Math.floor(totalSeconds / (3600 * 24));
-  const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
+  // Streak calculations do not need a 1-second interval; Date.now() on render is sufficient
+  const elapsedMs = Math.max(0, Date.now() - habit.quitDate);
   const currentStreakHours = elapsedMs / (1000 * 60 * 60);
   const maxHistoryHours = habit.history.reduce((max, r) => Math.max(max, r.streakDurationHours), 0);
   const longestStreakHours = Math.max(currentStreakHours, maxHistoryHours);
@@ -167,47 +225,7 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
       </div>
 
       {/* Live abstinence timer — shown only for cold-turkey trackers, not for moderation. */}
-      {!isLimitStrategy && (
-        <div className="rounded-xl bg-muted/40 border border-border/60 p-3 text-center space-y-2">
-          <div className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">
-            {t("quitTracker.currentAbstinenceStreak", "Current Abstinence Streak")}
-          </div>
-          <div className="grid grid-cols-4 gap-1.5 max-w-md mx-auto">
-            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
-              <span className="font-display text-xl font-extrabold text-foreground numeric">
-                {days}
-              </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                {t("common.days", "Days")}
-              </span>
-            </div>
-            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
-              <span className="font-display text-xl font-extrabold text-foreground numeric">
-                {String(hours).padStart(2, "0")}
-              </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                {t("common.hours", "Hours")}
-              </span>
-            </div>
-            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
-              <span className="font-display text-xl font-extrabold text-foreground numeric">
-                {String(minutes).padStart(2, "0")}
-              </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                {t("common.mins", "Mins")}
-              </span>
-            </div>
-            <div className="flex flex-col items-center bg-card rounded-lg p-2 border shadow-2xs">
-              <span className="font-display text-xl font-extrabold text-primary numeric animate-pulse">
-                {String(seconds).padStart(2, "0")}
-              </span>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                {t("common.secs", "Secs")}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+      {!isLimitStrategy && <LiveTimer quitDate={habit.quitDate} />}
 
       {/* Limit Strategy UI: Progress bar comes first for limit cards */}
       {isLimitStrategy ? (
@@ -485,4 +503,4 @@ export function BadHabitCard({ habit }: BadHabitCardProps) {
       </Dialog>
     </div>
   );
-}
+});

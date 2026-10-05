@@ -24,7 +24,7 @@
 "use strict";
 
 /** Version of the caching scheme. Also part of every cache name. */
-const SW_VERSION = "1.0.3";
+const SW_VERSION = "1.0.4";
 
 const CACHE_NAMESPACE = "cadence";
 /** Core shell files (document + icons + manifest); never trimmed at runtime. */
@@ -611,6 +611,191 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+/**
+ * In-memory schedule of reminders synced from the client.
+ * Array of { id, habitId, habitName, reminderTime, dateKey, title, body, icon, tag }
+ */
+let scheduledReminders = [];
+const sentReminderTags = new Set();
+
+/**
+ * Open Cadence IndexedDB directly from the Service Worker.
+ */
+function openCadenceDb() {
+  return new Promise((resolve, reject) => {
+    if (!self.indexedDB) {
+      return reject(new Error("IndexedDB not available in SW"));
+    }
+    const req = self.indexedDB.open("cadence-db", 2);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * Checks if a reminder was already sent today (survives worker restarts).
+ */
+async function isReminderSent(tag) {
+  if (sentReminderTags.has(tag)) return true;
+  try {
+    const cache = await caches.open("cadence-sent-reminders");
+    const match = await cache.match(new Request(`https://cadence.local/sent/${tag}`));
+    if (match) {
+      sentReminderTags.add(tag);
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+/**
+ * Marks a reminder as sent in both memory and Cache storage.
+ */
+async function markReminderSent(tag) {
+  sentReminderTags.add(tag);
+  try {
+    const cache = await caches.open("cadence-sent-reminders");
+    await cache.put(
+      new Request(`https://cadence.local/sent/${tag}`),
+      new Response("1", { headers: { "content-type": "text/plain" } }),
+    );
+  } catch (e) {}
+}
+
+/**
+ * Checks for due reminders and dispatches notifications via ServiceWorkerRegistration.showNotification.
+ * Handles both synced memory reminders and direct IndexedDB fallback for background events.
+ */
+async function checkAndDispatchDueReminders() {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const todayDateKey = `${year}-${month}-${day}`;
+  const dayOfWeek = now.getDay();
+
+  // 1. First evaluate synced reminders from the client if available
+  if (Array.isArray(scheduledReminders) && scheduledReminders.length > 0) {
+    for (const reminder of scheduledReminders) {
+      if (reminder.dateKey !== todayDateKey) continue;
+      if (await isReminderSent(reminder.tag)) continue;
+
+      const [hours, minutes] = (reminder.reminderTime || "").split(":").map(Number);
+      if (hours === undefined || minutes === undefined) continue;
+      const reminderMinutes = hours * 60 + minutes;
+      const minutesSinceReminder = currentMinutes - reminderMinutes;
+
+      // Allow 0 to 60 minutes window so background tab throttling doesn't drop reminders
+      if (minutesSinceReminder >= 0 && minutesSinceReminder <= 60) {
+        await markReminderSent(reminder.tag);
+        try {
+          await self.registration.showNotification(reminder.title, {
+            body: reminder.body,
+            icon: reminder.icon || "/pwa-192x192.png?v=2",
+            badge: "/pwa-192x192.png?v=2",
+            tag: reminder.tag,
+            data: { url: "/" },
+          });
+        } catch (err) {
+          console.warn("[SW] showNotification error:", err);
+        }
+      }
+    }
+    return;
+  }
+
+  // 2. Direct IndexedDB fallback if no in-memory reminders exist (e.g. background wake)
+  try {
+    const db = await openCadenceDb();
+    const tx = db.transaction(["habits", "habitLogs", "meta"], "readonly");
+    const habitsStore = tx.objectStore("habits");
+    const logsStore = tx.objectStore("habitLogs");
+    const metaStore = tx.objectStore("meta");
+
+    const [habits, logs, settings] = await Promise.all([
+      new Promise((res) => {
+        const r = habitsStore.getAll();
+        r.onsuccess = () => res(r.result || []);
+        r.onerror = () => res([]);
+      }),
+      new Promise((res) => {
+        const r = logsStore.getAll();
+        r.onsuccess = () => res(r.result || []);
+        r.onerror = () => res([]);
+      }),
+      new Promise((res) => {
+        const r = metaStore.get("settings");
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => res(null);
+      }),
+    ]);
+
+    if (!settings || !settings.notificationsEnabled) return;
+
+    // Completed, skipped, or frozen habit IDs for today
+    const inactiveHabitIds = new Set(
+      logs
+        .filter(
+          (l) =>
+            l.date === todayDateKey &&
+            (l.status === "complete" ||
+              l.status === "skipped" ||
+              l.status === "frozen" ||
+              (typeof l.value === "number" &&
+                typeof l.target === "number" &&
+                l.target > 0 &&
+                l.value >= l.target)),
+        )
+        .map((l) => l.habitId),
+    );
+
+    for (const habit of habits) {
+      if (habit.archived || inactiveHabitIds.has(habit.id)) continue;
+      if (habit.startDate && todayDateKey < habit.startDate) continue;
+      if (habit.endDate && todayDateKey > habit.endDate) continue;
+
+      // Basic schedule day matching
+      if (
+        habit.schedule &&
+        habit.schedule.type === "weekdays" &&
+        Array.isArray(habit.schedule.days) &&
+        !habit.schedule.days.includes(dayOfWeek)
+      ) {
+        continue;
+      }
+
+      const reminderTimes =
+        Array.isArray(habit.reminderTimes) && habit.reminderTimes.length > 0
+          ? habit.reminderTimes
+          : habit.reminder
+            ? [habit.reminder]
+            : [];
+
+      for (const reminderTime of reminderTimes) {
+        const [h, m] = reminderTime.split(":").map(Number);
+        if (h === undefined || m === undefined) continue;
+        const reminderMin = h * 60 + m;
+        const diff = currentMinutes - reminderMin;
+        const tag = `cadence-reminder-${habit.id}-${todayDateKey}-${reminderTime}`;
+
+        if (diff >= 0 && diff <= 60 && !(await isReminderSent(tag))) {
+          await markReminderSent(tag);
+          await self.registration.showNotification(habit.name, {
+            body: `Keep your streak going! Don't forget to complete ${habit.name} today.`,
+            icon: "/pwa-192x192.png?v=2",
+            badge: "/pwa-192x192.png?v=2",
+            tag,
+            data: { url: "/" },
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[SW] IDB background reminder check error:", err);
+  }
+}
+
 self.addEventListener("message", (event) => {
   const data = event.data;
   if (!data || typeof data !== "object") return;
@@ -621,6 +806,25 @@ self.addEventListener("message", (event) => {
     return;
   }
 
+  // Trigger immediate check of due notifications
+  if (data.type === "CHECK_NOTIFICATIONS") {
+    event.waitUntil(checkAndDispatchDueReminders());
+    return;
+  }
+
+  // Receive scheduled reminders from client
+  if (data.type === "SYNC_REMINDERS" && Array.isArray(data.reminders)) {
+    scheduledReminders = data.reminders;
+    event.waitUntil(checkAndDispatchDueReminders());
+    return;
+  }
+
+  // Direct dispatch of notification via SW (safe for mobile)
+  if (data.type === "DISPATCH_NOTIFICATION" && data.title) {
+    event.waitUntil(self.registration.showNotification(data.title, data.options || {}));
+    return;
+  }
+
   // Optional refresh of the offline documents, used by the client once per
   // session so cached HTML follows the deployment that is currently live.
   if (data.type === "CACHE_ROUTES" && Array.isArray(data.urls)) {
@@ -628,4 +832,37 @@ self.addEventListener("message", (event) => {
     if (urls.length === 0) return;
     event.waitUntil(precacheRoutes(urls).catch(() => undefined));
   }
+});
+
+// Periodic Background Sync: triggers periodically in background on Chromium mobile PWAs
+self.addEventListener("periodicsync", (event) => {
+  if (event.tag === "check-notifications" || event.tag === "cadence-reminders") {
+    event.waitUntil(checkAndDispatchDueReminders());
+  }
+});
+
+// Background Sync: fires when connectivity or background sync occurs
+self.addEventListener("sync", (event) => {
+  if (event.tag === "check-notifications" || event.tag === "cadence-reminders") {
+    event.waitUntil(checkAndDispatchDueReminders());
+  }
+});
+
+// Notification click: focuses open window or opens app
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const urlToOpen =
+    event.notification.data && event.notification.data.url ? event.notification.data.url : "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+    }),
+  );
 });

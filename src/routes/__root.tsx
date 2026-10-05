@@ -19,7 +19,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/stores/app-store";
 import { LanguageProvider, useTranslation } from "@/i18n/context";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { checkDailyHabitReminder } from "@/lib/notifications";
+import {
+  checkDailyHabitReminder,
+  syncRemindersToServiceWorker,
+  triggerServiceWorkerNotificationCheck,
+  registerPeriodicSync,
+} from "@/lib/notifications";
 import { registerServiceWorker } from "@/lib/service-worker";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useApp } from "@/stores/app-store";
@@ -350,7 +355,6 @@ function RootShell({ children }: { children: ReactNode }) {
             `,
           }}
         />
-        
 
         <script
           dangerouslySetInnerHTML={{
@@ -525,17 +529,50 @@ function NotificationScheduler() {
   useEffect(() => {
     habitsRef.current = habits;
     logMapRef.current = logMap;
-  }, [habits, logMap]);
+    // Keep Service Worker synced whenever habits or logs update
+    if (ready && settings.notificationsEnabled) {
+      void syncRemindersToServiceWorker(habits, logMap);
+    }
+  }, [habits, logMap, ready, settings.notificationsEnabled]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !ready || !settings.notificationsEnabled) return;
 
+    // Register Chromium mobile periodic background sync if supported
+    void registerPeriodicSync();
+
     const check = () => {
       void checkDailyHabitReminder(habitsRef.current, logMapRef.current);
+      void syncRemindersToServiceWorker(habitsRef.current, logMapRef.current);
+      void triggerServiceWorkerNotificationCheck();
     };
+
     check();
     const intervalId = window.setInterval(check, 60_000);
-    return () => window.clearInterval(intervalId);
+
+    // CRITICAL FOR MOBILE: Mobile OSes freeze JS execution when backgrounded.
+    // When the user unlocks their phone or switches back to Cadence, immediately evaluate!
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        check();
+      } else {
+        // App is being backgrounded: sync latest state with SW before tab freezes
+        void syncRemindersToServiceWorker(habitsRef.current, logMapRef.current);
+      }
+    };
+
+    const handleFocus = () => {
+      check();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [ready, settings.notificationsEnabled]);
 
   return null;

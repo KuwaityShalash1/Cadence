@@ -41,7 +41,7 @@ function hasFrozenHabitOnDay(habits: Habit[], date: string): boolean {
 
 export function CalendarPage() {
   const { t, language } = useTranslation();
-  const { habits, logMap, ready, settings } = useApp();
+  const { habits, logMap, ready, settings, customIcons } = useApp();
   const today = todayKey();
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
@@ -96,7 +96,9 @@ export function CalendarPage() {
   }, [weekStartsOn, t]);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
+    return (
+      <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
+    );
   }
 
   return (
@@ -272,7 +274,14 @@ export function CalendarPage() {
         ) : (
           <ul className="space-y-3">
             {selectedHabits.map((habit) => (
-              <HabitRow key={habit.id} habit={habit} date={selected} readOnly={isFutureDate} />
+              <HabitRow
+                key={habit.id}
+                habit={habit}
+                date={selected}
+                readOnly={isFutureDate}
+                logMap={logMap}
+                customIcons={customIcons}
+              />
             ))}
           </ul>
         )}

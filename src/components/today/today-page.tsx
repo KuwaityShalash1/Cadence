@@ -205,7 +205,11 @@ export function TodayPage() {
   }, [activeId, due]);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading", "Loading…")}</div>;
+    return (
+      <div className="py-20 text-center text-sm text-muted-foreground">
+        {t("common.loading", "Loading…")}
+      </div>
+    );
   }
 
   return (
@@ -229,7 +233,10 @@ export function TodayPage() {
             <h1 className="font-sans text-3xl font-bold tracking-tight sm:text-4xl">
               {getGreeting(t, settings.displayName)}
               <span className="sr-only">
-                {t("today.srSuffix", " — Cadence, a free offline habit tracker and daily routine planner")}
+                {t(
+                  "today.srSuffix",
+                  " — Cadence, a free offline habit tracker and daily routine planner",
+                )}
               </span>
             </h1>
           </div>
@@ -273,7 +280,9 @@ export function TodayPage() {
       {!hasAnyHabits ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <h2 className="font-display text-xl">{t("today.welcomeTitle")}</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("today.welcomeDesc")}</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            {t("today.welcomeDesc")}
+          </p>
           <Button className="mt-5" onClick={() => editor.open()}>
             <Plus className="me-1 h-4 w-4" /> {t("today.createFirst")}
           </Button>
@@ -281,7 +290,9 @@ export function TodayPage() {
       ) : due.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <h2 className="font-display text-xl">{t("today.nothingTitle")}</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("today.nothingDesc")}</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            {t("today.nothingDesc")}
+          </p>
           <Button className="mt-5" onClick={() => editor.open()}>
             <Plus className="me-1 h-4 w-4" /> {t("today.newHabit")}
           </Button>
@@ -326,16 +337,18 @@ export function TodayPage() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  {mode === "all" ? t("today.filterAll") : mode === "pending" ? t("today.filterPending") : t("today.filterDone")}
+                  {mode === "all"
+                    ? t("today.filterAll")
+                    : mode === "pending"
+                      ? t("today.filterPending")
+                      : t("today.filterDone")}
                 </button>
               ))}
             </div>
           </div>
 
           {filtered.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              {t("today.noMatch")}
-            </p>
+            <p className="py-10 text-center text-sm text-muted-foreground">{t("today.noMatch")}</p>
           ) : (
             <DndContext
               sensors={sensors}
@@ -359,6 +372,8 @@ export function TodayPage() {
                             key={habit.id}
                             habit={habit}
                             date={date}
+                            logMap={logMap}
+                            customIcons={customIcons}
                             draggable={filter === "all" && !query}
                           />
                         ))}
@@ -374,7 +389,13 @@ export function TodayPage() {
                     </h2>
                     <ul className="cadence-stagger space-y-3">
                       {completed.map((habit) => (
-                        <HabitRow key={habit.id} habit={habit} date={date} />
+                        <HabitRow
+                          key={habit.id}
+                          habit={habit}
+                          date={date}
+                          logMap={logMap}
+                          customIcons={customIcons}
+                        />
                       ))}
                     </ul>
                   </section>
@@ -382,7 +403,14 @@ export function TodayPage() {
               </div>
               <DragOverlay>
                 {activeHabit ? (
-                  <HabitRow habit={activeHabit} date={date} isOverlay draggable />
+                  <HabitRow
+                    habit={activeHabit}
+                    date={date}
+                    logMap={logMap}
+                    customIcons={customIcons}
+                    isOverlay
+                    draggable
+                  />
                 ) : null}
               </DragOverlay>
             </DndContext>
@@ -417,9 +445,7 @@ export function TodayPage() {
           <div className="py-12 text-center text-sm text-muted-foreground">
             <Archive className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
             <p className="font-medium text-foreground">{t("today.noArchived")}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("today.noArchivedDesc")}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("today.noArchivedDesc")}</p>
           </div>
         ) : (
           <ul className="space-y-3 py-4">
@@ -501,10 +527,14 @@ export function TodayPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("today.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("today.deleteDesc").replace("{name}", habitToDelete?.name ?? "")}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {t("today.deleteDesc").replace("{name}", habitToDelete?.name ?? "")}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setHabitToDelete(null)}>{t("today.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setHabitToDelete(null)}>
+              {t("today.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (habitToDelete) {

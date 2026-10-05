@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -147,7 +148,7 @@ interface AppState extends Snapshot {
   activeTimer?: TimerState | null;
 }
 
-interface AppActions {
+export interface AppActions {
   createHabit: (input: Omit<Habit, "id" | "createdAt" | "order" | "archived">) => Habit;
   updateHabit: (habit: Habit) => void;
   archiveHabit: (id: string, archived: boolean) => void;
@@ -207,11 +208,19 @@ interface AppActions {
   setCustomColors: (colors: string[]) => void;
   addCustomIcon: (icon: { id: string; svgContent: string }) => void;
   removeCustomIcon: (id: string) => void;
+  getActiveTimer: () => TimerState | null;
 }
 
-type Store = AppState & AppActions;
+export type Store = AppState & AppActions;
 
-const AppContext = createContext<Store | null>(null);
+export const AppContext = createContext<Store | null>(null);
+export const AppActionsContext = createContext<AppActions | null>(null);
+
+export function useAppActions(): AppActions {
+  const ctx = useContext(AppActionsContext);
+  if (!ctx) throw new Error("useAppActions must be used inside AppProvider");
+  return ctx;
+}
 
 const EMPTY: Snapshot = {
   habits: [],
@@ -269,6 +278,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const [ready, setReady] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(getInitialCollapsed);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   const setCollapsed = useCallback((collapsed: boolean | ((prev: boolean) => boolean)) => {
     setIsCollapsed((prev) => {
@@ -411,77 +422,82 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // disabled for future days, but this guard keeps analytics integrity even
       // if a caller bypasses the UI.
       if (date > todayKey()) return;
-      setState((prev) => {
-        const habit = prev.habits.find((h) => h.id === habitId);
-        if (!habit) return prev;
-        const id = logKey(habitId, date);
-        const existing = prev.habitLogs.find((l) => l.id === id);
-        const next = mutate(existing, habit);
 
-        const wasComplete = existing ? existing.status === "complete" : false;
-        const isNowComplete = next ? next.status === "complete" : false;
-        if (!wasComplete && isNowComplete) {
-          playCompleteHabitSound();
+      const current = stateRef.current;
+      const habit = current.habits.find((h) => h.id === habitId);
+      if (!habit) return;
+      const id = logKey(habitId, date);
+      const existing = current.habitLogs.find((l) => l.id === id);
+      const next = mutate(existing, habit);
+
+      const wasComplete = existing ? existing.status === "complete" : false;
+      const isNowComplete = next ? next.status === "complete" : false;
+      const shouldPlaySound = !wasComplete && isNowComplete;
+
+      let routineLogs = current.routineLogs;
+      const routineLogsToSave: RoutineLog[] = [];
+      const linkedRoutines = current.routines.filter((routine) =>
+        routine.steps.some((step) => step.habitId === habitId),
+      );
+      for (const routine of linkedRoutines) {
+        const linkedStepIds = routine.steps
+          .filter((step) => step.habitId === habitId)
+          .map((step) => step.id);
+        const routineLogId = `${routine.id}:${date}`;
+        const existingRoutineLog = routineLogs.find((log) => log.id === routineLogId);
+        const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
+
+        for (const stepId of linkedStepIds) {
+          if (isNowComplete) completedStepIds.add(stepId);
+          else completedStepIds.delete(stepId);
         }
 
-        // Habit -> Routine sync intentionally updates routine logs directly.
-        // The Routine -> Habit path also writes directly, so neither direction
-        // dispatches the other action and the two paths cannot recurse.
-        let routineLogs = prev.routineLogs;
-        const linkedRoutines = prev.routines.filter((routine) =>
-          routine.steps.some((step) => step.habitId === habitId),
+        const nextCompletedStepIds = [...completedStepIds];
+        const changed = linkedStepIds.some((stepId) =>
+          isNowComplete
+            ? !existingRoutineLog?.completedStepIds.includes(stepId)
+            : existingRoutineLog?.completedStepIds.includes(stepId),
         );
-        for (const routine of linkedRoutines) {
-          const linkedStepIds = routine.steps
-            .filter((step) => step.habitId === habitId)
-            .map((step) => step.id);
-          const routineLogId = `${routine.id}:${date}`;
-          const existingRoutineLog = routineLogs.find((log) => log.id === routineLogId);
-          const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
+        if (!changed) continue;
 
-          for (const stepId of linkedStepIds) {
-            if (isNowComplete) completedStepIds.add(stepId);
-            else completedStepIds.delete(stepId);
-          }
-
-          const nextCompletedStepIds = [...completedStepIds];
-          const changed = linkedStepIds.some((stepId) =>
-            isNowComplete
-              ? !existingRoutineLog?.completedStepIds.includes(stepId)
-              : existingRoutineLog?.completedStepIds.includes(stepId),
-          );
-          if (!changed) continue;
-
-          const nextRoutineLog: RoutineLog = {
-            id: routineLogId,
-            routineId: routine.id,
-            date,
-            completedStepIds: nextCompletedStepIds,
-            updatedAt: Date.now(),
-          };
-          void repo.saveRoutineLog(nextRoutineLog);
-          routineLogs = existingRoutineLog
-            ? routineLogs.map((log) => (log.id === routineLogId ? nextRoutineLog : log))
-            : [...routineLogs, nextRoutineLog];
-        }
-
-        if (!next) {
-          void repo.deleteLog(id);
-          return {
-            ...prev,
-            habitLogs: prev.habitLogs.filter((l) => l.id !== id),
-            routineLogs,
-          };
-        }
-        void repo.saveLog(next);
-        return {
-          ...prev,
-          routineLogs,
-          habitLogs: existing
-            ? prev.habitLogs.map((l) => (l.id === id ? next : l))
-            : [...prev.habitLogs, next],
+        const nextRoutineLog: RoutineLog = {
+          id: routineLogId,
+          routineId: routine.id,
+          date,
+          completedStepIds: nextCompletedStepIds,
+          updatedAt: Date.now(),
         };
-      });
+        routineLogsToSave.push(nextRoutineLog);
+        routineLogs = existingRoutineLog
+          ? routineLogs.map((log) => (log.id === routineLogId ? nextRoutineLog : log))
+          : [...routineLogs, nextRoutineLog];
+      }
+
+      const nextHabitLogs = !next
+        ? current.habitLogs.filter((l) => l.id !== id)
+        : existing
+          ? current.habitLogs.map((l) => (l.id === id ? next : l))
+          : [...current.habitLogs, next];
+
+      // 1. Pure state transition
+      setState((prev) => ({
+        ...prev,
+        routineLogs,
+        habitLogs: nextHabitLogs,
+      }));
+
+      // 2. Side effects outside and after setState (prevents StrictMode double-execution)
+      if (shouldPlaySound) {
+        playCompleteHabitSound();
+      }
+      for (const rLog of routineLogsToSave) {
+        void repo.saveRoutineLog(rLog);
+      }
+      if (!next) {
+        void repo.deleteLog(id);
+      } else {
+        void repo.saveLog(next);
+      }
     },
     [],
   );
@@ -504,47 +520,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
      * because both live in the same object literal being built here).
      */
     const applySettings = (patch: Partial<AppSettings>) => {
-      setState((prev) => {
-        const settings = { ...prev.settings, ...patch };
-        void repo.saveSettings(settings);
+      const current = stateRef.current;
+      const settings = { ...current.settings, ...patch };
+
+      setState((prev) => ({ ...prev, settings }));
+
+      void repo.saveSettings(settings);
+      try {
+        if (patch.theme) {
+          localStorage.setItem("cadence-theme", patch.theme);
+          localStorage.setItem("theme", patch.theme);
+          const media = window.matchMedia("(prefers-color-scheme: dark)");
+          const dark = patch.theme === "dark" || (patch.theme === "system" && media.matches);
+          document.documentElement.classList.toggle("dark", dark);
+        }
+
+        // Always update localStorage and cadence-storage with latest settings
+        const soundVal = settings.isSoundEnabled ?? !(settings.isMuted ?? false);
+        localStorage.setItem("isSoundEnabled", String(soundVal));
+        localStorage.setItem("isMuted", String(!soundVal));
+        localStorage.setItem("cadence_sound_enabled", String(soundVal));
+
+        // Always update cadence-storage with latest settings and state
+        const raw = localStorage.getItem("cadence-storage");
+        let existing: any = {};
         try {
-          if (patch.theme) {
-            localStorage.setItem("cadence-theme", patch.theme);
-            localStorage.setItem("theme", patch.theme);
-            const media = window.matchMedia("(prefers-color-scheme: dark)");
-            const dark = patch.theme === "dark" || (patch.theme === "system" && media.matches);
-            document.documentElement.classList.toggle("dark", dark);
-          }
-
-          // Always update localStorage and cadence-storage with latest settings
-          const soundVal = settings.isSoundEnabled ?? !(settings.isMuted ?? false);
-          localStorage.setItem("isSoundEnabled", String(soundVal));
-          localStorage.setItem("isMuted", String(!soundVal));
-          localStorage.setItem("cadence_sound_enabled", String(soundVal));
-
-          // Always update cadence-storage with latest settings and state
-          const raw = localStorage.getItem("cadence-storage");
-          let existing: any = {};
-          try {
-            existing = JSON.parse(raw || "{}");
-          } catch {}
-          const existingState = existing.state || existing;
-          localStorage.setItem(
-            "cadence-storage",
-            JSON.stringify({
-              state: {
-                ...existingState,
-                settings,
-                theme: settings.theme ?? existingState.theme,
-                isSidebarCollapsed: isCollapsed,
-                isCollapsed,
-              },
-              version: 0,
-            }),
-          );
+          existing = JSON.parse(raw || "{}");
         } catch {}
-        return { ...prev, settings };
-      });
+        const existingState = existing.state || existing;
+        localStorage.setItem(
+          "cadence-storage",
+          JSON.stringify({
+            state: {
+              ...existingState,
+              settings,
+              theme: settings.theme ?? existingState.theme,
+              isSidebarCollapsed: isCollapsed,
+              isCollapsed,
+            },
+            version: 0,
+          }),
+        );
+      } catch {}
     };
 
     /**
@@ -554,14 +571,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
      * completion.
      *
      * PURE: no toasts, sounds or other side effects fire here, and the state
-     * merge below is the single side-effect-free `setState` call. React may
-     * re-invoke updater functions (which previously caused double toasts), so
-     * all notification side effects live in the UI's click handler, driven by
-     * the synchronously returned `FreezeResult`.
+     * merge below is the single side-effect-free `setState` call. DB writes happen
+     * outside and after `setState` to prevent StrictMode double-execution.
      */
     const freezeHabitFn = (habitId: string, date?: string): FreezeResult => {
       try {
-        const habit = state.habits.find((h) => h.id === habitId);
+        const current = stateRef.current;
+        const habit = current.habits.find((h) => h.id === habitId);
         if (!habit) return buildFreezeFailure("missing", 0, 0);
 
         const dayKey = date || todayKey();
@@ -583,20 +599,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const max = habitCurrent.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT;
 
         const logId = logKey(habitId, dayKey);
-        const existingLog = state.habitLogs.find((l) => l.id === logId);
+        const existingLog = current.habitLogs.find((l) => l.id === logId);
 
         // Completed days can't be frozen — the streak is already safe, so
         // nothing is written and the monthly quota is not consumed.
         if (!isFrozen && isCompletedLog(existingLog)) {
           return buildFreezeFailure(
             "already-completed",
-            countFrozenDaysThisMonth(habitCurrent, state.habitLogs, monthKey),
+            countFrozenDaysThisMonth(habitCurrent, current.habitLogs, monthKey),
             max,
           );
         }
 
         // Used this calendar month — frozen logs merged with legacy dates.
-        const used = countFrozenDaysThisMonth(habitCurrent, state.habitLogs, monthKey);
+        const used = countFrozenDaysThisMonth(habitCurrent, current.habitLogs, monthKey);
 
         // Enforce the monthly budget (unfreezing is always allowed).
         if (!isFrozen && used >= max) {
@@ -614,11 +630,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
             : (habitCurrent.freezesUsedThisMonth ?? 0) + 1,
           lastFreezeResetDate: monthKey,
         };
-        void repo.saveHabit(updatedHabit);
 
         // Daily log — freezing overrides any existing state (even 'complete');
         // unfreezing restores the previous completion when it still holds.
-        let nextLogs = state.habitLogs;
+        let nextLogs = current.habitLogs;
+        let logToSave: HabitLog | null = null;
+        let logToDelete: string | null = null;
+
         if (!isFrozen) {
           const frozenLog: HabitLog = {
             id: logId,
@@ -630,10 +648,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             status: "frozen",
             updatedAt: Date.now(),
           };
-          void repo.saveLog(frozenLog);
+          logToSave = frozenLog;
           nextLogs = existingLog
-            ? state.habitLogs.map((l) => (l.id === logId ? frozenLog : l))
-            : [...state.habitLogs, frozenLog];
+            ? current.habitLogs.map((l) => (l.id === logId ? frozenLog : l))
+            : [...current.habitLogs, frozenLog];
         } else if (existingLog && existingLog.status === "frozen") {
           if (existingLog.value >= existingLog.target) {
             const restoredLog: HabitLog = {
@@ -641,27 +659,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
               status: "complete",
               updatedAt: Date.now(),
             };
-            void repo.saveLog(restoredLog);
-            nextLogs = state.habitLogs.map((l) => (l.id === logId ? restoredLog : l));
+            logToSave = restoredLog;
+            nextLogs = current.habitLogs.map((l) => (l.id === logId ? restoredLog : l));
           } else {
-            void repo.deleteLog(logId);
-            nextLogs = state.habitLogs.filter((l) => l.id !== logId);
+            logToDelete = logId;
+            nextLogs = current.habitLogs.filter((l) => l.id !== logId);
           }
         }
 
         // A running timer for this habit can't continue through a freeze.
-        const stoppedTimer = !isFrozen && state.timer?.habitId === habitId;
-        if (stoppedTimer) {
-          void repo.clearTimer();
-        }
+        const stoppedTimer = !isFrozen && current.timer?.habitId === habitId;
 
-        // Single pure state merge — every toast/sound happens in the UI.
+        // 1. Single pure state merge
         setState((prev) => ({
           ...prev,
           timer: stoppedTimer ? null : prev.timer,
           habits: prev.habits.map((h) => (h.id === habitId ? updatedHabit : h)),
           habitLogs: nextLogs,
         }));
+
+        // 2. DB writes outside and after setState
+        void repo.saveHabit(updatedHabit);
+        if (logToSave) {
+          void repo.saveLog(logToSave);
+        }
+        if (logToDelete) {
+          void repo.deleteLog(logToDelete);
+        }
+        if (stoppedTimer) {
+          void repo.clearTimer();
+        }
 
         return {
           ok: true,
@@ -694,8 +721,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           frozenDates: input.frozenDates ?? [],
           lastFreezeResetDate: input.lastFreezeResetDate ?? todayKey().slice(0, 7),
         };
-        void repo.saveHabit(habit);
         setState((prev) => ({ ...prev, habits: [...prev.habits, habit] }));
+        void repo.saveHabit(habit);
         return habit;
       },
       freezeHabitDay(habitId, date) {
@@ -708,7 +735,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return freezeHabitFn(habitId, date);
       },
       calculateRemainingFreezes(habitId) {
-        const habit = state.habits.find((h) => h.id === habitId);
+        const current = stateRef.current;
+        const habit = current.habits.find((h) => h.id === habitId);
         if (!habit) {
           return {
             used: 0,
@@ -717,81 +745,89 @@ export function AppProvider({ children }: { children: ReactNode }) {
           };
         }
         return {
-          used: countFrozenDaysThisMonth(habit, state.habitLogs, todayKey().slice(0, 7)),
+          used: countFrozenDaysThisMonth(habit, current.habitLogs, todayKey().slice(0, 7)),
           max: habit.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT,
           daysUntilReset: daysUntilMonthlyReset(),
         };
       },
       updateHabit(habit) {
-        void repo.saveHabit(habit);
         setState((prev) => ({
           ...prev,
           habits: prev.habits.map((h) => (h.id === habit.id ? habit : h)),
         }));
+        void repo.saveHabit(habit);
       },
       archiveHabit(id, archived) {
-        setState((prev) => {
-          const habits = prev.habits.map((h) => (h.id === id ? { ...h, archived } : h));
-          const changed = habits.find((h) => h.id === id);
-          if (changed) void repo.saveHabit(changed);
-          return { ...prev, habits };
-        });
+        const current = stateRef.current;
+        const habits = current.habits.map((h) => (h.id === id ? { ...h, archived } : h));
+        const changed = habits.find((h) => h.id === id);
+        setState((prev) => ({ ...prev, habits }));
+        if (changed) void repo.saveHabit(changed);
       },
       removeHabit(id) {
-        void repo.deleteHabit(id);
-        setState((prev) => {
-          const habits = prev.habits.filter((h) => h.id !== id);
-          const goals = prev.goals.map((g) => {
-            if (!g.habitIds.includes(id)) return g;
-            const nextGoal = { ...g, habitIds: g.habitIds.filter((hid) => hid !== id) };
-            void repo.saveGoal(nextGoal);
-            return nextGoal;
-          });
-          const routines = prev.routines.map((r) => {
-            if (!r.steps.some((s) => s.habitId === id)) return r;
-            const nextRoutine = {
-              ...r,
-              steps: r.steps.map((s) => (s.habitId === id ? { ...s, habitId: undefined } : s)),
-            };
-            void repo.saveRoutine(nextRoutine);
-            return nextRoutine;
-          });
-          return { ...prev, habits, goals, routines };
+        const current = stateRef.current;
+        const habits = current.habits.filter((h) => h.id !== id);
+        const goalsToSave: Goal[] = [];
+        const goals = current.goals.map((g) => {
+          if (!g.habitIds.includes(id)) return g;
+          const nextGoal = { ...g, habitIds: g.habitIds.filter((hid) => hid !== id) };
+          goalsToSave.push(nextGoal);
+          return nextGoal;
         });
+        const routinesToSave: Routine[] = [];
+        const routines = current.routines.map((r) => {
+          if (!r.steps.some((s) => s.habitId === id)) return r;
+          const nextRoutine = {
+            ...r,
+            steps: r.steps.map((s) => (s.habitId === id ? { ...s, habitId: undefined } : s)),
+          };
+          routinesToSave.push(nextRoutine);
+          return nextRoutine;
+        });
+
+        setState((prev) => ({ ...prev, habits, goals, routines }));
+
+        void repo.deleteHabit(id);
+        for (const g of goalsToSave) void repo.saveGoal(g);
+        for (const r of routinesToSave) void repo.saveRoutine(r);
       },
       restoreHabit(habit) {
         // A deleted habit's daily logs were never removed (only the habit
         // record itself), so pushing the original object back restores the
         // full history. Idempotent: re-adding an id that already exists is a
         // no-op replacement, which guards against a double-clicked Undo.
+        const current = stateRef.current;
+        const goalsToSave: Goal[] = [];
+        const goals = habit.goalId
+          ? current.goals.map((goal) => {
+              if (goal.id !== habit.goalId || goal.habitIds.includes(habit.id)) return goal;
+              const updatedGoal = { ...goal, habitIds: [...goal.habitIds, habit.id] };
+              goalsToSave.push(updatedGoal);
+              return updatedGoal;
+            })
+          : current.goals;
+
+        const habits = current.habits.some((h) => h.id === habit.id)
+          ? current.habits.map((h) => (h.id === habit.id ? habit : h))
+          : [...current.habits, habit];
+
+        setState((prev) => ({
+          ...prev,
+          goals,
+          habits,
+        }));
+
         void repo.saveHabit(habit);
-        setState((prev) => {
-          const goals = habit.goalId
-            ? prev.goals.map((goal) => {
-                if (goal.id !== habit.goalId || goal.habitIds.includes(habit.id)) return goal;
-                const updatedGoal = { ...goal, habitIds: [...goal.habitIds, habit.id] };
-                void repo.saveGoal(updatedGoal);
-                return updatedGoal;
-              })
-            : prev.goals;
-          return {
-            ...prev,
-            goals,
-            habits: prev.habits.some((h) => h.id === habit.id)
-              ? prev.habits.map((h) => (h.id === habit.id ? habit : h))
-              : [...prev.habits, habit],
-          };
-        });
+        for (const g of goalsToSave) void repo.saveGoal(g);
       },
       reorderHabits(orderedIds) {
-        setState((prev) => {
-          const habits = prev.habits.map((h) => {
-            const index = orderedIds.indexOf(h.id);
-            return index === -1 ? h : { ...h, order: index };
-          });
-          void repo.saveHabits(habits);
-          return { ...prev, habits };
+        const current = stateRef.current;
+        const habits = current.habits.map((h) => {
+          const index = orderedIds.indexOf(h.id);
+          return index === -1 ? h : { ...h, order: index };
         });
+        setState((prev) => ({ ...prev, habits }));
+        void repo.saveHabits(habits);
       },
       setHabitValue(habitId, date, value) {
         writeLog(habitId, date, (existing, habit) =>
@@ -826,235 +862,263 @@ export function AppProvider({ children }: { children: ReactNode }) {
         writeLog(habitId, date, () => null);
       },
       upsertGroup(group) {
-        void repo.saveGroup(group);
         setState((prev) => ({
           ...prev,
           groups: prev.groups.some((g) => g.id === group.id)
             ? prev.groups.map((g) => (g.id === group.id ? group : g))
             : [...prev.groups, group],
         }));
+        void repo.saveGroup(group);
       },
       removeGroup(id) {
-        void repo.deleteGroup(id);
         setState((prev) => ({ ...prev, groups: prev.groups.filter((g) => g.id !== id) }));
+        void repo.deleteGroup(id);
       },
       upsertGoal(goal) {
-        void repo.saveGoal(goal);
-        setState((prev) => {
-          const selectedHabitIds = new Set(goal.habitIds);
-          const goals = prev.goals
-            .map((existingGoal) => {
-              if (existingGoal.id === goal.id) return goal;
-              const nextHabitIds = existingGoal.habitIds.filter(
-                (habitId) => !selectedHabitIds.has(habitId),
-              );
-              if (nextHabitIds.length === existingGoal.habitIds.length) return existingGoal;
-              const updatedGoal = { ...existingGoal, habitIds: nextHabitIds };
-              void repo.saveGoal(updatedGoal);
-              return updatedGoal;
-            })
-            .concat(prev.goals.some((existingGoal) => existingGoal.id === goal.id) ? [] : [goal]);
+        const current = stateRef.current;
+        const selectedHabitIds = new Set(goal.habitIds);
+        const goalsToSave: Goal[] = [];
+        const goals = current.goals
+          .map((existingGoal) => {
+            if (existingGoal.id === goal.id) return goal;
+            const nextHabitIds = existingGoal.habitIds.filter(
+              (habitId) => !selectedHabitIds.has(habitId),
+            );
+            if (nextHabitIds.length === existingGoal.habitIds.length) return existingGoal;
+            const updatedGoal = { ...existingGoal, habitIds: nextHabitIds };
+            goalsToSave.push(updatedGoal);
+            return updatedGoal;
+          })
+          .concat(current.goals.some((existingGoal) => existingGoal.id === goal.id) ? [] : [goal]);
 
-          const habits = prev.habits.map((habit) => {
-            const shouldLink = selectedHabitIds.has(habit.id);
-            const wasLinkedToThisGoal = habit.goalId === goal.id;
-            if (shouldLink && habit.goalId !== goal.id) {
-              const updatedHabit = { ...habit, goalId: goal.id };
-              void repo.saveHabit(updatedHabit);
-              return updatedHabit;
-            }
-            if (!shouldLink && wasLinkedToThisGoal) {
-              const updatedHabit = { ...habit, goalId: undefined };
-              void repo.saveHabit(updatedHabit);
-              return updatedHabit;
-            }
-            return habit;
-          });
-
-          return { ...prev, goals, habits };
+        const habitsToSave: Habit[] = [];
+        const habits = current.habits.map((habit) => {
+          const shouldLink = selectedHabitIds.has(habit.id);
+          const wasLinkedToThisGoal = habit.goalId === goal.id;
+          if (shouldLink && habit.goalId !== goal.id) {
+            const updatedHabit = { ...habit, goalId: goal.id };
+            habitsToSave.push(updatedHabit);
+            return updatedHabit;
+          }
+          if (!shouldLink && wasLinkedToThisGoal) {
+            const updatedHabit = { ...habit, goalId: undefined };
+            habitsToSave.push(updatedHabit);
+            return updatedHabit;
+          }
+          return habit;
         });
+
+        setState((prev) => ({ ...prev, goals, habits }));
+
+        void repo.saveGoal(goal);
+        for (const g of goalsToSave) void repo.saveGoal(g);
+        for (const h of habitsToSave) void repo.saveHabit(h);
       },
       adjustGoalValue(goalId, delta) {
-        setState((prev) => {
-          const goal = prev.goals.find((item) => item.id === goalId);
-          if (!goal || goal.type !== "numeric") return prev;
-          const currentValue = Math.min(
-            goal.targetValue,
-            Math.max(0, (goal.currentValue ?? 0) + delta),
-          );
-          const updated = { ...goal, currentValue };
-          void repo.saveGoal(updated);
-          return {
-            ...prev,
-            goals: prev.goals.map((item) => (item.id === goalId ? updated : item)),
-          };
-        });
+        const current = stateRef.current;
+        const goal = current.goals.find((item) => item.id === goalId);
+        if (!goal || goal.type !== "numeric") return;
+        const currentValue = Math.min(
+          goal.targetValue,
+          Math.max(0, (goal.currentValue ?? 0) + delta),
+        );
+        const updated = { ...goal, currentValue };
+
+        setState((prev) => ({
+          ...prev,
+          goals: prev.goals.map((item) => (item.id === goalId ? updated : item)),
+        }));
+
+        void repo.saveGoal(updated);
       },
       removeGoal(id) {
-        void repo.deleteGoal(id);
-        setState((prev) => {
-          const habits = prev.habits.map((habit) => {
-            if (habit.goalId !== id) return habit;
-            const updatedHabit = { ...habit, goalId: undefined };
-            void repo.saveHabit(updatedHabit);
-            return updatedHabit;
-          });
-          return { ...prev, habits, goals: prev.goals.filter((g) => g.id !== id) };
+        const current = stateRef.current;
+        const habitsToSave: Habit[] = [];
+        const habits = current.habits.map((habit) => {
+          if (habit.goalId !== id) return habit;
+          const updatedHabit = { ...habit, goalId: undefined };
+          habitsToSave.push(updatedHabit);
+          return updatedHabit;
         });
+        const goals = current.goals.filter((g) => g.id !== id);
+
+        setState((prev) => ({ ...prev, habits, goals }));
+
+        void repo.deleteGoal(id);
+        for (const h of habitsToSave) void repo.saveHabit(h);
       },
       restoreGoal(goal) {
-        void repo.saveGoal(goal);
-        setState((prev) => {
-          const selectedHabitIds = new Set(goal.habitIds);
-          const goals = prev.goals
-            .map((existingGoal) => {
-              if (existingGoal.id === goal.id) return goal;
-              const nextHabitIds = existingGoal.habitIds.filter(
-                (habitId) => !selectedHabitIds.has(habitId),
-              );
-              if (nextHabitIds.length === existingGoal.habitIds.length) return existingGoal;
-              const updatedGoal = { ...existingGoal, habitIds: nextHabitIds };
-              void repo.saveGoal(updatedGoal);
-              return updatedGoal;
-            })
-            .concat(prev.goals.some((existingGoal) => existingGoal.id === goal.id) ? [] : [goal]);
-          const habits = prev.habits.map((habit) => {
-            if (!selectedHabitIds.has(habit.id)) return habit;
-            const updatedHabit = { ...habit, goalId: goal.id };
-            void repo.saveHabit(updatedHabit);
-            return updatedHabit;
-          });
-          return { ...prev, goals, habits };
+        const current = stateRef.current;
+        const selectedHabitIds = new Set(goal.habitIds);
+        const goalsToSave: Goal[] = [];
+        const goals = current.goals
+          .map((existingGoal) => {
+            if (existingGoal.id === goal.id) return goal;
+            const nextHabitIds = existingGoal.habitIds.filter(
+              (habitId) => !selectedHabitIds.has(habitId),
+            );
+            if (nextHabitIds.length === existingGoal.habitIds.length) return existingGoal;
+            const updatedGoal = { ...existingGoal, habitIds: nextHabitIds };
+            goalsToSave.push(updatedGoal);
+            return updatedGoal;
+          })
+          .concat(current.goals.some((existingGoal) => existingGoal.id === goal.id) ? [] : [goal]);
+
+        const habitsToSave: Habit[] = [];
+        const habits = current.habits.map((habit) => {
+          if (!selectedHabitIds.has(habit.id)) return habit;
+          const updatedHabit = { ...habit, goalId: goal.id };
+          habitsToSave.push(updatedHabit);
+          return updatedHabit;
         });
+
+        setState((prev) => ({ ...prev, goals, habits }));
+
+        void repo.saveGoal(goal);
+        for (const g of goalsToSave) void repo.saveGoal(g);
+        for (const h of habitsToSave) void repo.saveHabit(h);
       },
       reorderGoals(orderedIds) {
-        setState((prev) => {
-          const goals = prev.goals.map((goal) => {
-            const index = orderedIds.indexOf(goal.id);
-            return index === -1 ? goal : { ...goal, order: index };
-          });
-          void Promise.all(goals.map((goal) => repo.saveGoal(goal)));
-          return { ...prev, goals };
+        const current = stateRef.current;
+        const goals = current.goals.map((goal) => {
+          const index = orderedIds.indexOf(goal.id);
+          return index === -1 ? goal : { ...goal, order: index };
         });
+
+        setState((prev) => ({ ...prev, goals }));
+
+        void Promise.all(goals.map((goal) => repo.saveGoal(goal)));
       },
       upsertRoutine(routine) {
-        void repo.saveRoutine(routine);
         setState((prev) => ({
           ...prev,
           routines: prev.routines.some((r) => r.id === routine.id)
             ? prev.routines.map((r) => (r.id === routine.id ? routine : r))
             : [...prev.routines, routine],
         }));
+        void repo.saveRoutine(routine);
       },
       removeRoutine(id) {
-        void repo.deleteRoutine(id);
         setState((prev) => ({ ...prev, routines: prev.routines.filter((r) => r.id !== id) }));
+        void repo.deleteRoutine(id);
       },
       restoreRoutine(routine) {
-        void repo.saveRoutine(routine);
         setState((prev) => ({
           ...prev,
           routines: prev.routines.some((r) => r.id === routine.id)
             ? prev.routines.map((r) => (r.id === routine.id ? routine : r))
             : [...prev.routines, routine],
         }));
+        void repo.saveRoutine(routine);
       },
       reorderRoutines(orderedIds) {
-        setState((prev) => {
-          const routines = prev.routines.map((routine) => {
-            const index = orderedIds.indexOf(routine.id);
-            return index === -1 ? routine : { ...routine, order: index };
-          });
-          void Promise.all(routines.map((routine) => repo.saveRoutine(routine)));
-          return { ...prev, routines };
+        const current = stateRef.current;
+        const routines = current.routines.map((routine) => {
+          const index = orderedIds.indexOf(routine.id);
+          return index === -1 ? routine : { ...routine, order: index };
         });
+
+        setState((prev) => ({ ...prev, routines }));
+
+        void Promise.all(routines.map((routine) => repo.saveRoutine(routine)));
       },
       toggleRoutineStep(routineId, stepId, date) {
-        setState((prev) => {
-          const routine = prev.routines.find((item) => item.id === routineId);
-          const step = routine?.steps.find((item) => item.id === stepId);
-          if (!step) return prev;
+        const current = stateRef.current;
+        const routine = current.routines.find((item) => item.id === routineId);
+        const step = routine?.steps.find((item) => item.id === stepId);
+        if (!step) return;
 
-          const id = `${routineId}:${date}`;
-          const existing = prev.routineLogs.find((l) => l.id === id);
-          const completed = existing?.completedStepIds ?? [];
-          const wasCompleted = completed.includes(stepId);
-          const next: RoutineLog = {
-            id,
-            routineId,
-            date,
-            completedStepIds: wasCompleted
-              ? completed.filter((s) => s !== stepId)
-              : [...completed, stepId],
-            updatedAt: Date.now(),
-          };
-          void repo.saveRoutineLog(next);
+        const id = `${routineId}:${date}`;
+        const existing = current.routineLogs.find((l) => l.id === id);
+        const completed = existing?.completedStepIds ?? [];
+        const wasCompleted = completed.includes(stepId);
+        const next: RoutineLog = {
+          id,
+          routineId,
+          date,
+          completedStepIds: wasCompleted
+            ? completed.filter((s) => s !== stepId)
+            : [...completed, stepId],
+          updatedAt: Date.now(),
+        };
 
-          let habitLogs = prev.habitLogs;
-          let routineLogs = existing
-            ? prev.routineLogs.map((l) => (l.id === id ? next : l))
-            : [...prev.routineLogs, next];
-          if (step.habitId) {
-            const habit = prev.habits.find((item) => item.id === step.habitId);
-            if (habit) {
-              const habitLogId = logKey(habit.id, date);
-              const existingHabitLog = prev.habitLogs.find((log) => log.id === habitLogId);
+        let habitLogs = current.habitLogs;
+        let routineLogs = existing
+          ? current.routineLogs.map((l) => (l.id === id ? next : l))
+          : [...current.routineLogs, next];
 
-              if (wasCompleted) {
-                void repo.deleteLog(habitLogId);
-                habitLogs = prev.habitLogs.filter((log) => log.id !== habitLogId);
-              } else {
-                const completedHabitLog: HabitLog = {
-                  id: habitLogId,
-                  habitId: habit.id,
-                  date,
-                  value: existingHabitLog?.target ?? habit.target,
-                  target: existingHabitLog?.target ?? habit.target,
-                  status: "complete",
-                  updatedAt: Date.now(),
-                };
-                void repo.saveLog(completedHabitLog);
-                habitLogs = existingHabitLog
-                  ? prev.habitLogs.map((log) => (log.id === habitLogId ? completedHabitLog : log))
-                  : [...prev.habitLogs, completedHabitLog];
+        let habitLogToSave: HabitLog | null = null;
+        let habitLogIdToDelete: string | null = null;
+        const routineLogsToSave: RoutineLog[] = [next];
+
+        if (step.habitId) {
+          const habit = current.habits.find((item) => item.id === step.habitId);
+          if (habit) {
+            const habitLogId = logKey(habit.id, date);
+            const existingHabitLog = current.habitLogs.find((log) => log.id === habitLogId);
+
+            if (wasCompleted) {
+              habitLogIdToDelete = habitLogId;
+              habitLogs = current.habitLogs.filter((log) => log.id !== habitLogId);
+            } else {
+              const completedHabitLog: HabitLog = {
+                id: habitLogId,
+                habitId: habit.id,
+                date,
+                value: existingHabitLog?.target ?? habit.target,
+                target: existingHabitLog?.target ?? habit.target,
+                status: "complete",
+                updatedAt: Date.now(),
+              };
+              habitLogToSave = completedHabitLog;
+              habitLogs = existingHabitLog
+                ? current.habitLogs.map((log) => (log.id === habitLogId ? completedHabitLog : log))
+                : [...current.habitLogs, completedHabitLog];
+            }
+
+            for (const linkedRoutine of current.routines) {
+              if (linkedRoutine.id === routineId) continue;
+              const linkedStepIds = linkedRoutine.steps
+                .filter((linkedStep) => linkedStep.habitId === habit.id)
+                .map((linkedStep) => linkedStep.id);
+              if (linkedStepIds.length === 0) continue;
+              const linkedLogId = `${linkedRoutine.id}:${date}`;
+              const existingLinkedLog = routineLogs.find((log) => log.id === linkedLogId);
+              const completedStepIds = new Set(existingLinkedLog?.completedStepIds ?? []);
+              for (const linkedStepId of linkedStepIds) {
+                if (wasCompleted) completedStepIds.delete(linkedStepId);
+                else completedStepIds.add(linkedStepId);
               }
-
-              // A habit may be used by multiple routines. Keep every linked
-              // step on the same date aligned with the canonical habit log.
-              for (const linkedRoutine of prev.routines) {
-                if (linkedRoutine.id === routineId) continue;
-                const linkedStepIds = linkedRoutine.steps
-                  .filter((linkedStep) => linkedStep.habitId === habit.id)
-                  .map((linkedStep) => linkedStep.id);
-                if (linkedStepIds.length === 0) continue;
-                const linkedLogId = `${linkedRoutine.id}:${date}`;
-                const existingLinkedLog = routineLogs.find((log) => log.id === linkedLogId);
-                const completedStepIds = new Set(existingLinkedLog?.completedStepIds ?? []);
-                for (const linkedStepId of linkedStepIds) {
-                  if (wasCompleted) completedStepIds.delete(linkedStepId);
-                  else completedStepIds.add(linkedStepId);
-                }
-                const linkedLog: RoutineLog = {
-                  id: linkedLogId,
-                  routineId: linkedRoutine.id,
-                  date,
-                  completedStepIds: [...completedStepIds],
-                  updatedAt: Date.now(),
-                };
-                void repo.saveRoutineLog(linkedLog);
-                routineLogs = existingLinkedLog
-                  ? routineLogs.map((log) => (log.id === linkedLogId ? linkedLog : log))
-                  : [...routineLogs, linkedLog];
-              }
+              const linkedLog: RoutineLog = {
+                id: linkedLogId,
+                routineId: linkedRoutine.id,
+                date,
+                completedStepIds: [...completedStepIds],
+                updatedAt: Date.now(),
+              };
+              routineLogsToSave.push(linkedLog);
+              routineLogs = existingLinkedLog
+                ? routineLogs.map((log) => (log.id === linkedLogId ? linkedLog : log))
+                : [...routineLogs, linkedLog];
             }
           }
+        }
 
-          return {
-            ...prev,
-            habitLogs,
-            routineLogs,
-          };
-        });
+        setState((prev) => ({
+          ...prev,
+          habitLogs,
+          routineLogs,
+        }));
+
+        for (const rLog of routineLogsToSave) {
+          void repo.saveRoutineLog(rLog);
+        }
+        if (habitLogIdToDelete) {
+          void repo.deleteLog(habitLogIdToDelete);
+        }
+        if (habitLogToSave) {
+          void repo.saveLog(habitLogToSave);
+        }
       },
       toggleSoundSettings() {
         const current = state.settings.isSoundEnabled ?? !(state.settings.isMuted ?? false);
@@ -1069,107 +1133,121 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
       startTimer(habitId) {
         const timer: TimerState = { id: "timer", habitId, startedAt: Date.now(), accumulatedMs: 0 };
-        void repo.saveTimer(timer);
         setState((prev) => ({ ...prev, timer }));
+        void repo.saveTimer(timer);
       },
       pauseTimer() {
-        setState((prev) => {
-          if (!prev.timer?.startedAt) return prev;
-          const timer: TimerState = {
-            ...prev.timer,
-            accumulatedMs: prev.timer.accumulatedMs + (Date.now() - prev.timer.startedAt),
-            startedAt: null,
-          };
-          void repo.saveTimer(timer);
-          return { ...prev, timer };
-        });
+        const current = stateRef.current;
+        if (!current.timer?.startedAt) return;
+        const timer: TimerState = {
+          ...current.timer,
+          accumulatedMs: current.timer.accumulatedMs + (Date.now() - current.timer.startedAt),
+          startedAt: null,
+        };
+        setState((prev) => ({ ...prev, timer }));
+        void repo.saveTimer(timer);
       },
       resumeTimer() {
-        setState((prev) => {
-          if (!prev.timer || prev.timer.startedAt) return prev;
-          const timer: TimerState = { ...prev.timer, startedAt: Date.now() };
-          void repo.saveTimer(timer);
-          return { ...prev, timer };
-        });
+        const current = stateRef.current;
+        if (!current.timer || current.timer.startedAt) return;
+        const timer: TimerState = { ...current.timer, startedAt: Date.now() };
+        setState((prev) => ({ ...prev, timer }));
+        void repo.saveTimer(timer);
       },
       stopTimer(saveMinutes) {
-        setState((prev) => {
-          const timer = prev.timer;
-          if (!timer) return prev;
+        const current = stateRef.current;
+        const timer = current.timer;
+        if (!timer) return;
+
+        if (!saveMinutes) {
+          setState((prev) => ({ ...prev, timer: null }));
           void repo.clearTimer();
-          if (!saveMinutes) return { ...prev, timer: null };
-          const elapsed =
-            timer.accumulatedMs + (timer.startedAt ? Date.now() - timer.startedAt : 0);
-          const minutes = Math.round(elapsed / 60000);
-          const habit = prev.habits.find((h) => h.id === timer.habitId);
-          if (!habit || minutes <= 0) return { ...prev, timer: null };
-          const date = todayKey();
-          const id = logKey(habit.id, date);
-          const existing = prev.habitLogs.find((l) => l.id === id);
-          const target = existing?.target ?? habit.target;
-          const value = (existing?.value ?? 0) + minutes;
-          const status = value >= target ? "complete" : "partial";
-          const wasComplete = existing ? existing.status === "complete" : false;
-          const isNowComplete = status === "complete";
-          if (!wasComplete && isNowComplete) {
-            playCompleteHabitSound();
-          }
-          const log: HabitLog = {
-            id,
-            habitId: habit.id,
+          return;
+        }
+
+        const elapsed = timer.accumulatedMs + (timer.startedAt ? Date.now() - timer.startedAt : 0);
+        const minutes = Math.round(elapsed / 60000);
+        const habit = current.habits.find((h) => h.id === timer.habitId);
+        if (!habit || minutes <= 0) {
+          setState((prev) => ({ ...prev, timer: null }));
+          void repo.clearTimer();
+          return;
+        }
+
+        const date = todayKey();
+        const id = logKey(habit.id, date);
+        const existing = current.habitLogs.find((l) => l.id === id);
+        const target = existing?.target ?? habit.target;
+        const value = (existing?.value ?? 0) + minutes;
+        const status = value >= target ? "complete" : "partial";
+        const wasComplete = existing ? existing.status === "complete" : false;
+        const isNowComplete = status === "complete";
+        const shouldPlaySound = !wasComplete && isNowComplete;
+
+        const log: HabitLog = {
+          id,
+          habitId: habit.id,
+          date,
+          value,
+          target,
+          status,
+          updatedAt: Date.now(),
+        };
+
+        let routineLogs = current.routineLogs;
+        const routineLogsToSave: RoutineLog[] = [];
+        for (const routine of current.routines) {
+          const linkedStepIds = routine.steps
+            .filter((step) => step.habitId === habit.id)
+            .map((step) => step.id);
+          if (linkedStepIds.length === 0) continue;
+          const routineLogId = `${routine.id}:${date}`;
+          const existingRoutineLog = routineLogs.find((item) => item.id === routineLogId);
+          const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
+          for (const stepId of linkedStepIds) completedStepIds.add(stepId);
+          const nextRoutineLog: RoutineLog = {
+            id: routineLogId,
+            routineId: routine.id,
             date,
-            value,
-            target,
-            status,
+            completedStepIds: [...completedStepIds],
             updatedAt: Date.now(),
           };
-          void repo.saveLog(log);
-          let routineLogs = prev.routineLogs;
-          for (const routine of prev.routines) {
-            const linkedStepIds = routine.steps
-              .filter((step) => step.habitId === habit.id)
-              .map((step) => step.id);
-            if (linkedStepIds.length === 0) continue;
-            const routineLogId = `${routine.id}:${date}`;
-            const existingRoutineLog = routineLogs.find((item) => item.id === routineLogId);
-            const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
-            for (const stepId of linkedStepIds) completedStepIds.add(stepId);
-            const nextRoutineLog: RoutineLog = {
-              id: routineLogId,
-              routineId: routine.id,
-              date,
-              completedStepIds: [...completedStepIds],
-              updatedAt: Date.now(),
-            };
-            void repo.saveRoutineLog(nextRoutineLog);
-            routineLogs = existingRoutineLog
-              ? routineLogs.map((item) => (item.id === routineLogId ? nextRoutineLog : item))
-              : [...routineLogs, nextRoutineLog];
-          }
-          return {
-            ...prev,
-            timer: null,
-            routineLogs,
-            habitLogs: existing
-              ? prev.habitLogs.map((l) => (l.id === id ? log : l))
-              : [...prev.habitLogs, log],
-          };
-        });
+          routineLogsToSave.push(nextRoutineLog);
+          routineLogs = existingRoutineLog
+            ? routineLogs.map((item) => (item.id === routineLogId ? nextRoutineLog : item))
+            : [...routineLogs, nextRoutineLog];
+        }
+
+        const nextHabitLogs = existing
+          ? current.habitLogs.map((l) => (l.id === id ? log : l))
+          : [...current.habitLogs, log];
+
+        setState((prev) => ({
+          ...prev,
+          timer: null,
+          routineLogs,
+          habitLogs: nextHabitLogs,
+        }));
+
+        void repo.clearTimer();
+        if (shouldPlaySound) playCompleteHabitSound();
+        void repo.saveLog(log);
+        for (const rLog of routineLogsToSave) {
+          void repo.saveRoutineLog(rLog);
+        }
       },
       adjustTimer(minutes) {
-        setState((prev) => {
-          if (!prev.timer) return prev;
-          const timer: TimerState = {
-            ...prev.timer,
-            accumulatedMs: Math.max(0, prev.timer.accumulatedMs + minutes * 60000),
-          };
-          void repo.saveTimer(timer);
-          return { ...prev, timer };
-        });
+        const current = stateRef.current;
+        if (!current.timer) return;
+        const timer: TimerState = {
+          ...current.timer,
+          accumulatedMs: Math.max(0, current.timer.accumulatedMs + minutes * 60000),
+        };
+        setState((prev) => ({ ...prev, timer }));
+        void repo.saveTimer(timer);
       },
 
       upsertBadHabit(habit) {
-        void repo.saveBadHabit(habit);
         setState((prev) => {
           const exists = prev.badHabits.some((h) => h.id === habit.id);
           return {
@@ -1179,64 +1257,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
               : [...prev.badHabits, habit],
           };
         });
+        void repo.saveBadHabit(habit);
       },
       removeBadHabit(id) {
-        void repo.deleteBadHabit(id);
         setState((prev) => ({
           ...prev,
           badHabits: prev.badHabits.filter((h) => h.id !== id),
         }));
+        void repo.deleteBadHabit(id);
       },
       restoreBadHabit(habit) {
         // The relapse history lives inside the BadHabit object itself, so
         // restoring the captured snapshot brings the streak history back too.
-        void repo.saveBadHabit(habit);
         setState((prev) => ({
           ...prev,
           badHabits: prev.badHabits.some((h) => h.id === habit.id)
             ? prev.badHabits.map((h) => (h.id === habit.id ? habit : h))
             : [...prev.badHabits, habit],
         }));
+        void repo.saveBadHabit(habit);
       },
       reorderTrackers(orderedIds) {
-        setState((prev) => {
-          const badHabits = prev.badHabits.map((habit) => {
-            const index = orderedIds.indexOf(habit.id);
-            return index === -1 ? habit : { ...habit, order: index };
-          });
-          void Promise.all(badHabits.map((habit) => repo.saveBadHabit(habit)));
-          return { ...prev, badHabits };
+        const current = stateRef.current;
+        const badHabits = current.badHabits.map((habit) => {
+          const index = orderedIds.indexOf(habit.id);
+          return index === -1 ? habit : { ...habit, order: index };
         });
+        setState((prev) => ({ ...prev, badHabits }));
+        void Promise.all(badHabits.map((habit) => repo.saveBadHabit(habit)));
       },
       recordRelapse(habitId, triggerCategory, detailedReason) {
-        setState((prev) => {
-          const habit = prev.badHabits.find((h) => h.id === habitId);
-          if (!habit) return prev;
-          const now = Date.now();
-          const streakDurationHours = Math.max(
-            0,
-            Math.floor((now - habit.quitDate) / (1000 * 60 * 60)),
-          );
-          const relapseRecord = {
-            id: uid(),
-            relapsedAt: now,
-            triggerCategory,
-            detailedReason: detailedReason?.trim() || undefined,
-            streakDurationHours,
-            /** ISO timestamp of when this relapse record was created. */
-            updatedAt: new Date().toISOString(),
-          };
-          const updated: BadHabit = {
-            ...habit,
-            quitDate: now,
-            history: [relapseRecord, ...habit.history],
-          };
-          void repo.saveBadHabit(updated);
-          return {
-            ...prev,
-            badHabits: prev.badHabits.map((h) => (h.id === habitId ? updated : h)),
-          };
-        });
+        const current = stateRef.current;
+        const habit = current.badHabits.find((h) => h.id === habitId);
+        if (!habit) return;
+        const now = Date.now();
+        const streakDurationHours = Math.max(
+          0,
+          Math.floor((now - habit.quitDate) / (1000 * 60 * 60)),
+        );
+        const relapseRecord = {
+          id: uid(),
+          relapsedAt: now,
+          triggerCategory,
+          detailedReason: detailedReason?.trim() || undefined,
+          streakDurationHours,
+          /** ISO timestamp of when this relapse record was created. */
+          updatedAt: new Date().toISOString(),
+        };
+        const updated: BadHabit = {
+          ...habit,
+          quitDate: now,
+          history: [relapseRecord, ...habit.history],
+        };
+        setState((prev) => ({
+          ...prev,
+          badHabits: prev.badHabits.map((h) => (h.id === habitId ? updated : h)),
+        }));
+        void repo.saveBadHabit(updated);
       },
 
       /**
@@ -1245,60 +1322,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
        * (quit date resets and a relapse record is added).
        */
       logUsage(habitId, value) {
-        setState((prev) => {
-          const habit = prev.badHabits.find((h) => h.id === habitId);
-          if (!habit || habit.strategy !== "limit") return prev;
+        const current = stateRef.current;
+        const habit = current.badHabits.find((h) => h.id === habitId);
+        if (!habit || habit.strategy !== "limit") return;
 
-          const today = todayKey();
-          const existingLogs = habit.usageLogs ?? [];
-          const todayLog = existingLogs.find((log) => log.date === today);
-          const todayTotal = todayLog ? todayLog.value + value : value;
+        const today = todayKey();
+        const existingLogs = habit.usageLogs ?? [];
+        const todayLog = existingLogs.find((log) => log.date === today);
+        const todayTotal = todayLog ? todayLog.value + value : value;
 
-          // Check if this usage exceeds the limit
-          const limitValue = habit.limitValue ?? 0;
-          const exceedsLimit = todayTotal > limitValue;
+        // Check if this usage exceeds the limit
+        const limitValue = habit.limitValue ?? 0;
+        const exceedsLimit = todayTotal > limitValue;
 
-          const newLog: UsageLog = {
+        const newLog: UsageLog = {
+          id: uid(),
+          date: today,
+          value,
+          updatedAt: Date.now(),
+        };
+
+        const updatedLogs = todayLog
+          ? existingLogs.map((log) => (log.date === today ? { ...log, value: todayTotal } : log))
+          : [...existingLogs, newLog];
+
+        const updated: BadHabit = {
+          ...habit,
+          usageLogs: updatedLogs,
+        };
+
+        // If limit exceeded, trigger a relapse
+        if (exceedsLimit) {
+          const now = Date.now();
+          const streakDurationHours = Math.max(
+            0,
+            Math.floor((now - habit.quitDate) / (1000 * 60 * 60)),
+          );
+          const relapseRecord = {
             id: uid(),
-            date: today,
-            value,
-            updatedAt: Date.now(),
+            relapsedAt: now,
+            triggerCategory: "limit-exceeded",
+            detailedReason: `${habit.limitType === "time" ? "minutes" : "units"} exceeded daily limit (${todayTotal}/${limitValue})`,
+            streakDurationHours,
+            updatedAt: new Date().toISOString(),
           };
+          updated.quitDate = now;
+          updated.history = [relapseRecord, ...updated.history];
+        }
 
-          const updatedLogs = todayLog
-            ? existingLogs.map((log) => (log.date === today ? { ...log, value: todayTotal } : log))
-            : [...existingLogs, newLog];
-
-          const updated: BadHabit = {
-            ...habit,
-            usageLogs: updatedLogs,
-          };
-
-          // If limit exceeded, trigger a relapse
-          if (exceedsLimit) {
-            const now = Date.now();
-            const streakDurationHours = Math.max(
-              0,
-              Math.floor((now - habit.quitDate) / (1000 * 60 * 60)),
-            );
-            const relapseRecord = {
-              id: uid(),
-              relapsedAt: now,
-              triggerCategory: "limit-exceeded",
-              detailedReason: `${habit.limitType === "time" ? "minutes" : "units"} exceeded daily limit (${todayTotal}/${limitValue})`,
-              streakDurationHours,
-              updatedAt: new Date().toISOString(),
-            };
-            updated.quitDate = now;
-            updated.history = [relapseRecord, ...updated.history];
-          }
-
-          void repo.saveBadHabit(updated);
-          return {
-            ...prev,
-            badHabits: prev.badHabits.map((h) => (h.id === habitId ? updated : h)),
-          };
-        });
+        setState((prev) => ({
+          ...prev,
+          badHabits: prev.badHabits.map((h) => (h.id === habitId ? updated : h)),
+        }));
+        void repo.saveBadHabit(updated);
       },
 
       undoLastRelapse(previousTrackerSnapshot) {
@@ -1308,7 +1384,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // reverting (e.g. only restoring quitDate) would leave corrupted
         // statistics, so we find the tracker by ID and completely overwrite
         // it with the pre-relapse snapshot instead.
-        void repo.saveBadHabit(previousTrackerSnapshot);
         setState((prev) => {
           const exists = prev.badHabits.some((h) => h.id === previousTrackerSnapshot.id);
           return {
@@ -1323,20 +1398,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 [...prev.badHabits, previousTrackerSnapshot],
           };
         });
+        void repo.saveBadHabit(previousTrackerSnapshot);
       },
       exportData() {
         return JSON.stringify(
           {
-            habits: state.habits,
-            habitLogs: state.habitLogs,
-            groups: state.groups,
-            goals: state.goals,
-            routines: state.routines,
-            routineLogs: state.routineLogs,
-            badHabits: state.badHabits,
-            settings: state.settings,
-            customColors: state.customColors,
-            customIcons: state.customIcons,
+            habits: stateRef.current.habits,
+            habitLogs: stateRef.current.habitLogs,
+            groups: stateRef.current.groups,
+            goals: stateRef.current.goals,
+            routines: stateRef.current.routines,
+            routineLogs: stateRef.current.routineLogs,
+            badHabits: stateRef.current.badHabits,
+            settings: stateRef.current.settings,
+            customColors: stateRef.current.customColors,
+            customIcons: stateRef.current.customIcons,
           },
           null,
           2,
@@ -1357,23 +1433,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setState({ ...EMPTY, groups: DEFAULT_GROUPS });
       },
       setCustomColors(colors: string[]) {
-        void repo.saveCustomColors(colors);
         setState((prev) => ({ ...prev, customColors: colors }));
+        void repo.saveCustomColors(colors);
       },
       addCustomIcon(icon: { id: string; svgContent: string }) {
-        const updated = Array.isArray(state.customIcons) ? [...state.customIcons, icon] : [icon];
-        void repo.saveCustomIcons(updated);
+        const current = stateRef.current;
+        const updated = Array.isArray(current.customIcons)
+          ? [...current.customIcons, icon]
+          : [icon];
         setState((prev) => ({ ...prev, customIcons: updated }));
+        void repo.saveCustomIcons(updated);
       },
       removeCustomIcon(id: string) {
-        const updated = Array.isArray(state.customIcons)
-          ? state.customIcons.filter((i) => i.id !== id)
+        const current = stateRef.current;
+        const updated = Array.isArray(current.customIcons)
+          ? current.customIcons.filter((i) => i.id !== id)
           : [];
-        void repo.saveCustomIcons(updated);
         setState((prev) => ({ ...prev, customIcons: updated }));
+        void repo.saveCustomIcons(updated);
+      },
+      getActiveTimer() {
+        return stateRef.current.timer;
       },
     };
-  }, [writeLog, state, setCollapsed, toggleCollapse]);
+  }, [writeLog, setCollapsed, toggleCollapse]);
 
   const value = useMemo<Store>(
     () => ({
@@ -1400,7 +1483,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [state, ready, logMap, isCollapsed, actions],
   );
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppActionsContext.Provider value={actions}>
+      <AppContext.Provider value={value}>{children}</AppContext.Provider>
+    </AppActionsContext.Provider>
+  );
 }
 
 export function useApp(): Store {
