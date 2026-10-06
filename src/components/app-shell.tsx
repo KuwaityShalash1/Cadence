@@ -35,6 +35,7 @@ import { OfflineIndicator } from "@/components/offline-indicator";
 import { playToggleSound } from "@/lib/sound";
 import { useBackupReminderStatus } from "@/hooks/use-weekly-backup";
 import { useAppBadge } from "@/hooks/use-app-badge";
+import { useAuth } from "@/auth/auth-context";
 
 /**
  * Nav item definitions use translation key references rather than hardcoded
@@ -127,6 +128,7 @@ function Shell({ children }: { children: ReactNode }) {
   const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
   const { isDue: isBackupDue } = useBackupReminderStatus();
   const { t, isRtl } = useTranslation();
+  const { session } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [enableSidebarTransition, setEnableSidebarTransition] = useState(false);
@@ -274,7 +276,7 @@ function Shell({ children }: { children: ReactNode }) {
             const settingsLabel = t("nav.settings");
             const settingsLink = (
               <Link
-                to="/settings"
+                to={session ? "/settings" : "/auth"}
                 aria-label={settingsLabel}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
@@ -351,7 +353,9 @@ function Shell({ children }: { children: ReactNode }) {
               aria-label={
                 isBackupDue
                   ? `${displayName} - ${t("backup.badgeAria", "Backup recommended")}`
-                  : displayName
+                  : session
+                    ? displayName
+                    : "Enable cloud sync"
               }
             >
               <div className="relative shrink-0">
@@ -367,7 +371,9 @@ function Shell({ children }: { children: ReactNode }) {
                   />
                 )}
               </div>
-              <span className="max-w-32 truncate text-sm font-medium">{displayName}</span>
+              <span className="max-w-32 truncate text-sm font-medium">
+                {session ? displayName : "Enable sync"}
+              </span>
             </Link>
           </div>
         </header>

@@ -29,6 +29,7 @@ import { registerServiceWorker } from "@/lib/service-worker";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useApp } from "@/stores/app-store";
 import { useShortcuts } from "@/hooks/use-shortcuts";
+import { AuthProvider } from "@/auth/auth-context";
 import appCss from "../styles.css?url";
 
 function NotFoundContent() {
@@ -447,7 +448,8 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
-        <LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
           <HeadMetadataSync />
           <NotificationScheduler />
           <ServiceWorkerBootstrap />
@@ -467,7 +469,8 @@ function RootComponent() {
             </ErrorBoundary>
           </TooltipProvider>
           <Toaster />
-        </LanguageProvider>
+          </LanguageProvider>
+        </AuthProvider>
       </AppProvider>
     </QueryClientProvider>
   );

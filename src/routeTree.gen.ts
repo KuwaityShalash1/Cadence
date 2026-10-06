@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutUsRouteImport } from './routes/about-us'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as QuitTrackerRouteImport } from './routes/quit-tracker'
@@ -26,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutUsRoute = AboutUsRouteImport.update({
   id: '/about-us',
   path: '/about-us',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarRoute = CalendarRouteImport.update({
@@ -62,6 +68,7 @@ const StatsRoute = StatsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about-us': typeof AboutUsRoute
+  '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/goals': typeof GoalsRoute
   '/quit-tracker': typeof QuitTrackerRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about-us': typeof AboutUsRoute
+  '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/goals': typeof GoalsRoute
   '/quit-tracker': typeof QuitTrackerRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about-us': typeof AboutUsRoute
+  '/auth': typeof AuthRoute
   '/calendar': typeof CalendarRoute
   '/goals': typeof GoalsRoute
   '/quit-tracker': typeof QuitTrackerRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about-us'
+    | '/auth'
     | '/calendar'
     | '/goals'
     | '/quit-tracker'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about-us'
+    | '/auth'
     | '/calendar'
     | '/goals'
     | '/quit-tracker'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about-us'
+    | '/auth'
     | '/calendar'
     | '/goals'
     | '/quit-tracker'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutUsRoute: typeof AboutUsRoute
+  AuthRoute: typeof AuthRoute
   CalendarRoute: typeof CalendarRoute
   GoalsRoute: typeof GoalsRoute
   QuitTrackerRoute: typeof QuitTrackerRoute
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/about-us'
       fullPath: '/about-us'
       preLoaderRoute: typeof AboutUsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendar': {
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutUsRoute: AboutUsRoute,
+  AuthRoute: AuthRoute,
   CalendarRoute: CalendarRoute,
   GoalsRoute: GoalsRoute,
   QuitTrackerRoute: QuitTrackerRoute,
