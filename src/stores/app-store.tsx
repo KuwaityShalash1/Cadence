@@ -579,6 +579,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           existing = JSON.parse(raw || "{}");
         } catch {}
         const existingState = existing.state || existing;
+        let currentCollapsed = isCollapsed;
+        if (typeof existingState?.isSidebarCollapsed === "boolean") {
+          currentCollapsed = existingState.isSidebarCollapsed;
+        } else if (typeof existingState?.isCollapsed === "boolean") {
+          currentCollapsed = existingState.isCollapsed;
+        } else {
+          currentCollapsed = localStorage.getItem("cadence_sidebar_collapsed") === "true";
+        }
+
         localStorage.setItem(
           "cadence-storage",
           JSON.stringify({
@@ -586,8 +595,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ...existingState,
               settings,
               theme: settings.theme ?? existingState.theme,
-              isSidebarCollapsed: isCollapsed,
-              isCollapsed,
+              isSidebarCollapsed: currentCollapsed,
+              isCollapsed: currentCollapsed,
             },
             version: 0,
           }),

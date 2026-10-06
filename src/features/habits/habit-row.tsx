@@ -1485,6 +1485,7 @@ export function areHabitRowPropsEqual(prevProps: Props, nextProps: Props): boole
     if (
       p.id !== n.id ||
       p.name !== n.name ||
+      p.description !== n.description ||
       p.color !== n.color ||
       p.icon !== n.icon ||
       p.target !== n.target ||

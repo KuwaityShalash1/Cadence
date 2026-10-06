@@ -661,6 +661,64 @@ async function markReminderSent(tag) {
 }
 
 /**
+ * Calendar difference in local days matching services/dates.ts
+ */
+function diffCalendarDays(dateKeyA, dateKeyB) {
+  const [y1, m1, d1] = dateKeyA.split("-").map(Number);
+  const [y2, m2, d2] = dateKeyB.split("-").map(Number);
+  const dt1 = new Date(y1, m1 - 1, d1);
+  const dt2 = new Date(y2, m2 - 1, d2);
+  const utc1 = Date.UTC(dt1.getFullYear(), dt1.getMonth(), dt1.getDate());
+  const utc2 = Date.UTC(dt2.getFullYear(), dt2.getMonth(), dt2.getDate());
+  return Math.round((utc1 - utc2) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Checks whether a habit is scheduled on the given local day in the Service Worker.
+ * Mirrors src/services/schedule.ts logic for all schedule types:
+ * - daily
+ * - weekdays
+ * - timesPerWeek (flexible; available every day, measured weekly)
+ * - monthDays (handles days of month and month-end clamp)
+ * - interval (every N days from anchor startDate)
+ */
+function isScheduledOnSW(habit, dateKey, now) {
+  if (habit.startDate && dateKey < habit.startDate) return false;
+  if (habit.endDate && dateKey > habit.endDate) return false;
+
+  const schedule = habit.schedule;
+  if (!schedule) return true;
+
+  switch (schedule.type) {
+    case "daily":
+      return true;
+    case "weekdays": {
+      const day = now.getDay();
+      return Array.isArray(schedule.days) && schedule.days.includes(day);
+    }
+    case "timesPerWeek":
+      // Flexible: available every day, measured weekly.
+      return true;
+    case "monthDays": {
+      if (!Array.isArray(schedule.days) || schedule.days.length === 0) return false;
+      const dayOfMonth = now.getDate();
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      return schedule.days.some(
+        (d) => d === dayOfMonth || (d > lastDayOfMonth && dayOfMonth === lastDayOfMonth),
+      );
+    }
+    case "interval": {
+      const n = Math.max(1, Number(schedule.everyNDays) || 1);
+      const anchorKey = habit.startDate || dateKey;
+      const delta = diffCalendarDays(dateKey, anchorKey);
+      return delta >= 0 && delta % n === 0;
+    }
+    default:
+      return true;
+  }
+}
+
+/**
  * Checks for due reminders and dispatches notifications via ServiceWorkerRegistration.showNotification.
  * Handles both synced memory reminders and direct IndexedDB fallback for background events.
  */
@@ -750,18 +808,7 @@ async function checkAndDispatchDueReminders() {
 
     for (const habit of habits) {
       if (habit.archived || inactiveHabitIds.has(habit.id)) continue;
-      if (habit.startDate && todayDateKey < habit.startDate) continue;
-      if (habit.endDate && todayDateKey > habit.endDate) continue;
-
-      // Basic schedule day matching
-      if (
-        habit.schedule &&
-        habit.schedule.type === "weekdays" &&
-        Array.isArray(habit.schedule.days) &&
-        !habit.schedule.days.includes(dayOfWeek)
-      ) {
-        continue;
-      }
+      if (!isScheduledOnSW(habit, todayDateKey, now)) continue;
 
       const reminderTimes =
         Array.isArray(habit.reminderTimes) && habit.reminderTimes.length > 0
