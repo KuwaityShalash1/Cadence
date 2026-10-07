@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { getLocalClientId, trackLocalPush } from "@/lib/realtime";
 import * as repo from "@/database/repository";
 import type {
   AppSettings,
@@ -279,15 +280,19 @@ export async function pushRecordsToSupabase(
   userId: string,
 ): Promise<void> {
   if (records.length === 0) return;
+  const clientId = getLocalClientId();
 
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const chunk = records.slice(i, i + BATCH_SIZE);
+    for (const record of chunk) {
+      trackLocalPush(record.store, record.id, record.updatedAt);
+    }
     const results = await Promise.all(
       chunk.map((record) =>
         supabase.rpc("upsert_cadence_sync_record", {
           p_store_name: record.store,
           p_record_id: record.id,
-          p_data: record.data,
+          p_data: { ...record.data, _clientId: clientId },
           p_updated_at: record.updatedAt,
           p_deleted: record.deleted,
         }),

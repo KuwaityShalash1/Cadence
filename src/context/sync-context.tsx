@@ -10,12 +10,16 @@ import {
 import { useAuth } from "@/auth/auth-context";
 import { subscribeToSync, syncNow } from "@/lib/sync";
 import { getPendingSyncCount } from "@/database/repository";
+import { useRealtimeSync } from "@/hooks/use-realtime-sync";
+import type { RealtimeSyncStatus } from "@/lib/realtime";
 import type { SyncStatus } from "@/types";
 
 export interface SyncContextType {
   isOnline: boolean;
   isSyncing: boolean;
   syncStatus: SyncStatus;
+  realtimeStatus: RealtimeSyncStatus;
+  isRealtimeConnected: boolean;
   pendingCount: number;
   lastSyncedAt: Date | null;
   /** Manually trigger background synchronization. */
@@ -28,6 +32,8 @@ const DEFAULT_SYNC_STATE: SyncContextType = {
   isOnline: typeof navigator !== "undefined" ? navigator.onLine : true,
   isSyncing: false,
   syncStatus: "idle",
+  realtimeStatus: "disabled",
+  isRealtimeConnected: false,
   pendingCount: 0,
   lastSyncedAt: null,
   triggerSync: async () => false,
@@ -144,10 +150,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     };
   }, [session, triggerSync, refreshPendingCount]);
 
+  const realtime = useRealtimeSync();
+
   const value: SyncContextType = {
     isOnline,
     isSyncing,
     syncStatus,
+    realtimeStatus: realtime.status,
+    isRealtimeConnected: realtime.isConnected,
     pendingCount,
     lastSyncedAt,
     triggerSync,
@@ -156,4 +166,3 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 }
-

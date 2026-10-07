@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { getLocalClientId, trackLocalPush } from "@/lib/realtime";
 import {
   clearPendingSyncFlag,
   clearTombstone,
@@ -87,14 +88,18 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
   let pushedCount = 0;
   let failedCount = 0;
   const lastPushTimestamp = await getLastPushTimestamp();
+  const clientId = getLocalClientId();
 
   for (const record of pendingRecords) {
     try {
+      trackLocalPush(record.store, record.id, record.updatedAt);
       // Remove local-only pending_sync flag before uploading to Supabase
       let payloadData: Record<string, unknown> | null = null;
       if (record.data) {
         const { pending_sync, ...rest } = record.data;
-        payloadData = { ...rest, synced: true };
+        payloadData = { ...rest, synced: true, _clientId: clientId };
+      } else if (record.deleted) {
+        payloadData = { _clientId: clientId };
       }
 
       const { error } = await supabase.rpc("upsert_cadence_sync_record", {

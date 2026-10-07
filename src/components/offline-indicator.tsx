@@ -25,7 +25,7 @@ export function OfflineIndicator({ className }: { className?: string }) {
     if (!isOnline) {
       wasOffline.current = true;
       setShowSyncedBriefly(false);
-      return;
+      return undefined;
     }
 
     if (wasOffline.current && !isSyncing) {
@@ -36,6 +36,7 @@ export function OfflineIndicator({ className }: { className?: string }) {
       }, 2500);
       return () => window.clearTimeout(timer);
     }
+    return undefined;
   }, [isOnline, isSyncing]);
 
   // While online and not syncing, hide to keep header clean

@@ -478,6 +478,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .then((snapshot) => {
           if (cancelled) return;
           setState(snapshot);
+          if (snapshot?.settings) {
+            const soundVal =
+              snapshot.settings.isSoundEnabled ?? !(snapshot.settings.isMuted ?? false);
+            setSoundEnabled(soundVal);
+          }
         })
         .catch((err) => {
           console.error("Failed refreshing snapshot after background sync:", err);

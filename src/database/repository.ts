@@ -316,9 +316,15 @@ export async function getSyncRecords(): Promise<SyncRecord[]> {
   }
 
   const tombstones = await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID);
-  for (const [key, updatedAt] of Object.entries(tombstones?.values ?? {})) {
+  for (const [key, tombstoneVal] of Object.entries(tombstones?.values ?? {})) {
     const separator = key.indexOf(":");
     if (separator > 0) {
+      const updatedAt =
+        typeof tombstoneVal === "object" && tombstoneVal !== null
+          ? tombstoneVal.updatedAt
+          : typeof tombstoneVal === "string"
+            ? tombstoneVal
+            : nowIso();
       records.push({
         store: key.slice(0, separator),
         id: key.slice(separator + 1),
