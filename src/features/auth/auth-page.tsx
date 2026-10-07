@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
@@ -22,34 +22,110 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [isProcessingToken, setIsProcessingToken] = useState(false);
+
+  const redirectToDashboard = useCallback(() => {
+    // Strip hash tokens from the URL bar immediately to prevent token exposure or re-processing
+    if (typeof window !== "undefined" && window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+
+    // Try SPA router navigation first
+    void navigate({ to: "/", replace: true }).catch(() => {
+      window.location.href = "/";
+    });
+
+    // Fallback: If still on /auth, force direct browser navigation to the dashboard
+    setTimeout(() => {
+      if (typeof window !== "undefined" && window.location.pathname.includes("/auth")) {
+        window.location.href = "/";
+      }
+    }, 150);
+  }, [navigate]);
 
   useEffect(() => {
-    // If context already contains an active session, redirect immediately to root
+    let isMounted = true;
+
+    // 1. If session already exists in React context, redirect immediately
     if (session) {
-      void navigate({ to: "/", replace: true });
+      redirectToDashboard();
       return;
     }
 
-    // Check active session directly from Supabase client
-    void supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (currentSession) {
-        void navigate({ to: "/", replace: true });
-      }
-    });
+    // 2. Process URL hash parameters or PKCE query parameters from Google OAuth
+    const processUrlTokens = async () => {
+      if (typeof window === "undefined") return;
 
-    // Listen for auth state changes (e.g. Google OAuth callback hash processing)
+      const rawHash = window.location.hash.startsWith("#")
+        ? window.location.hash.slice(1)
+        : window.location.hash;
+      const hashParams = new URLSearchParams(rawHash);
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        setIsProcessingToken(true);
+        try {
+          const { data, error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (isMounted && data.session && !setSessionError) {
+            redirectToDashboard();
+            return;
+          }
+        } catch (err) {
+          console.error("Unable to set Supabase session from OAuth hash:", err);
+        }
+      }
+
+      // Handle PKCE authorization code if present
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code") || hashParams.get("code");
+      if (code) {
+        setIsProcessingToken(true);
+        try {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (isMounted && data.session && !exchangeError) {
+            redirectToDashboard();
+            return;
+          }
+        } catch (err) {
+          console.error("Unable to exchange OAuth code for session:", err);
+        }
+      }
+
+      // 3. Explicit check via supabase.auth.getSession() on mount
+      try {
+        const {
+          data: { session: currentSession },
+          error: getSessionError,
+        } = await supabase.auth.getSession();
+        if (isMounted && currentSession && !getSessionError) {
+          redirectToDashboard();
+        }
+      } catch (err) {
+        console.error("Unable to restore session on mount:", err);
+      }
+    };
+
+    void processUrlTokens();
+
+    // 4. Listen for auth state changes (e.g. background token detection by client)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (currentSession) {
-        void navigate({ to: "/", replace: true });
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (!isMounted) return;
+      if (currentSession || event === "SIGNED_IN") {
+        redirectToDashboard();
       }
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate, session]);
+  }, [redirectToDashboard, session]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,7 +144,7 @@ export function AuthPage() {
       setMessage("Account created. Check your email if confirmation is required.");
     } else {
       setMessage("You are signed in. Redirecting...");
-      void navigate({ to: "/", replace: true });
+      redirectToDashboard();
     }
   };
 
@@ -88,7 +164,7 @@ export function AuthPage() {
     }
   };
 
-  if (isLoading || session) {
+  if (isLoading || session || isProcessingToken) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Loading" />
