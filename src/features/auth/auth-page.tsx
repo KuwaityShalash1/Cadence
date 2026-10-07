@@ -22,107 +22,153 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [isProcessingToken, setIsProcessingToken] = useState(false);
+  const [isProcessingToken, setIsProcessingToken] = useState(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      return (
+        hash.includes("access_token=") ||
+        hash.includes("code=") ||
+        window.location.search.includes("code=")
+      );
+    }
+    return false;
+  });
 
   const redirectToDashboard = useCallback(() => {
-    // Strip hash tokens from the URL bar immediately to prevent token exposure or re-processing
-    if (typeof window !== "undefined" && window.location.hash) {
-      window.history.replaceState(null, "", window.location.pathname);
-    }
-
-    // Try SPA router navigation first
-    void navigate({ to: "/", replace: true }).catch(() => {
-      window.location.href = "/";
-    });
-
-    // Fallback: If still on /auth, force direct browser navigation to the dashboard
-    setTimeout(() => {
-      if (typeof window !== "undefined" && window.location.pathname.includes("/auth")) {
-        window.location.href = "/";
+    if (typeof window !== "undefined") {
+      // Clear hash parameters from URL bar to prevent tokens lingering in history
+      if (window.location.hash) {
+        window.history.replaceState(null, "", window.location.pathname);
       }
-    }, 150);
+      // Force immediate browser navigation to app root
+      window.location.replace("/");
+    } else {
+      void navigate({ to: "/", replace: true });
+    }
   }, [navigate]);
 
   useEffect(() => {
     let isMounted = true;
 
-    // 1. If session already exists in React context, redirect immediately
+    // Safety timeout: prevent spinner from hanging infinitely if OAuth exchange fails
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) {
+        setIsProcessingToken(false);
+      }
+    }, 4000);
+
+    // 1. If context already contains an active session, redirect immediately
     if (session) {
+      clearTimeout(safetyTimer);
       redirectToDashboard();
       return;
     }
 
-    // 2. Process URL hash parameters or PKCE query parameters from Google OAuth
-    const processUrlTokens = async () => {
+    // 2. Process hash tokens or auth code on mount
+    const handleAuthTokens = async () => {
       if (typeof window === "undefined") return;
 
       const rawHash = window.location.hash.startsWith("#")
         ? window.location.hash.slice(1)
         : window.location.hash;
       const hashParams = new URLSearchParams(rawHash);
+      const searchParams = new URLSearchParams(window.location.search);
+
+      // Check for OAuth error returned by provider
+      const oauthErrorDesc =
+        hashParams.get("error_description") ||
+        hashParams.get("error") ||
+        searchParams.get("error_description") ||
+        searchParams.get("error");
+
+      if (oauthErrorDesc) {
+        if (isMounted) {
+          setError(decodeURIComponent(oauthErrorDesc.replace(/\+/g, " ")));
+          setIsProcessingToken(false);
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+        return;
+      }
+
       const accessToken = hashParams.get("access_token");
       const refreshToken = hashParams.get("refresh_token");
 
-      if (accessToken && refreshToken) {
-        setIsProcessingToken(true);
+      if (accessToken) {
         try {
           const { data, error: setSessionError } = await supabase.auth.setSession({
             access_token: accessToken,
-            refresh_token: refreshToken,
+            refresh_token: refreshToken || "",
           });
-          if (isMounted && data.session && !setSessionError) {
+
+          if (!setSessionError && data.session) {
+            clearTimeout(safetyTimer);
             redirectToDashboard();
             return;
           }
+
+          if (setSessionError) {
+            console.warn(
+              "Manual setSession returned error, verifying getSession():",
+              setSessionError.message,
+            );
+          }
         } catch (err) {
-          console.error("Unable to set Supabase session from OAuth hash:", err);
+          console.error("Failed to set session from URL hash:", err);
         }
       }
 
-      // Handle PKCE authorization code if present
-      const searchParams = new URLSearchParams(window.location.search);
+      // Handle PKCE code flow if present
       const code = searchParams.get("code") || hashParams.get("code");
       if (code) {
-        setIsProcessingToken(true);
         try {
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (isMounted && data.session && !exchangeError) {
+          if (!exchangeError && data.session) {
+            clearTimeout(safetyTimer);
             redirectToDashboard();
             return;
           }
         } catch (err) {
-          console.error("Unable to exchange OAuth code for session:", err);
+          console.error("Failed to exchange OAuth code for session:", err);
         }
       }
 
-      // 3. Explicit check via supabase.auth.getSession() on mount
+      // 3. Fallback verification via supabase.auth.getSession()
       try {
         const {
           data: { session: currentSession },
-          error: getSessionError,
         } = await supabase.auth.getSession();
-        if (isMounted && currentSession && !getSessionError) {
+
+        if (currentSession) {
+          clearTimeout(safetyTimer);
           redirectToDashboard();
+          return;
         }
       } catch (err) {
-        console.error("Unable to restore session on mount:", err);
+        console.error("Failed to retrieve Supabase session:", err);
+      }
+
+      // If tokens existed but no session was established, release loading state
+      if (isMounted && (accessToken || code)) {
+        setIsProcessingToken(false);
       }
     };
 
-    void processUrlTokens();
+    void handleAuthTokens();
 
-    // 4. Listen for auth state changes (e.g. background token detection by client)
+    // 4. Listen for auth state changes (catches asynchronous client detection)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
       if (currentSession || event === "SIGNED_IN") {
+        clearTimeout(safetyTimer);
         redirectToDashboard();
       }
     });
 
     return () => {
       isMounted = false;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
   }, [redirectToDashboard, session]);
@@ -164,10 +210,13 @@ export function AuthPage() {
     }
   };
 
-  if (isLoading || session || isProcessingToken) {
+  if ((isLoading || isProcessingToken) && !error) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Loading" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading" />
+          <p className="text-sm text-muted-foreground">Completing sign in...</p>
+        </div>
       </main>
     );
   }
