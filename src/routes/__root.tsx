@@ -447,31 +447,31 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <AppProvider>
           <LanguageProvider>
-          <HeadMetadataSync />
-          <NotificationScheduler />
-          <ServiceWorkerBootstrap />
-          <ClientAnalytics />
-          <ClientSpeedInsights />
-          <ThemeSync />
-          {/*
+            <HeadMetadataSync />
+            <NotificationScheduler />
+            <ServiceWorkerBootstrap />
+            <ClientAnalytics />
+            <ClientSpeedInsights />
+            <ThemeSync />
+            {/*
             Command palette (⌘K / Ctrl+K). The launcher is part of the initial
             bundle but renders nothing until the palette is first opened; the
             palette component itself is a separate lazily imported chunk.
           */}
-          <CommandPaletteLoader />
-          <TooltipProvider delayDuration={200}>
-            <ErrorBoundary>
-              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-              <Outlet />
-            </ErrorBoundary>
-          </TooltipProvider>
-          <Toaster />
+            <CommandPaletteLoader />
+            <TooltipProvider delayDuration={200}>
+              <ErrorBoundary>
+                {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+                <Outlet />
+              </ErrorBoundary>
+            </TooltipProvider>
+            <Toaster />
           </LanguageProvider>
-        </AuthProvider>
-      </AppProvider>
+        </AppProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -15,6 +15,8 @@ import type { Snapshot } from "@/database/repository";
 import { diffDays, toDateKey, todayKey } from "@/services/dates";
 import { buildLogMap, logKey, type LogMap } from "@/services/stats";
 import { playCompleteHabitSound, setSoundEnabled } from "@/lib/sound";
+import { useAuth } from "@/auth/auth-context";
+import { syncNow } from "@/lib/sync";
 import type {
   BadHabit,
   AppSettings,
@@ -259,6 +261,7 @@ const getInitialCollapsed = (): boolean => {
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
   const [state, setState] = useState<Snapshot>(() => {
     try {
       if (typeof window !== "undefined") {
@@ -418,6 +421,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (timeout !== undefined) window.clearTimeout(timeout);
     };
   }, []);
+
+  useEffect(() => {
+    if (!ready || !session) return;
+    let cancelled = false;
+
+    const runSync = () =>
+      syncNow()
+        .then(async (merged) => {
+          if (cancelled || !merged) return;
+          const snapshot = await repo.loadSnapshot();
+          if (cancelled) return;
+          setState(snapshot);
+          const soundVal =
+            snapshot.settings.isSoundEnabled ?? !(snapshot.settings.isMuted ?? false);
+          setSoundEnabled(soundVal);
+        })
+        .catch((error: unknown) => {
+          console.error("Background data sync failed.", error);
+        });
+
+    void runSync();
+    window.addEventListener("online", runSync);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", runSync);
+    };
+  }, [ready, session]);
 
   const logMap = useMemo(() => buildLogMap(state.habitLogs), [state.habitLogs]);
 

@@ -14,6 +14,72 @@ import { clearStore, getAll, getOne, put, putMany, remove } from "./idb";
 import { todayKey } from "@/services/dates";
 import { sanitizeSvgIcon } from "@/components/icon-map";
 
+export interface SyncableRecord {
+  id: string;
+  [key: string]: unknown;
+}
+
+export interface SyncRecord {
+  store: string;
+  id: string;
+  data: SyncableRecord | null;
+  updatedAt: string;
+  deleted: boolean;
+}
+
+const SYNC_TOMBSTONES_ID = "sync-tombstones";
+type Tombstones = { id: typeof SYNC_TOMBSTONES_ID; values: Record<string, string> };
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function markForSync<T extends { id: string }>(value: T): T & { __syncUpdatedAt: string } {
+  return { ...value, __syncUpdatedAt: nowIso() };
+}
+
+function write<T extends { id: string }>(
+  store: Parameters<typeof put>[0],
+  value: T,
+): Promise<void> {
+  return put(store, markForSync(value)).then(() => {
+    void import("@/lib/sync")
+      .then(({ pushPendingRecords }) => pushPendingRecords())
+      .catch((error: unknown) => console.error("Background sync push failed.", error));
+  });
+}
+
+function writeMany<T extends { id: string }>(
+  store: Parameters<typeof putMany>[0],
+  values: T[],
+): Promise<void> {
+  return putMany(store, values.map(markForSync)).then(() => {
+    void import("@/lib/sync")
+      .then(({ pushPendingRecords }) => pushPendingRecords())
+      .catch((error: unknown) => console.error("Background sync push failed.", error));
+  });
+}
+
+async function recordTombstone(store: string, id: string): Promise<void> {
+  const existing = (await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID)) ?? {
+    id: SYNC_TOMBSTONES_ID,
+    values: {},
+  };
+  await put("meta", {
+    id: SYNC_TOMBSTONES_ID,
+    values: { ...existing.values, [`${store}:${id}`]: nowIso() },
+  });
+}
+
+function removeAndSync(store: Parameters<typeof remove>[0], id: string): Promise<void> {
+  return remove(store, id).then(async () => {
+    await recordTombstone(store, id);
+    void import("@/lib/sync")
+      .then(({ pushPendingRecords }) => pushPendingRecords())
+      .catch((error: unknown) => console.error("Background sync delete push failed.", error));
+  });
+}
+
 export interface Snapshot {
   habits: Habit[];
   habitLogs: HabitLog[];
@@ -111,8 +177,11 @@ export async function loadSnapshot(): Promise<Snapshot> {
     settings: {
       ...DEFAULT_SETTINGS,
       ...storedSettings,
-      notificationsEnabled:
-        Boolean((storedSettings as Record<string, unknown>)["notificationsEnabled"] ?? (storedSettings as Record<string, unknown>)["remindersEnabled"] ?? false),
+      notificationsEnabled: Boolean(
+        (storedSettings as Record<string, unknown>)["notificationsEnabled"] ??
+        (storedSettings as Record<string, unknown>)["remindersEnabled"] ??
+        false,
+      ),
     },
     timer: timer ?? null,
     customColors: Array.isArray(customColors?.customColors) ? customColors.customColors : [],
@@ -120,33 +189,104 @@ export async function loadSnapshot(): Promise<Snapshot> {
   };
 }
 
-export const saveHabit = (habit: Habit) => put("habits", habit);
-export const saveHabits = (habits: Habit[]) => putMany("habits", habits);
-export const deleteHabit = (id: string) => remove("habits", id);
+export const saveHabit = (habit: Habit) => write("habits", habit);
+export const saveHabits = (habits: Habit[]) => writeMany("habits", habits);
+export const deleteHabit = (id: string) => removeAndSync("habits", id);
 
-export const saveLog = (log: HabitLog) => put("habitLogs", log);
-export const deleteLog = (id: string) => remove("habitLogs", id);
+export const saveLog = (log: HabitLog) => write("habitLogs", log);
+export const deleteLog = (id: string) => removeAndSync("habitLogs", id);
 
-export const saveGroup = (group: Group) => put("groups", group);
-export const deleteGroup = (id: string) => remove("groups", id);
+export const saveGroup = (group: Group) => write("groups", group);
+export const deleteGroup = (id: string) => removeAndSync("groups", id);
 
-export const saveGoal = (goal: Goal) => put("goals", goal);
-export const deleteGoal = (id: string) => remove("goals", id);
+export const saveGoal = (goal: Goal) => write("goals", goal);
+export const deleteGoal = (id: string) => removeAndSync("goals", id);
 
-export const saveRoutine = (routine: Routine) => put("routines", routine);
-export const deleteRoutine = (id: string) => remove("routines", id);
-export const saveRoutineLog = (log: RoutineLog) => put("routineLogs", log);
+export const saveRoutine = (routine: Routine) => write("routines", routine);
+export const deleteRoutine = (id: string) => removeAndSync("routines", id);
+export const saveRoutineLog = (log: RoutineLog) => write("routineLogs", log);
 
-export const saveBadHabit = (habit: BadHabit) => put("badHabits", habit);
-export const deleteBadHabit = (id: string) => remove("badHabits", id);
+export const saveBadHabit = (habit: BadHabit) => write("badHabits", habit);
+export const deleteBadHabit = (id: string) => removeAndSync("badHabits", id);
 
-export const saveSettings = (settings: AppSettings) => put("meta", settings);
-export const saveTimer = (timer: TimerState) => put("meta", timer);
-export const clearTimer = () => remove("meta", "timer");
+export const saveSettings = (settings: AppSettings) => write("meta", settings);
+export const saveTimer = (timer: TimerState) => write("meta", timer);
+export const clearTimer = () => removeAndSync("meta", "timer");
 export const saveCustomColors = (customColors: string[]) =>
-  put("meta", { id: "customColors", customColors });
+  write("meta", { id: "customColors", customColors });
 export const saveCustomIcons = (customIcons: CustomIcon[]) =>
-  put("meta", { id: "customIcons", customIcons });
+  write("meta", { id: "customIcons", customIcons });
+
+export async function getSyncRecords(): Promise<SyncRecord[]> {
+  const records: SyncRecord[] = [];
+  for (const store of [
+    "habits",
+    "habitLogs",
+    "groups",
+    "goals",
+    "routines",
+    "routineLogs",
+    "badHabits",
+    "meta",
+  ] as const) {
+    const values = await getAll<SyncableRecord>(store);
+    for (const value of values) {
+      if (store === "meta" && value.id === SYNC_TOMBSTONES_ID) continue;
+      const updatedAt =
+        typeof value["__syncUpdatedAt"] === "string"
+          ? value["__syncUpdatedAt"]
+          : typeof value["updatedAt"] === "number"
+            ? new Date(value["updatedAt"]).toISOString()
+            : typeof value["updatedAt"] === "string"
+              ? value["updatedAt"]
+              : new Date(0).toISOString();
+      records.push({ store, id: value.id, data: value, updatedAt, deleted: false });
+    }
+  }
+
+  const tombstones = await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID);
+  for (const [key, updatedAt] of Object.entries(tombstones?.values ?? {})) {
+    const separator = key.indexOf(":");
+    if (separator > 0) {
+      records.push({
+        store: key.slice(0, separator),
+        id: key.slice(separator + 1),
+        data: null,
+        updatedAt,
+        deleted: true,
+      });
+    }
+  }
+  return records;
+}
+
+export async function mergeSyncRecord(record: SyncRecord): Promise<void> {
+  if (record.deleted) {
+    await remove(record.store as Parameters<typeof remove>[0], record.id);
+    return;
+  }
+  if (record.data) {
+    await put(record.store as Parameters<typeof put>[0], record.data);
+  }
+}
+
+export async function getLastSyncTimestamp(): Promise<string> {
+  const value = await getOne<{ id: string; value?: string }>("meta", "lastSyncTimestamp");
+  return value?.value ?? new Date(0).toISOString();
+}
+
+export async function setLastSyncTimestamp(value: string): Promise<void> {
+  await put("meta", { id: "lastSyncTimestamp", value });
+}
+
+export async function getLastPushTimestamp(): Promise<string> {
+  const value = await getOne<{ id: string; value?: string }>("meta", "lastPushTimestamp");
+  return value?.value ?? new Date(0).toISOString();
+}
+
+export async function setLastPushTimestamp(value: string): Promise<void> {
+  await put("meta", { id: "lastPushTimestamp", value });
+}
 
 export async function wipeAll(): Promise<void> {
   await Promise.all([
@@ -168,7 +308,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isRecordArray(value: unknown): value is Array<{ id: string }> {
   return (
     Array.isArray(value) &&
-    value.every((item) => isRecord(item) && typeof item["id"] === "string" && (item["id"] as string).length > 0)
+    value.every(
+      (item) =>
+        isRecord(item) && typeof item["id"] === "string" && (item["id"] as string).length > 0,
+    )
   );
 }
 
