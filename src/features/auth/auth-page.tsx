@@ -1,6 +1,6 @@
-import { FormEvent, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Cloud, Loader2 } from "lucide-react";
+import { FormEvent, useEffect, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/auth/auth-context";
 import { CadenceLogo } from "@/components/ui/CadenceLogo";
@@ -13,7 +13,8 @@ import { supabase } from "@/lib/supabase";
 type AuthMode = "login" | "signup";
 
 export function AuthPage() {
-  const { isConfigured, isLoading, session, signIn, signUp, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { isConfigured, isLoading, session, signIn, signUp } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +22,34 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+
+  useEffect(() => {
+    // If context already contains an active session, redirect immediately to root
+    if (session) {
+      void navigate({ to: "/", replace: true });
+      return;
+    }
+
+    // Check active session directly from Supabase client
+    void supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      if (currentSession) {
+        void navigate({ to: "/", replace: true });
+      }
+    });
+
+    // Listen for auth state changes (e.g. Google OAuth callback hash processing)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (currentSession) {
+        void navigate({ to: "/", replace: true });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate, session]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -38,7 +67,8 @@ export function AuthPage() {
     if (mode === "signup") {
       setMessage("Account created. Check your email if confirmation is required.");
     } else {
-      setMessage("You are signed in. Cloud sync is ready for the next phase.");
+      setMessage("You are signed in. Redirecting...");
+      void navigate({ to: "/", replace: true });
     }
   };
 
@@ -58,43 +88,10 @@ export function AuthPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || session) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" aria-label="Loading" />
-      </main>
-    );
-  }
-
-  if (session) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Cloud className="mx-auto h-10 w-10 text-primary" />
-            <CardTitle className="mt-2 text-2xl">Cloud sync enabled</CardTitle>
-            <CardDescription>{session.user.email}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
-              Your local app remains available offline. Syncing local data will be added in the next
-              phase.
-            </p>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild className="flex-1">
-                <Link to="/">Return to Cadence</Link>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  void signOut();
-                }}
-              >
-                Sign out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </main>
     );
   }
