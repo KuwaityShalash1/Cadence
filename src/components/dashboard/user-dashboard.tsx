@@ -22,6 +22,7 @@ import {
   Clock,
   Settings,
   LogIn,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -36,6 +37,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
+import { DeleteAccountDialog } from "@/components/delete-account-dialog";
+import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -85,20 +89,9 @@ export function UserDashboard() {
 
   const activeUser = refreshedUser ?? authUser;
 
-  // Extract metadata attributes with sensible fallbacks
-  const userMetadata = activeUser?.user_metadata ?? {};
-  const fullName =
-    (userMetadata["full_name"] as string | undefined) ||
-    (userMetadata["name"] as string | undefined) ||
-    settings.displayName ||
-    (activeUser?.email ? activeUser.email.split("@")[0] : "Cadence User");
-
-  const avatarUrl =
-    (userMetadata["avatar_url"] as string | undefined) ||
-    (userMetadata["picture"] as string | undefined) ||
-    (settings.avatar?.startsWith("http") || settings.avatar?.startsWith("data:")
-      ? settings.avatar
-      : undefined);
+  // Extract metadata attributes directly from Supabase session metadata with sensible fallbacks
+  const fullName = extractUserDisplayName(activeUser, settings.displayName);
+  const avatarUrl = extractUserAvatarUrl(activeUser, settings.avatar);
 
   const email = activeUser?.email ?? "Offline Guest Mode";
   const authProvider = activeUser?.app_metadata?.["provider"]
@@ -155,16 +148,13 @@ export function UserDashboard() {
             {/* User Avatar + Identity */}
             <div className="flex items-center gap-4 sm:gap-5 min-w-0">
               <div className="relative shrink-0">
-                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-border/80 shadow-md ring-4 ring-primary/10">
-                  {avatarUrl && (
-                    <AvatarImage src={avatarUrl} alt={fullName} className="object-cover" />
-                  )}
-                  <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-                    {settings.avatar && !avatarUrl
-                      ? settings.avatar
-                      : (fullName || "User").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  avatar={avatarUrl || (!avatarUrl && settings.avatar ? settings.avatar : undefined)}
+                  name={fullName}
+                  className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-border/80 shadow-md ring-4 ring-primary/10"
+                  fallbackClassName="text-2xl font-bold"
+                  iconClassName="h-10 w-10 text-muted-foreground"
+                />
                 {/* Realtime Live Indicator Dot */}
                 <span
                   title={isRealtimeConnected ? "Realtime sync connected" : "Offline"}
@@ -250,20 +240,23 @@ export function UserDashboard() {
               </Link>
 
               {session ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 h-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 h-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </Button>
+                  <DeleteAccountDialog />
+                </div>
               ) : (
                 <Link to="/auth">
-                  <Button size="sm" className="gap-2 h-9">
+                  <Button size="sm" className="gap-2 h-9 font-medium shadow-xs">
                     <LogIn className="h-4 w-4" />
-                    <span>Connect Account</span>
+                    <span>Sign In</span>
                   </Button>
                 </Link>
               )}
@@ -582,7 +575,28 @@ export function UserDashboard() {
         </CardContent>
       </Card>
 
-      {/* ── 5. Analytics Link & Data Overview Footer ─────────────────────── */}
+      {/* ── 5. Account Security & Danger Zone ───────────────────────────── */}
+      {session && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardHeader className="p-5 pb-3">
+            <CardTitle className="text-base font-semibold text-destructive flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Account Security & Danger Zone
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Permanently delete your account, synced habits, streaks, and all cloud backups from Supabase.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 pt-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              Once deleted, your cloud account and habit history cannot be recovered.
+            </p>
+            <DeleteAccountDialog />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 6. Analytics Link & Data Overview Footer ─────────────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-border bg-card/60 text-xs text-muted-foreground">
         <div>
           <span>Total Habits: </span>

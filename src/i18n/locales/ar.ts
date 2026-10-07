@@ -10,6 +10,7 @@ export const ar = {
   "nav.more": "المزيد",
   "nav.add": "إضافة",
   "nav.user": "المستخدم",
+  "nav.signIn": "تسجيل الدخول",
   "offline.offline": "غير متصل",
   "offline.backOnline": "عاد الاتصال",
   "offline.hint": "بياناتك محفوظة على هذا الجهاز — كادنس يعمل دون اتصال.",

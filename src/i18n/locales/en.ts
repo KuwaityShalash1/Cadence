@@ -10,6 +10,7 @@ export const en = {
   "nav.more": "More",
   "nav.add": "Add",
   "nav.user": "User",
+  "nav.signIn": "Sign In",
   "offline.offline": "Offline",
   "offline.backOnline": "Back online",
   "offline.hint": "Your data is saved on this device — Cadence keeps working offline.",

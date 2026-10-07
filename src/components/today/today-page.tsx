@@ -7,9 +7,12 @@ import {
   Trash2,
   X,
   Globe,
+  LogIn,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/auth/auth-context";
 import { FOCUS_HABIT_SEARCH_EVENT, OPEN_ARCHIVED_HABITS_EVENT } from "@/hooks/use-shortcuts";
 
 import {
@@ -82,6 +85,7 @@ const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export function TodayPage() {
   const { t } = useTranslation();
+  const { session } = useAuth();
   const {
     habits,
     logMap,
@@ -241,6 +245,14 @@ export function TodayPage() {
             </h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {!session && (
+              <Button asChild variant="outline" size="sm" className="gap-2">
+                <Link to="/auth" aria-label="Sign In or Login">
+                  <LogIn className="h-4 w-4" />
+                  <span>{t("nav.signIn", "Sign In")}</span>
+                </Link>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

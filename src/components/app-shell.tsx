@@ -15,6 +15,7 @@ import {
   PanelLeft,
   Menu,
   LayoutDashboard,
+  LogIn,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -26,7 +27,8 @@ import { CadenceLogo } from "@/components/ui/CadenceLogo";
 const LogoIcon = (props: { className?: string; [key: string]: unknown }) => (
   <CadenceLogo showText={false} iconClassName={props.className} {...props} />
 );
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
+import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppStore } from "@/stores/app-store";
 import { useTranslation } from "@/i18n/context";
@@ -60,62 +62,6 @@ const MOBILE_NAV = [
   { labelKey: "nav.quitTracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
 ];
 
-function getInitials(name?: string): string {
-  if (!name || !name.trim()) return "";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    const first = parts[0] ?? "";
-    const second = parts[1] ?? "";
-    return `${first.charAt(0)}${second.charAt(0)}`.toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-}
-
-function UserAvatar({
-  avatar,
-  name,
-  className = "h-8 w-8",
-}: {
-  avatar?: string | undefined;
-  name?: string | undefined;
-  className?: string | undefined;
-}) {
-  const initials = getInitials(name);
-
-  if (avatar) {
-    if (
-      avatar.startsWith("data:") ||
-      avatar.startsWith("http://") ||
-      avatar.startsWith("https://")
-    ) {
-      return (
-        <Avatar className={className}>
-          <AvatarImage src={avatar} alt={name?.trim() || "User"} className="object-cover" />
-          <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">
-            {initials || <User className="h-4 w-4" />}
-          </AvatarFallback>
-        </Avatar>
-      );
-    }
-    // Emoji avatar
-    return (
-      <Avatar className={className}>
-        <AvatarFallback className="bg-primary/10 text-lg flex items-center justify-center">
-          {avatar}
-        </AvatarFallback>
-      </Avatar>
-    );
-  }
-
-  return (
-    <Avatar className={className}>
-      <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">
-        {initials || <User className="h-4 w-4" />}
-      </AvatarFallback>
-    </Avatar>
-  );
-}
-
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <HabitEditorProvider>
@@ -130,14 +76,17 @@ function Shell({ children }: { children: ReactNode }) {
   const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
   const { isDue: isBackupDue } = useBackupReminderStatus();
   const { t, isRtl } = useTranslation();
-  const { session } = useAuth();
+  const { session, user } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [enableSidebarTransition, setEnableSidebarTransition] = useState(false);
   // During SSR, use a static default (sidebar open) to avoid hydration mismatch.
   // The persisted collapsed state is applied after mount via useEffect.
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const displayName = settings.displayName?.trim() || "User";
+  const userAvatarUrl = extractUserAvatarUrl(user, settings.avatar);
+  const effectiveDisplayName = session
+    ? extractUserDisplayName(user, settings.displayName)
+    : settings.displayName?.trim() || "User";
 
   const handleToggleSidebar = () => {
     playToggleSound(!isSidebarCollapsed);
@@ -278,7 +227,7 @@ function Shell({ children }: { children: ReactNode }) {
             const settingsLabel = t("nav.settings");
             const settingsLink = (
               <Link
-                to={session ? "/settings" : "/auth"}
+                to="/settings"
                 aria-label={settingsLabel}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
@@ -348,35 +297,57 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             {/* Connectivity hint only; every feature keeps working offline. */}
             <OfflineIndicator />
-            {/* Profile pill — logical padding so it flips correctly in RTL */}
-            <Link
-              to="/dashboard"
-              className="flex items-center gap-3 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
-              aria-label={
-                isBackupDue
-                  ? `${displayName} - ${t("backup.badgeAria", "Backup recommended")}`
-                  : session
-                    ? displayName
-                    : "User Dashboard"
-              }
-            >
-              <div className="relative shrink-0">
-                <UserAvatar
-                  avatar={settings.avatar}
-                  name={settings.displayName}
-                  className="h-7 w-7"
-                />
-                {isBackupDue && (
-                  <span
-                    className="absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-card shadow-xs"
-                    aria-hidden="true"
+            {session ? (
+              /* Profile pill for authenticated user with extracted Google avatar */
+              <Link
+                to="/dashboard"
+                className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
+                aria-label={
+                  isBackupDue
+                    ? `${effectiveDisplayName} - ${t("backup.badgeAria", "Backup recommended")}`
+                    : effectiveDisplayName
+                }
+              >
+                <div className="relative shrink-0">
+                  <UserAvatar
+                    avatar={userAvatarUrl}
+                    name={effectiveDisplayName}
+                    className="h-7 w-7"
                   />
-                )}
+                  {isBackupDue && (
+                    <span
+                      className="absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-card shadow-xs"
+                      aria-hidden="true"
+                    />
+                  )}
+                </div>
+                <span className="max-w-32 truncate text-sm font-medium">
+                  {effectiveDisplayName}
+                </span>
+              </Link>
+            ) : (
+              /* Clear, visible Sign In / Login button for visitors */
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/dashboard"
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card py-1 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  aria-label="Dashboard"
+                >
+                  <User className="h-3.5 w-3.5" />
+                  <span>{t("nav.dashboard", "Dashboard")}</span>
+                </Link>
+                <Button
+                  asChild
+                  size="sm"
+                  className="gap-1.5 h-8 px-3 text-xs font-semibold shadow-xs"
+                >
+                  <Link to="/auth" aria-label="Sign In / Login">
+                    <LogIn className="h-3.5 w-3.5" />
+                    <span>{t("nav.signIn", "Sign In")}</span>
+                  </Link>
+                </Button>
               </div>
-              <span className="max-w-32 truncate text-sm font-medium">
-                {session ? displayName : "Enable sync"}
-              </span>
-            </Link>
+            )}
           </div>
         </header>
 
@@ -479,6 +450,16 @@ function Shell({ children }: { children: ReactNode }) {
                 />
               )}
             </Link>
+            {!session && (
+              <Link
+                to="/auth"
+                onClick={() => setMoreOpen(false)}
+                className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+              >
+                <LogIn className="h-5 w-5" />
+                <span>{t("nav.signIn", "Sign In")}</span>
+              </Link>
+            )}
           </div>
         </div>
       </ResponsiveSheet>

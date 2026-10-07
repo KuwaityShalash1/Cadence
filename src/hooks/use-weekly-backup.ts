@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "@/i18n/context";
+import { useAuth } from "@/auth/auth-context";
 
 import {
   BACKUP_STATUS_CHANGED_EVENT,
@@ -14,7 +15,7 @@ import {
 
 interface UseWeeklyBackupReminderOptions {
   /** Skip the check (e.g. while the store is still loading). Defaults to true. */
-  enabled?: boolean;
+  enabled?: boolean | undefined;
 }
 
 export interface WeeklyBackupReminderState {
@@ -37,16 +38,30 @@ export interface WeeklyBackupReminderState {
  * Subscribes to window events so state updates instantly across the app.
  * Returns `isDue: true` whenever the user has not exported a JSON backup
  * (or it is older than 7 days). This powers the yellow dot on the Settings icon.
+ *
+ * NOTE: If the user has an active Supabase session, their data is already safely
+ * backed up and synchronized to the cloud. The reminder is disabled entirely.
  */
 export function useBackupReminderStatus() {
   const [isDue, setIsDue] = useState(false);
+  const { session } = useAuth();
 
   const checkStatus = useCallback(() => {
+    // Suppress and disable reminder if the user is authenticated to Supabase cloud
+    if (session) {
+      setIsDue(false);
+      return;
+    }
     setIsDue(isBackupExportNeeded());
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (session) {
+      setIsDue(false);
+      return;
+    }
+
     checkStatus();
 
     window.addEventListener(BACKUP_STATUS_CHANGED_EVENT, checkStatus);
@@ -59,9 +74,9 @@ export function useBackupReminderStatus() {
       window.removeEventListener("focus", checkStatus);
       window.removeEventListener("pageshow", checkStatus);
     };
-  }, [checkStatus]);
+  }, [checkStatus, session]);
 
-  return { isDue, checkStatus };
+  return { isDue: session ? false : isDue, checkStatus };
 }
 
 /**
@@ -71,8 +86,8 @@ export function useBackupReminderStatus() {
  * or the last one is older than 7 days — and the reminder is not snoozed — it flags
  * `isDue` to true.
  *
- * When dismissed or snoozed, the inline banner is suppressed for 7-14 days so
- * it doesn't bother the user inside Settings.
+ * If the user is logged into Supabase (authenticated), this prompt is completely
+ * hidden and disabled because data is continually synchronized to the cloud.
  *
  * SSR-safe: storage checks happen inside `useEffect`; initial render is false.
  *
@@ -83,16 +98,27 @@ export function useWeeklyBackupReminder(
   exportData?: () => string,
   options?: UseWeeklyBackupReminderOptions,
 ): WeeklyBackupReminderState {
-  const enabled = options?.enabled ?? true;
+  const { session } = useAuth();
+  const enabled = (options?.enabled ?? true) && !session;
   const [isDue, setIsDue] = useState(false);
   const { t } = useTranslation();
 
   const checkStatus = useCallback(() => {
+    // Disable JSON backup reminder prompt when authenticated to Supabase cloud
+    if (session) {
+      setIsDue(false);
+      return;
+    }
     setIsDue(isBackupReminderDue());
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (session) {
+      setIsDue(false);
+      return;
+    }
+
     checkStatus();
 
     window.addEventListener(BACKUP_STATUS_CHANGED_EVENT, checkStatus);
@@ -105,7 +131,7 @@ export function useWeeklyBackupReminder(
       window.removeEventListener("focus", checkStatus);
       window.removeEventListener("pageshow", checkStatus);
     };
-  }, [checkStatus]);
+  }, [checkStatus, session]);
 
   const snooze = useCallback((days: number = DEFAULT_SNOOZE_DAYS) => {
     snoozeBackupReminder(days);
@@ -146,4 +172,3 @@ export function useWeeklyBackupReminder(
     refreshStatus: checkStatus,
   };
 }
-

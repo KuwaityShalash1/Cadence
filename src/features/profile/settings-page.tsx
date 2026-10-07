@@ -16,10 +16,12 @@ import {
   User,
   Volume2,
   VolumeX,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 
 import { Button } from "@/components/ui/button";
 import { ImageCropperModal } from "./image-cropper-modal";
@@ -57,6 +59,8 @@ import { BackupReminder } from "@/components/backup-reminder";
 import { useWeeklyBackupReminder } from "@/hooks/use-weekly-backup";
 import { usePWA } from "@/hooks/use-pwa";
 import { useApp } from "@/stores/app-store";
+import { useAuth } from "@/auth/auth-context";
+import { extractUserAvatarUrl } from "@/lib/user";
 import { useTranslation, LANGUAGES } from "@/i18n/context";
 import { LanguageFlag } from "@/components/language-flag";
 import type { ThemeMode } from "@/types";
@@ -90,8 +94,10 @@ export function SettingsPage() {
     dismissReminder,
   } = useWeeklyBackupReminder(exportData);
   const { shareApp, isInstallAvailable, isStandalone, triggerInstall } = usePWA();
+  const { session, user } = useAuth();
   const { t, language, setLanguage, isRtl } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
+  const activeAvatar = session ? extractUserAvatarUrl(user, settings.avatar) : settings.avatar;
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>("unsupported");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -220,15 +226,17 @@ export function SettingsPage() {
         <div className="mt-5 flex flex-col items-center gap-4 sm:flex-row sm:items-center">
           <div className="relative shrink-0">
             <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-border">
-              {settings.avatar ? (
-                settings.avatar.startsWith("data:") ? (
+              {activeAvatar ? (
+                activeAvatar.startsWith("data:") ||
+                activeAvatar.startsWith("http://") ||
+                activeAvatar.startsWith("https://") ? (
                   <img
-                    src={settings.avatar}
+                    src={activeAvatar}
                     alt={t("settings.profile")}
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-4xl">{settings.avatar}</span>
+                  <span className="text-4xl">{activeAvatar}</span>
                 )
               ) : (
                 <User className="h-10 w-10 text-muted-foreground" />
@@ -593,6 +601,25 @@ export function SettingsPage() {
           />
         </div>
       </section>
+
+      {/* ── Danger Zone / Account Deletion ───────────────────────────────── */}
+      {session && (
+        <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <span>Danger Zone</span>
+          </div>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Delete Account</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Permanently delete your account, synced habits, streaks, and all cloud backups.
+              </p>
+            </div>
+            <DeleteAccountDialog />
+          </div>
+        </section>
+      )}
 
       {/* ── Help & Support ───────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">

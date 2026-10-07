@@ -3,17 +3,18 @@ import { Download, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/context";
+import { useAuth } from "@/auth/auth-context";
 
 interface BackupReminderProps {
   /** Controls reminder visibility. */
-  visible?: boolean;
+  visible?: boolean | undefined;
   /** Triggers data export and clears the reminder. */
   onExport: () => void;
   /** Snoozes the reminder for 7-14 days. */
   onSnooze: () => void;
   /** Dismisses the reminder (persisting snooze). */
   onDismiss: () => void;
-  className?: string;
+  className?: string | undefined;
 }
 
 /**
@@ -21,6 +22,7 @@ interface BackupReminderProps {
  *
  * Renders as a compact, subtle inline alert strip inside the Settings page.
  * Completely in-flow (never fixed or floating) so it never blocks UI elements.
+ * Suppressed completely whenever a Supabase user session is active.
  */
 export function BackupReminder({
   visible = true,
@@ -30,8 +32,10 @@ export function BackupReminder({
   className,
 }: BackupReminderProps) {
   const { t } = useTranslation();
+  const { session } = useAuth();
 
-  if (!visible) return null;
+  // If user is authenticated to Supabase cloud, data is already backed up; hide prompt entirely
+  if (!visible || session) return null;
 
   return (
     <div
@@ -97,4 +101,3 @@ export function BackupReminder({
     </div>
   );
 }
-
