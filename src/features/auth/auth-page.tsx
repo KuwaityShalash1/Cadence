@@ -1,5 +1,5 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { FormEvent, useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/auth/auth-context";
@@ -13,7 +13,6 @@ import { supabase } from "@/lib/supabase";
 type AuthMode = "login" | "signup";
 
 export function AuthPage() {
-  const navigate = useNavigate();
   const { isConfigured, isLoading, session, signIn, signUp } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
@@ -22,156 +21,88 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [isProcessingToken, setIsProcessingToken] = useState(() => {
+  const [isAuthenticating, setIsAuthenticating] = useState(() => {
     if (typeof window !== "undefined") {
-      const hash = window.location.hash;
       return (
-        hash.includes("access_token=") ||
-        hash.includes("code=") ||
-        window.location.search.includes("code=")
+        window.location.hash.includes("access_token") &&
+        window.location.hash.includes("refresh_token")
       );
     }
     return false;
   });
 
-  const redirectToDashboard = useCallback(() => {
-    if (typeof window !== "undefined") {
-      // Clear hash parameters from URL bar to prevent tokens lingering in history
-      if (window.location.hash) {
-        window.history.replaceState(null, "", window.location.pathname);
-      }
-      // Force immediate browser navigation to app root
-      window.location.replace("/");
-    } else {
-      void navigate({ to: "/", replace: true });
-    }
-  }, [navigate]);
-
+  // 1. Explicitly check window.location.hash on mount for OAuth tokens
   useEffect(() => {
-    let isMounted = true;
-
-    // Safety timeout: prevent spinner from hanging infinitely if OAuth exchange fails
-    const safetyTimer = setTimeout(() => {
-      if (isMounted) {
-        setIsProcessingToken(false);
-      }
-    }, 4000);
-
-    // 1. If context already contains an active session, redirect immediately
-    if (session) {
-      clearTimeout(safetyTimer);
-      redirectToDashboard();
-      return;
-    }
-
-    // 2. Process hash tokens or auth code on mount
-    const handleAuthTokens = async () => {
-      if (typeof window === "undefined") return;
-
-      const rawHash = window.location.hash.startsWith("#")
-        ? window.location.hash.slice(1)
-        : window.location.hash;
-      const hashParams = new URLSearchParams(rawHash);
-      const searchParams = new URLSearchParams(window.location.search);
-
-      // Check for OAuth error returned by provider
-      const oauthErrorDesc =
-        hashParams.get("error_description") ||
-        hashParams.get("error") ||
-        searchParams.get("error_description") ||
-        searchParams.get("error");
-
-      if (oauthErrorDesc) {
-        if (isMounted) {
-          setError(decodeURIComponent(oauthErrorDesc.replace(/\+/g, " ")));
-          setIsProcessingToken(false);
-          window.history.replaceState(null, "", window.location.pathname);
-        }
+    const handleOAuthHash = async () => {
+      if (typeof window === "undefined" || !window.location.hash) {
         return;
       }
 
-      const accessToken = hashParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token");
+      const hash = window.location.hash.startsWith("#")
+        ? window.location.hash.substring(1)
+        : window.location.hash;
 
-      if (accessToken) {
-        try {
-          const { data, error: setSessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || "",
-          });
+      // 2. If window.location.hash contains access_token and refresh_token, parse them out manually
+      if (hash.includes("access_token") && hash.includes("refresh_token")) {
+        setIsAuthenticating(true);
+        const params = new URLSearchParams(hash);
+        const access_token = params.get("access_token");
+        const refresh_token = params.get("refresh_token");
 
-          if (!setSessionError && data.session) {
-            clearTimeout(safetyTimer);
-            redirectToDashboard();
-            return;
+        if (access_token && refresh_token) {
+          try {
+            // 3. Call supabase.auth.setSession({ access_token, refresh_token }) with the parsed values
+            const { data, error: sessionError } = await supabase.auth.setSession({
+              access_token,
+              refresh_token,
+            });
+
+            // 4. Upon successful manual session creation, force a redirect to the main dashboard (/)
+            if (!sessionError && data.session) {
+              window.history.replaceState(null, "", window.location.pathname);
+              window.location.replace("/");
+              return;
+            }
+
+            if (sessionError) {
+              console.error("Failed to establish session from URL hash:", sessionError);
+              setError(sessionError.message);
+              setIsAuthenticating(false);
+            }
+          } catch (err) {
+            console.error("Error setting session from URL hash:", err);
+            setIsAuthenticating(false);
           }
-
-          if (setSessionError) {
-            console.warn(
-              "Manual setSession returned error, verifying getSession():",
-              setSessionError.message,
-            );
-          }
-        } catch (err) {
-          console.error("Failed to set session from URL hash:", err);
+        } else {
+          setIsAuthenticating(false);
         }
-      }
-
-      // Handle PKCE code flow if present
-      const code = searchParams.get("code") || hashParams.get("code");
-      if (code) {
-        try {
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (!exchangeError && data.session) {
-            clearTimeout(safetyTimer);
-            redirectToDashboard();
-            return;
-          }
-        } catch (err) {
-          console.error("Failed to exchange OAuth code for session:", err);
-        }
-      }
-
-      // 3. Fallback verification via supabase.auth.getSession()
-      try {
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-
-        if (currentSession) {
-          clearTimeout(safetyTimer);
-          redirectToDashboard();
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to retrieve Supabase session:", err);
-      }
-
-      // If tokens existed but no session was established, release loading state
-      if (isMounted && (accessToken || code)) {
-        setIsProcessingToken(false);
       }
     };
 
-    void handleAuthTokens();
+    void handleOAuthHash();
+  }, []);
 
-    // 4. Listen for auth state changes (catches asynchronous client detection)
+  // Redirect to main dashboard if session is already active in context
+  useEffect(() => {
+    if (session) {
+      window.location.replace("/");
+    }
+  }, [session]);
+
+  // Fallback: listen to auth state changes for session confirmation
+  useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      if (!isMounted) return;
-      if (currentSession || event === "SIGNED_IN") {
-        clearTimeout(safetyTimer);
-        redirectToDashboard();
+      if (currentSession && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+        window.location.replace("/");
       }
     });
 
     return () => {
-      isMounted = false;
-      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
-  }, [redirectToDashboard, session]);
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -190,7 +121,7 @@ export function AuthPage() {
       setMessage("Account created. Check your email if confirmation is required.");
     } else {
       setMessage("You are signed in. Redirecting...");
-      redirectToDashboard();
+      window.location.replace("/");
     }
   };
 
@@ -210,12 +141,12 @@ export function AuthPage() {
     }
   };
 
-  if ((isLoading || isProcessingToken) && !error) {
+  if ((isLoading || isAuthenticating) && !error) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading" />
-          <p className="text-sm text-muted-foreground">Completing sign in...</p>
+          <p className="text-sm text-muted-foreground">Authenticating...</p>
         </div>
       </main>
     );
