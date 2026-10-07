@@ -16,6 +16,10 @@ import { sanitizeSvgIcon } from "@/components/icon-map";
 
 export interface SyncableRecord {
   id: string;
+  pending_sync?: boolean;
+  synced?: boolean;
+  __syncUpdatedAt?: string;
+  updatedAt?: number | string;
   [key: string]: unknown;
 }
 
@@ -28,7 +32,16 @@ export interface SyncRecord {
 }
 
 const SYNC_TOMBSTONES_ID = "sync-tombstones";
-type Tombstones = { id: typeof SYNC_TOMBSTONES_ID; values: Record<string, string> };
+
+export interface TombstoneEntry {
+  updatedAt: string;
+  pending_sync: boolean;
+}
+
+type Tombstones = {
+  id: typeof SYNC_TOMBSTONES_ID;
+  values: Record<string, TombstoneEntry | string>;
+};
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -36,30 +49,65 @@ function nowIso(): string {
 
 function markForSync<T extends { id: string }>(
   value: T,
-): T & { __syncUpdatedAt: string; synced: boolean } {
-  return { ...value, __syncUpdatedAt: nowIso(), synced: false };
+): T & { __syncUpdatedAt: string; synced: boolean; pending_sync: boolean } {
+  return { ...value, __syncUpdatedAt: nowIso(), synced: false, pending_sync: true };
+}
+
+function saveLocalFallback<T extends { id: string }>(store: string, item: T): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    const key = `cadence_fallback_${store}`;
+    const raw = localStorage.getItem(key);
+    const list: T[] = raw ? JSON.parse(raw) : [];
+    const index = list.findIndex((i) => i.id === item.id);
+    if (index >= 0) {
+      list[index] = item;
+    } else {
+      list.push(item);
+    }
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch (err) {
+    console.error(`Failed to save fallback in localStorage for ${store}:`, err);
+  }
 }
 
 function write<T extends { id: string }>(
   store: Parameters<typeof put>[0],
   value: T,
 ): Promise<void> {
-  return put(store, markForSync(value)).then(() => {
-    void import("@/lib/sync")
-      .then(({ pushPendingRecords }) => pushPendingRecords())
-      .catch((error: unknown) => console.error("Background sync push failed.", error));
-  });
+  const marked = markForSync(value);
+  return put(store, marked)
+    .catch((err) => {
+      console.warn(`IndexedDB write error for ${store}:${value.id}, saving fallback:`, err);
+      saveLocalFallback(store, marked);
+    })
+    .then(() => {
+      void import("@/lib/sync")
+        .then(({ pushPendingRecords }) => pushPendingRecords())
+        .catch((error: unknown) => {
+          // Mutation is preserved locally with pending_sync: true
+          console.warn("Background sync push deferred or failed:", error);
+        });
+    });
 }
 
 function writeMany<T extends { id: string }>(
   store: Parameters<typeof putMany>[0],
   values: T[],
 ): Promise<void> {
-  return putMany(store, values.map(markForSync)).then(() => {
-    void import("@/lib/sync")
-      .then(({ pushPendingRecords }) => pushPendingRecords())
-      .catch((error: unknown) => console.error("Background sync push failed.", error));
-  });
+  const markedValues = values.map(markForSync);
+  return putMany(store, markedValues)
+    .catch((err) => {
+      console.warn(`IndexedDB writeMany error for ${store}, saving fallback:`, err);
+      for (const v of markedValues) saveLocalFallback(store, v);
+    })
+    .then(() => {
+      void import("@/lib/sync")
+        .then(({ pushPendingRecords }) => pushPendingRecords())
+        .catch((error: unknown) => {
+          console.warn("Background sync push deferred or failed:", error);
+        });
+    });
 }
 
 async function recordTombstone(store: string, id: string): Promise<void> {
@@ -69,8 +117,27 @@ async function recordTombstone(store: string, id: string): Promise<void> {
   };
   await put("meta", {
     id: SYNC_TOMBSTONES_ID,
-    values: { ...existing.values, [`${store}:${id}`]: nowIso() },
+    values: {
+      ...existing.values,
+      [`${store}:${id}`]: { updatedAt: nowIso(), pending_sync: true },
+    },
   });
+}
+
+export async function clearTombstone(store: string, id: string): Promise<void> {
+  try {
+    const existing = await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID);
+    if (existing?.values) {
+      const key = `${store}:${id}`;
+      if (key in existing.values) {
+        const nextValues = { ...existing.values };
+        delete nextValues[key];
+        await put("meta", { id: SYNC_TOMBSTONES_ID, values: nextValues });
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to clear tombstone for ${store}:${id}:`, error);
+  }
 }
 
 function removeAndSync(store: Parameters<typeof remove>[0], id: string): Promise<void> {
@@ -78,7 +145,9 @@ function removeAndSync(store: Parameters<typeof remove>[0], id: string): Promise
     await recordTombstone(store, id);
     void import("@/lib/sync")
       .then(({ pushPendingRecords }) => pushPendingRecords())
-      .catch((error: unknown) => console.error("Background sync delete push failed.", error));
+      .catch((error: unknown) => {
+        console.warn("Background sync delete push deferred or failed:", error);
+      });
   });
 }
 
@@ -268,9 +337,133 @@ export async function mergeSyncRecord(record: SyncRecord): Promise<void> {
     return;
   }
   if (record.data) {
-    const dataWithSynced = { ...record.data, synced: true };
+    const { pending_sync, ...rest } = record.data;
+    const dataWithSynced = { ...rest, synced: true };
     await put(record.store as Parameters<typeof put>[0], dataWithSynced);
   }
+}
+
+/**
+ * Removes the pending_sync flag from a local record and marks it as synced: true.
+ * Executed immediately upon successful push to Supabase cloud.
+ */
+export async function clearPendingSyncFlag(
+  store: Parameters<typeof put>[0],
+  id: string,
+  recordData?: SyncableRecord,
+): Promise<void> {
+  try {
+    const current = recordData ?? (await getOne<SyncableRecord>(store, id));
+    if (current) {
+      const { pending_sync, ...rest } = current;
+      const cleanRecord = {
+        ...rest,
+        synced: true,
+        __syncUpdatedAt: (current.__syncUpdatedAt as string) ?? nowIso(),
+      };
+      await put(store, cleanRecord);
+    }
+  } catch (error) {
+    console.error(`Failed to clear pending_sync flag for ${store}:${id}:`, error);
+  }
+}
+
+export interface PendingSyncItem {
+  store: Parameters<typeof put>[0];
+  id: string;
+  data: SyncableRecord | null;
+  updatedAt: string;
+  deleted: boolean;
+}
+
+/**
+ * Fetches all local items marked with pending_sync: true (or un-synced) across
+ * all database stores, as well as pending deletion tombstones.
+ */
+export async function getPendingSyncRecords(): Promise<PendingSyncItem[]> {
+  const pending: PendingSyncItem[] = [];
+
+  for (const store of [
+    "habits",
+    "habitLogs",
+    "groups",
+    "goals",
+    "routines",
+    "routineLogs",
+    "badHabits",
+    "meta",
+  ] as const) {
+    try {
+      const records = await getAll<SyncableRecord>(store);
+      for (const record of records) {
+        if (store === "meta" && record.id === SYNC_TOMBSTONES_ID) continue;
+        if (record.pending_sync === true || record.synced === false) {
+          const updatedAt =
+            typeof record["__syncUpdatedAt"] === "string"
+              ? record["__syncUpdatedAt"]
+              : typeof record["updatedAt"] === "number"
+                ? new Date(record["updatedAt"]).toISOString()
+                : typeof record["updatedAt"] === "string"
+                  ? record["updatedAt"]
+                  : new Date().toISOString();
+
+          pending.push({
+            store,
+            id: record.id,
+            data: record,
+            updatedAt,
+            deleted: false,
+          });
+        }
+      }
+    } catch (storeError) {
+      console.error(`Failed reading store ${store} for pending sync:`, storeError);
+    }
+  }
+
+  // Pending tombstones (deleted records)
+  try {
+    const tombstones = await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID);
+    for (const [key, tombstoneVal] of Object.entries(tombstones?.values ?? {})) {
+      const separator = key.indexOf(":");
+      if (separator > 0) {
+        const store = key.slice(0, separator) as Parameters<typeof put>[0];
+        const id = key.slice(separator + 1);
+        let updatedAt = nowIso();
+        let isPending = true;
+
+        if (typeof tombstoneVal === "object" && tombstoneVal !== null) {
+          updatedAt = tombstoneVal.updatedAt;
+          isPending = tombstoneVal.pending_sync !== false;
+        } else if (typeof tombstoneVal === "string") {
+          updatedAt = tombstoneVal;
+          isPending = true;
+        }
+
+        if (isPending) {
+          pending.push({
+            store,
+            id,
+            data: null,
+            updatedAt,
+            deleted: true,
+          });
+        }
+      }
+    }
+  } catch (tombstoneError) {
+    console.error("Failed reading tombstones for pending sync:", tombstoneError);
+  }
+
+  return pending;
+}
+
+/**
+ * Returns the count of items currently awaiting synchronization to the cloud.
+ */
+export async function getPendingSyncCount(): Promise<number> {
+  const pending = await getPendingSyncRecords();
+  return pending.length;
 }
 
 /**
@@ -288,12 +481,15 @@ export function saveSyncedMany<T extends { id: string }>(
   store: Parameters<typeof putMany>[0],
   values: T[],
 ): Promise<void> {
-  const syncedValues = values.map((val) => ({
-    ...val,
-    synced: true,
-    __syncUpdatedAt: (val as Record<string, unknown>)["__syncUpdatedAt"] ?? nowIso(),
-  }));
-  return putMany(store, syncedValues as T[]);
+  const syncedValues = values.map((val) => {
+    const { pending_sync, ...rest } = val as unknown as Record<string, unknown>;
+    return {
+      ...rest,
+      synced: true,
+      __syncUpdatedAt: (val as Record<string, unknown>)["__syncUpdatedAt"] ?? nowIso(),
+    };
+  });
+  return putMany(store, syncedValues as unknown as T[]);
 }
 
 /**
@@ -303,12 +499,13 @@ export function saveSyncedOne<T extends { id: string }>(
   store: Parameters<typeof put>[0],
   value: T,
 ): Promise<void> {
+  const { pending_sync, ...rest } = value as unknown as Record<string, unknown>;
   const syncedValue = {
-    ...value,
+    ...rest,
     synced: true,
     __syncUpdatedAt: (value as Record<string, unknown>)["__syncUpdatedAt"] ?? nowIso(),
   };
-  return put(store, syncedValue as T);
+  return put(store, syncedValue as unknown as T);
 }
 
 export async function getLastSyncTimestamp(): Promise<string> {

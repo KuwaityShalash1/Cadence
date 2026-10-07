@@ -12,6 +12,8 @@ export const en = {
   "offline.offline": "Offline",
   "offline.backOnline": "Back online",
   "offline.hint": "Your data is saved on this device — Cadence keeps working offline.",
+  "sync.syncing": "Syncing...",
+  "sync.syncingTooltip": "Syncing changes with cloud...",
   "backup.title": "Protect your habit history",
   "backup.desc": "You haven't exported a JSON backup recently. Since Cadence is offline-first, manual backups ensure your progress is never lost.",
   "backup.descShort": "Export a backup copy to keep your habit history safe.",

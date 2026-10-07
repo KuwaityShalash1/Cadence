@@ -30,6 +30,7 @@ import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useApp } from "@/stores/app-store";
 import { useShortcuts } from "@/hooks/use-shortcuts";
 import { AuthProvider } from "@/auth/auth-context";
+import { SyncProvider } from "@/context/sync-context";
 import appCss from "../styles.css?url";
 
 function NotFoundContent() {
@@ -449,27 +450,29 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <AppProvider>
-          <LanguageProvider>
-            <HeadMetadataSync />
-            <NotificationScheduler />
-            <ServiceWorkerBootstrap />
-            <ClientAnalytics />
-            <ClientSpeedInsights />
-            <ThemeSync />
-            {/*
-            Command palette (⌘K / Ctrl+K). The launcher is part of the initial
-            bundle but renders nothing until the palette is first opened; the
-            palette component itself is a separate lazily imported chunk.
-          */}
-            <CommandPaletteLoader />
-            <TooltipProvider delayDuration={200}>
-              <ErrorBoundary>
-                {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-                <Outlet />
-              </ErrorBoundary>
-            </TooltipProvider>
-            <Toaster />
-          </LanguageProvider>
+          <SyncProvider>
+            <LanguageProvider>
+              <HeadMetadataSync />
+              <NotificationScheduler />
+              <ServiceWorkerBootstrap />
+              <ClientAnalytics />
+              <ClientSpeedInsights />
+              <ThemeSync />
+              {/*
+              Command palette (⌘K / Ctrl+K). The launcher is part of the initial
+              bundle but renders nothing until the palette is first opened; the
+              palette component itself is a separate lazily imported chunk.
+            */}
+              <CommandPaletteLoader />
+              <TooltipProvider delayDuration={200}>
+                <ErrorBoundary>
+                  {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+                  <Outlet />
+                </ErrorBoundary>
+              </TooltipProvider>
+              <Toaster />
+            </LanguageProvider>
+          </SyncProvider>
         </AppProvider>
       </AuthProvider>
     </QueryClientProvider>

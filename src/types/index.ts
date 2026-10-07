@@ -39,6 +39,8 @@ export interface Habit {
   lastFreezeResetDate: string; // YYYY-MM
   /** True when successfully synced to Supabase cloud. */
   synced?: boolean | undefined;
+  /** True when local modifications are pending push to Supabase cloud. */
+  pending_sync?: boolean | undefined;
 }
 
 export interface CustomIcon {
@@ -56,6 +58,8 @@ export interface HabitLog {
   updatedAt: number;
   /** True when successfully synced to Supabase cloud. */
   synced?: boolean | undefined;
+  /** True when local modifications are pending push to Supabase cloud. */
+  pending_sync?: boolean | undefined;
 }
 
 export interface Group {
@@ -66,6 +70,7 @@ export interface Group {
   /** ISO timestamp of the last modification (undefined for default groups). */
   updatedAt?: string | undefined;
   synced?: boolean | undefined;
+  pending_sync?: boolean | undefined;
 }
 
 export interface Goal {
@@ -87,6 +92,7 @@ export interface Goal {
   /** ISO timestamp of the last modification (undefined for legacy goals). */
   updatedAt?: string | undefined;
   synced?: boolean | undefined;
+  pending_sync?: boolean | undefined;
 }
 
 export interface RoutineStep {
@@ -96,6 +102,7 @@ export interface RoutineStep {
   /** ISO timestamp of the last modification. */
   updatedAt?: string | undefined;
   synced?: boolean | undefined;
+  pending_sync?: boolean | undefined;
 }
 
 export interface Routine {
@@ -111,6 +118,7 @@ export interface Routine {
   /** ISO timestamp of the last modification (undefined for legacy routines). */
   updatedAt?: string | undefined;
   synced?: boolean | undefined;
+  pending_sync?: boolean | undefined;
 }
 
 export interface RoutineLog {
@@ -120,6 +128,7 @@ export interface RoutineLog {
   completedStepIds: string[];
   updatedAt: number;
   synced?: boolean | undefined;
+  pending_sync?: boolean | undefined;
 }
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -199,6 +208,7 @@ export interface BadHabit {
    */
   usageLogs?: UsageLog[];
   synced?: boolean | undefined;
+  pending_sync?: boolean | undefined;
 }
 
 export interface TimerState {
@@ -232,3 +242,6 @@ export interface MigrationResult {
 }
 
 export type MigrationStatus = "idle" | "migrating" | "success" | "error";
+
+/** Background synchronization status. */
+export type SyncStatus = "idle" | "syncing" | "offline" | "error";

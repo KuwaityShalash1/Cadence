@@ -16,7 +16,7 @@ import { diffDays, toDateKey, todayKey } from "@/services/dates";
 import { buildLogMap, logKey, type LogMap } from "@/services/stats";
 import { playCompleteHabitSound, setSoundEnabled } from "@/lib/sound";
 import { useAuth } from "@/auth/auth-context";
-import { syncNow } from "@/lib/sync";
+import { subscribeToSync, syncNow } from "@/lib/sync";
 import { useLocalCloudMigration } from "@/hooks/use-local-cloud-migration";
 import type {
   BadHabit,
@@ -468,6 +468,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [ready, session]);
 
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+
+    const unsubscribe = subscribeToSync(() => {
+      void repo
+        .loadSnapshot()
+        .then((snapshot) => {
+          if (cancelled) return;
+          setState(snapshot);
+        })
+        .catch((err) => {
+          console.error("Failed refreshing snapshot after background sync:", err);
+        });
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [ready]);
+
   const logMap = useMemo(() => buildLogMap(state.habitLogs), [state.habitLogs]);
 
   const writeLog = useCallback(
@@ -579,6 +601,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       target: existing?.target ?? habit.target,
       status: value >= (existing?.target ?? habit.target) ? "complete" : "partial",
       updatedAt: Date.now(),
+      pending_sync: true,
+      synced: false,
     });
 
     /**
@@ -728,6 +752,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ? Math.max(0, (habitCurrent.freezesUsedThisMonth ?? 0) - 1)
               : (habitCurrent.freezesUsedThisMonth ?? 0) + 1,
             lastFreezeResetDate: monthKey,
+            updatedAt: new Date().toISOString(),
+            pending_sync: true,
+            synced: false,
           };
 
           // Daily log — freezing overrides any existing state (even 'complete');
@@ -746,6 +773,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               target: existingLog?.target ?? habit.target,
               status: "frozen",
               updatedAt: Date.now(),
+              pending_sync: true,
+              synced: false,
             };
             logToSave = frozenLog;
             nextLogs = existingLog
@@ -757,6 +786,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 ...existingLog,
                 status: "complete",
                 updatedAt: Date.now(),
+                pending_sync: true,
+                synced: false,
               };
               logToSave = restoredLog;
               nextLogs = prev.habitLogs.map((l) => (l.id === logId ? restoredLog : l));
@@ -824,6 +855,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           createdAt: Date.now(),
           /** ISO timestamp initialized on creation for sync metadata. */
           updatedAt: new Date().toISOString(),
+          pending_sync: true,
+          synced: false,
           freezesAllowedPerMonth: input.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT,
           freezesUsedThisMonth: input.freezesUsedThisMonth ?? 0,
           frozenDates: input.frozenDates ?? [],
@@ -859,16 +892,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       },
       updateHabit(habit) {
+        const updatedHabit: Habit = {
+          ...habit,
+          updatedAt: new Date().toISOString(),
+          pending_sync: true,
+          synced: false,
+        };
         setState((prev) => ({
           ...prev,
-          habits: prev.habits.map((h) => (h.id === habit.id ? habit : h)),
+          habits: prev.habits.map((h) => (h.id === habit.id ? updatedHabit : h)),
         }));
-        void repo.saveHabit(habit);
+        void repo.saveHabit(updatedHabit);
       },
       archiveHabit(id, archived) {
         let changed: Habit | undefined;
         setState((prev) => {
-          const habits = prev.habits.map((h) => (h.id === id ? { ...h, archived } : h));
+          const habits = prev.habits.map((h) =>
+            h.id === id
+              ? {
+                  ...h,
+                  archived,
+                  updatedAt: new Date().toISOString(),
+                  pending_sync: true,
+                  synced: false,
+                }
+              : h,
+          );
           changed = habits.find((h) => h.id === id);
           return { ...prev, habits };
         });
@@ -908,6 +957,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // record itself), so pushing the original object back restores the
         // full history. Idempotent: re-adding an id that already exists is a
         // no-op replacement, which guards against a double-clicked Undo.
+        const restoredHabit: Habit = {
+          ...habit,
+          updatedAt: new Date().toISOString(),
+          pending_sync: true,
+          synced: false,
+        };
         const goalsToSave: Goal[] = [];
 
         setState((prev) => {
@@ -921,8 +976,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             : prev.goals;
 
           const habits = prev.habits.some((h) => h.id === habit.id)
-            ? prev.habits.map((h) => (h.id === habit.id ? habit : h))
-            : [...prev.habits, habit];
+            ? prev.habits.map((h) => (h.id === habit.id ? restoredHabit : h))
+            : [...prev.habits, restoredHabit];
 
           return {
             ...prev,
@@ -931,7 +986,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           };
         });
 
-        void repo.saveHabit(habit);
+        void repo.saveHabit(restoredHabit);
         for (const g of goalsToSave) void repo.saveGoal(g);
       },
       reorderHabits(orderedIds) {
@@ -939,7 +994,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setState((prev) => {
           const habits = prev.habits.map((h) => {
             const index = orderedIds.indexOf(h.id);
-            return index === -1 ? h : { ...h, order: index };
+            return index === -1
+              ? h
+              : {
+                  ...h,
+                  order: index,
+                  updatedAt: new Date().toISOString(),
+                  pending_sync: true,
+                  synced: false,
+                };
           });
           habitsToSave = habits;
           return { ...prev, habits };
@@ -973,6 +1036,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           target: existing?.target ?? habit.target,
           status: "skipped",
           updatedAt: Date.now(),
+          pending_sync: true,
+          synced: false,
         }));
       },
       clearLog(habitId, date) {
