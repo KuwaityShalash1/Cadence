@@ -4,6 +4,7 @@ import {
   getLastSyncTimestamp,
   getSyncRecords,
   mergeSyncRecord,
+  saveSyncedOne,
   setLastPushTimestamp,
   setLastSyncTimestamp,
   type SyncRecord,
@@ -42,8 +43,13 @@ export async function pushPendingRecords(): Promise<void> {
   if (!userId) return;
 
   const lastPushTimestamp = await getLastPushTimestamp();
-  const records = (await getSyncRecords()).filter((record) => record.updatedAt > lastPushTimestamp);
+  const records = (await getSyncRecords()).filter((record) => {
+    // Record is pending if not marked synced: true or modified after last push
+    const isExplicitlySynced = record.data?.["synced"] === true;
+    return !isExplicitlySynced || record.updatedAt > lastPushTimestamp;
+  });
   if (records.length === 0) return;
+
   const results = await Promise.all(
     records.map((record) =>
       supabase.rpc("upsert_cadence_sync_record", {
@@ -60,6 +66,14 @@ export async function pushPendingRecords(): Promise<void> {
     console.error("Unable to push local changes to Supabase.", failed.error);
     return;
   }
+
+  // Mark all successfully pushed records as synced: true in local storage
+  for (const record of records) {
+    if (!record.deleted && record.data) {
+      await saveSyncedOne(record.store as Parameters<typeof saveSyncedOne>[0], record.data);
+    }
+  }
+
   const newestTimestamp = records.reduce(
     (latest, record) => (record.updatedAt > latest ? record.updatedAt : latest),
     lastPushTimestamp,
@@ -114,6 +128,14 @@ export async function syncNow(): Promise<boolean> {
     return false;
   }
   syncInFlight = (async () => {
+    const userId = await getAuthenticatedUserId();
+    if (userId) {
+      const { hasUserBeenMigrated, mergeLocalDataToCloud } = await import("@/lib/data-merge");
+      if (!hasUserBeenMigrated(userId)) {
+        await mergeLocalDataToCloud(userId);
+        return;
+      }
+    }
     await pullRemoteRecords();
     await pushPendingRecords();
   })().finally(() => {

@@ -34,8 +34,10 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function markForSync<T extends { id: string }>(value: T): T & { __syncUpdatedAt: string } {
-  return { ...value, __syncUpdatedAt: nowIso() };
+function markForSync<T extends { id: string }>(
+  value: T,
+): T & { __syncUpdatedAt: string; synced: boolean } {
+  return { ...value, __syncUpdatedAt: nowIso(), synced: false };
 }
 
 function write<T extends { id: string }>(
@@ -266,8 +268,47 @@ export async function mergeSyncRecord(record: SyncRecord): Promise<void> {
     return;
   }
   if (record.data) {
-    await put(record.store as Parameters<typeof put>[0], record.data);
+    const dataWithSynced = { ...record.data, synced: true };
+    await put(record.store as Parameters<typeof put>[0], dataWithSynced);
   }
+}
+
+/**
+ * Removes a local record from IndexedDB directly without generating a sync tombstone.
+ * Used during conflict resolution when remapping duplicate local IDs to canonical IDs.
+ */
+export function removeLocalOnly(store: Parameters<typeof remove>[0], id: string): Promise<void> {
+  return remove(store, id);
+}
+
+/**
+ * Persists multiple items marked as synced: true without triggering sync push cycles.
+ */
+export function saveSyncedMany<T extends { id: string }>(
+  store: Parameters<typeof putMany>[0],
+  values: T[],
+): Promise<void> {
+  const syncedValues = values.map((val) => ({
+    ...val,
+    synced: true,
+    __syncUpdatedAt: (val as Record<string, unknown>)["__syncUpdatedAt"] ?? nowIso(),
+  }));
+  return putMany(store, syncedValues as T[]);
+}
+
+/**
+ * Persists a single item marked as synced: true without triggering sync push cycles.
+ */
+export function saveSyncedOne<T extends { id: string }>(
+  store: Parameters<typeof put>[0],
+  value: T,
+): Promise<void> {
+  const syncedValue = {
+    ...value,
+    synced: true,
+    __syncUpdatedAt: (value as Record<string, unknown>)["__syncUpdatedAt"] ?? nowIso(),
+  };
+  return put(store, syncedValue as T);
 }
 
 export async function getLastSyncTimestamp(): Promise<string> {

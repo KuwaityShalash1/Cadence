@@ -37,6 +37,8 @@ export interface Habit {
   freezesUsedThisMonth: number;
   frozenDates: string[]; // YYYY-MM-DD
   lastFreezeResetDate: string; // YYYY-MM
+  /** True when successfully synced to Supabase cloud. */
+  synced?: boolean | undefined;
 }
 
 export interface CustomIcon {
@@ -52,6 +54,8 @@ export interface HabitLog {
   target: number; // snapshot of the target at log time
   status: Exclude<LogStatus, "none">;
   updatedAt: number;
+  /** True when successfully synced to Supabase cloud. */
+  synced?: boolean | undefined;
 }
 
 export interface Group {
@@ -61,6 +65,7 @@ export interface Group {
   color: string;
   /** ISO timestamp of the last modification (undefined for default groups). */
   updatedAt?: string | undefined;
+  synced?: boolean | undefined;
 }
 
 export interface Goal {
@@ -81,6 +86,7 @@ export interface Goal {
   createdAt: number;
   /** ISO timestamp of the last modification (undefined for legacy goals). */
   updatedAt?: string | undefined;
+  synced?: boolean | undefined;
 }
 
 export interface RoutineStep {
@@ -89,6 +95,7 @@ export interface RoutineStep {
   habitId?: string | undefined;
   /** ISO timestamp of the last modification. */
   updatedAt?: string | undefined;
+  synced?: boolean | undefined;
 }
 
 export interface Routine {
@@ -103,6 +110,7 @@ export interface Routine {
   createdAt: number;
   /** ISO timestamp of the last modification (undefined for legacy routines). */
   updatedAt?: string | undefined;
+  synced?: boolean | undefined;
 }
 
 export interface RoutineLog {
@@ -111,6 +119,7 @@ export interface RoutineLog {
   date: string;
   completedStepIds: string[];
   updatedAt: number;
+  synced?: boolean | undefined;
 }
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -189,6 +198,7 @@ export interface BadHabit {
    * A relapse occurs only when the daily total exceeds limitValue.
    */
   usageLogs?: UsageLog[];
+  synced?: boolean | undefined;
 }
 
 export interface TimerState {
@@ -197,3 +207,28 @@ export interface TimerState {
   startedAt: number | null; // null while paused
   accumulatedMs: number;
 }
+
+/** Statistics captured during a local-to-cloud merge operation. */
+export interface MigrationStats {
+  habitsChecked: number;
+  habitsUpserted: number;
+  habitsResolved: number;
+  logsChecked: number;
+  logsUpserted: number;
+  logsResolved: number;
+  durationMs: number;
+}
+
+/** Result returned by the local-to-cloud migration utility. */
+export interface MigrationResult {
+  success: boolean;
+  stats: MigrationStats;
+  error?: string | undefined;
+  details?:
+    | {
+        remappedHabitIds: Record<string, string>;
+      }
+    | undefined;
+}
+
+export type MigrationStatus = "idle" | "migrating" | "success" | "error";

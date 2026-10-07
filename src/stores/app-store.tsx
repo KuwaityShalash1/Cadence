@@ -17,6 +17,7 @@ import { buildLogMap, logKey, type LogMap } from "@/services/stats";
 import { playCompleteHabitSound, setSoundEnabled } from "@/lib/sound";
 import { useAuth } from "@/auth/auth-context";
 import { syncNow } from "@/lib/sync";
+import { useLocalCloudMigration } from "@/hooks/use-local-cloud-migration";
 import type {
   BadHabit,
   AppSettings,
@@ -212,6 +213,8 @@ export interface AppActions {
   addCustomIcon: (icon: { id: string; svgContent: string }) => void;
   removeCustomIcon: (id: string) => void;
   getActiveTimer: () => TimerState | null;
+  /** Manually trigger local-to-cloud data sync/merge. */
+  syncData: () => Promise<boolean>;
 }
 
 export type Store = AppState & AppActions;
@@ -421,6 +424,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (timeout !== undefined) window.clearTimeout(timeout);
     };
   }, []);
+
+  useLocalCloudMigration({
+    onSuccess: async (result) => {
+      if (
+        result.stats.habitsUpserted > 0 ||
+        result.stats.habitsResolved > 0 ||
+        result.stats.logsUpserted > 0 ||
+        result.stats.logsResolved > 0
+      ) {
+        const snapshot = await repo.loadSnapshot();
+        setState(snapshot);
+        const soundVal = snapshot.settings.isSoundEnabled ?? !(snapshot.settings.isMuted ?? false);
+        setSoundEnabled(soundVal);
+      }
+    },
+  });
 
   useEffect(() => {
     if (!ready || !session) return;
@@ -670,7 +689,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
               ? { ...habit, freezesUsedThisMonth: 0, lastFreezeResetDate: monthKey }
               : habit;
 
-          const frozenDates = Array.isArray(habitCurrent.frozenDates) ? habitCurrent.frozenDates : [];
+          const frozenDates = Array.isArray(habitCurrent.frozenDates)
+            ? habitCurrent.frozenDates
+            : [];
           const isFrozen = frozenDates.includes(dayKey);
           const max = habitCurrent.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT;
 
@@ -1299,7 +1320,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             return { ...prev, timer: null };
           }
 
-          const elapsed = timer.accumulatedMs + (timer.startedAt ? Date.now() - timer.startedAt : 0);
+          const elapsed =
+            timer.accumulatedMs + (timer.startedAt ? Date.now() - timer.startedAt : 0);
           const minutes = Math.round(elapsed / 60000);
           const habit = prev.habits.find((h) => h.id === timer.habitId);
           if (!habit || minutes <= 0) {
@@ -1607,9 +1629,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addCustomIcon(icon: { id: string; svgContent: string }) {
         let updated: { id: string; svgContent: string }[] = [];
         setState((prev) => {
-          updated = Array.isArray(prev.customIcons)
-            ? [...prev.customIcons, icon]
-            : [icon];
+          updated = Array.isArray(prev.customIcons) ? [...prev.customIcons, icon] : [icon];
           return { ...prev, customIcons: updated };
         });
         if (updated.length > 0) void repo.saveCustomIcons(updated);
@@ -1626,6 +1646,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
       getActiveTimer() {
         return stateRef.current.timer;
+      },
+      async syncData() {
+        const changed = await syncNow();
+        if (changed) {
+          const snapshot = await repo.loadSnapshot();
+          setState(snapshot);
+        }
+        return changed;
       },
     };
   }, [writeLog, setCollapsed, toggleCollapse]);
