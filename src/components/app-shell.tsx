@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   PanelLeft,
   Menu,
+  LayoutDashboard,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -44,6 +45,7 @@ import { useAuth } from "@/auth/auth-context";
  */
 const NAV_ITEMS = [
   { labelKey: "nav.today", icon: Sun, to: "/" as const, exact: true },
+  { labelKey: "nav.dashboard", icon: LayoutDashboard, to: "/dashboard" as const, exact: false },
   { labelKey: "nav.calendar", icon: CalendarDays, to: "/calendar" as const, exact: false },
   { labelKey: "nav.stats", icon: BarChart3, to: "/stats" as const, exact: false },
   { labelKey: "nav.goals", icon: Target, to: "/goals" as const, exact: false },
@@ -348,14 +350,14 @@ function Shell({ children }: { children: ReactNode }) {
             <OfflineIndicator />
             {/* Profile pill — logical padding so it flips correctly in RTL */}
             <Link
-              to="/settings"
+              to="/dashboard"
               className="flex items-center gap-3 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
               aria-label={
                 isBackupDue
                   ? `${displayName} - ${t("backup.badgeAria", "Backup recommended")}`
                   : session
                     ? displayName
-                    : "Enable cloud sync"
+                    : "User Dashboard"
               }
             >
               <div className="relative shrink-0">

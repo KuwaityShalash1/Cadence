@@ -1,5 +1,6 @@
 export const en = {
   "nav.today": "Today",
+  "nav.dashboard": "Dashboard",
   "nav.calendar": "Calendar",
   "nav.stats": "Analytics",
   "nav.goals": "Goals",

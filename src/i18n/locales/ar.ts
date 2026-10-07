@@ -1,5 +1,6 @@
 export const ar = {
   "nav.today": "اليوم",
+  "nav.dashboard": "لوحة التحكم",
   "nav.calendar": "التقويم",
   "nav.stats": "التحليلات",
   "nav.goals": "الأهداف",
