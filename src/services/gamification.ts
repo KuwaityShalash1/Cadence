@@ -3,13 +3,19 @@ import { addDays, diffDays, rangeKeys, todayKey } from "./dates";
 import { isCompleteOn, streaks, type LogMap } from "./stats";
 import { isScheduledOn } from "./schedule";
 
+export type BadgeRarity = "bronze" | "silver" | "gold" | "diamond";
+
 export interface GamificationBadge {
   id: string;
   title: string;
   description: string;
   icon: string; // Lucide icon name
+  rarity: BadgeRarity;
   unlocked: boolean;
   progress: number; // 0..100
+  currentValue: number;
+  targetValue: number;
+  unit?: string;
   unlockedAt?: string | undefined;
 }
 
@@ -268,55 +274,243 @@ export function calculateGamificationStats(habits: Habit[], logMap: LogMap): Gam
     Math.max(0, Math.round((xpIntoCurrentLevel / xpNeededForNext) * 100)),
   );
 
-  // 8. Achievements & Badges
+  // 8. Achievements & Badges calculation
+  // Early Bird (< 8:00 AM) & Night Owl (>= 10:00 PM / 22:00) detection
+  let hasEarlyBird = false;
+  let hasNightOwl = false;
+
+  for (const log of Object.values(logMap)) {
+    const isCompleted = log.status === "complete" || (log.target > 0 && log.value >= log.target);
+    if (isCompleted && typeof log.updatedAt === "number" && !isNaN(log.updatedAt) && log.updatedAt > 0) {
+      const logHour = new Date(log.updatedAt).getHours();
+      if (logHour < 8) {
+        hasEarlyBird = true;
+      }
+      if (logHour >= 22) {
+        hasNightOwl = true;
+      }
+    }
+  }
+
+  // Iron Will: 14-day streak without using streak freezes
+  const allFrozenDates = new Set<string>();
+  for (const h of habits) {
+    if (Array.isArray(h.frozenDates)) {
+      for (const d of h.frozenDates) {
+        allFrozenDates.add(d);
+      }
+    }
+  }
+  for (const log of Object.values(logMap)) {
+    if (log.status === "frozen") {
+      allFrozenDates.add(log.date);
+    }
+  }
+
+  let maxIronWillStreak = 0;
+  let runningFreezeFreeStreak = 0;
+  let prevDateForIron: string | null = null;
+
+  for (const date of sortedDates) {
+    if (allFrozenDates.has(date)) {
+      runningFreezeFreeStreak = 0;
+      prevDateForIron = null;
+      continue;
+    }
+    if (!prevDateForIron) {
+      runningFreezeFreeStreak = 1;
+    } else {
+      const diff = diffDays(date, prevDateForIron);
+      if (diff === 1) {
+        runningFreezeFreeStreak += 1;
+      } else {
+        runningFreezeFreeStreak = 1;
+      }
+    }
+    prevDateForIron = date;
+    if (runningFreezeFreeStreak > maxIronWillStreak) {
+      maxIronWillStreak = runningFreezeFreeStreak;
+    }
+  }
+
+  // Also check individual active habits for freeze-free streaks
+  for (const habit of activeHabits) {
+    const habitLogs = Object.values(logMap).filter((l) => l.habitId === habit.id);
+    if (!habitLogs.length) continue;
+    const earliest = habitLogs.reduce((min, l) => (l.date < min ? l.date : min), habit.startDate);
+    const habitDays = rangeKeys(earliest < habit.startDate ? earliest : habit.startDate, today);
+    let habitFreezeFreeRun = 0;
+    for (const day of habitDays) {
+      if (!isScheduledOn(habit, day)) continue;
+      if (isCompleteOn(habit, logMap, day) && !allFrozenDates.has(day)) {
+        habitFreezeFreeRun += 1;
+        if (habitFreezeFreeRun > maxIronWillStreak) {
+          maxIronWillStreak = habitFreezeFreeRun;
+        }
+      } else {
+        habitFreezeFreeRun = 0;
+      }
+    }
+  }
+
+  // Triple Crown: Achieve 100% daily completion for 3 consecutive days
+  let maxConsecutivePerfectDays = 0;
+  let runningPerfectDays = 0;
+
+  let earliestPerfDate = addDays(today, -89);
+  for (const date of sortedDates) {
+    if (date < earliestPerfDate) earliestPerfDate = date;
+  }
+  const perfDaysRange = rangeKeys(earliestPerfDate, today);
+
+  for (const day of perfDaysRange) {
+    let dayScheduled = 0;
+    let dayCompleted = 0;
+    for (const habit of activeHabits) {
+      if (isScheduledOn(habit, day)) {
+        dayScheduled += 1;
+        if (isCompleteOn(habit, logMap, day)) {
+          dayCompleted += 1;
+        }
+      }
+    }
+    const isPerfect = dayScheduled > 0 && dayCompleted >= dayScheduled;
+    if (isPerfect) {
+      runningPerfectDays += 1;
+      if (runningPerfectDays > maxConsecutivePerfectDays) {
+        maxConsecutivePerfectDays = runningPerfectDays;
+      }
+    } else {
+      if (day !== today) {
+        runningPerfectDays = 0;
+      }
+    }
+  }
+
   const badges: GamificationBadge[] = [
+    // Bronze Tiers
     {
       id: "badge-first-step",
       title: "First Step",
       description: "Log your first habit completion",
       icon: "Sparkles",
+      rarity: "bronze",
       unlocked: totalCompletions >= 1,
       progress: Math.min(100, Math.round((totalCompletions / 1) * 100)),
+      currentValue: Math.min(totalCompletions, 1),
+      targetValue: 1,
+      unit: "completions",
     },
+    {
+      id: "badge-early-bird",
+      title: "Early Bird",
+      description: "Log a habit before 8:00 AM",
+      icon: "Sunrise",
+      rarity: "bronze",
+      unlocked: hasEarlyBird,
+      progress: hasEarlyBird ? 100 : 0,
+      currentValue: hasEarlyBird ? 1 : 0,
+      targetValue: 1,
+      unit: "morning",
+    },
+    {
+      id: "badge-night-owl",
+      title: "Night Owl",
+      description: "Log a habit after 10:00 PM",
+      icon: "Moon",
+      rarity: "bronze",
+      unlocked: hasNightOwl,
+      progress: hasNightOwl ? 100 : 0,
+      currentValue: hasNightOwl ? 1 : 0,
+      targetValue: 1,
+      unit: "night",
+    },
+    // Silver Tiers
     {
       id: "badge-week-streak",
       title: "7-Day Streak",
       description: "Maintain a 7-day consecutive streak",
       icon: "Flame",
+      rarity: "silver",
       unlocked: longestStreak >= 7,
       progress: Math.min(100, Math.round((longestStreak / 7) * 100)),
-    },
-    {
-      id: "badge-consistency-king",
-      title: "30-Day Master",
-      description: "Achieve a 30-day streak of daily consistency",
-      icon: "Crown",
-      unlocked: longestStreak >= 30,
-      progress: Math.min(100, Math.round((longestStreak / 30) * 100)),
-    },
-    {
-      id: "badge-century",
-      title: "Century Club",
-      description: "Complete 100 habits across your journey",
-      icon: "Award",
-      unlocked: totalCompletions >= 100,
-      progress: Math.min(100, Math.round((totalCompletions / 100) * 100)),
-    },
-    {
-      id: "badge-perfectionist",
-      title: "Flawless Week",
-      description: "Achieve 85%+ completion rate over 7 days",
-      icon: "Target",
-      unlocked: weeklyRate >= 85,
-      progress: Math.min(100, Math.round((weeklyRate / 85) * 100)),
+      currentValue: Math.min(longestStreak, 7),
+      targetValue: 7,
+      unit: "days",
     },
     {
       id: "badge-habit-builder",
       title: "Habit Architect",
       description: "Build and maintain 5 or more active habits",
       icon: "Layers",
+      rarity: "silver",
       unlocked: activeHabits.length >= 5,
       progress: Math.min(100, Math.round((activeHabits.length / 5) * 100)),
+      currentValue: Math.min(activeHabits.length, 5),
+      targetValue: 5,
+      unit: "habits",
+    },
+    {
+      id: "badge-triple-crown",
+      title: "Triple Crown",
+      description: "Achieve 100% daily completion for 3 consecutive days",
+      icon: "Trophy",
+      rarity: "silver",
+      unlocked: maxConsecutivePerfectDays >= 3,
+      progress: Math.min(100, Math.round((maxConsecutivePerfectDays / 3) * 100)),
+      currentValue: Math.min(maxConsecutivePerfectDays, 3),
+      targetValue: 3,
+      unit: "days",
+    },
+    // Gold Tiers
+    {
+      id: "badge-iron-will",
+      title: "Iron Will",
+      description: "Maintain a 14-day streak without using streak freezes",
+      icon: "ShieldCheck",
+      rarity: "gold",
+      unlocked: maxIronWillStreak >= 14,
+      progress: Math.min(100, Math.round((maxIronWillStreak / 14) * 100)),
+      currentValue: Math.min(maxIronWillStreak, 14),
+      targetValue: 14,
+      unit: "days",
+    },
+    {
+      id: "badge-perfectionist",
+      title: "Flawless Week",
+      description: "Achieve 85%+ completion rate over 7 days",
+      icon: "Target",
+      rarity: "gold",
+      unlocked: weeklyRate >= 85,
+      progress: Math.min(100, Math.round((weeklyRate / 85) * 100)),
+      currentValue: Math.min(weeklyRate, 85),
+      targetValue: 85,
+      unit: "%",
+    },
+    // Diamond / Legendary Tiers
+    {
+      id: "badge-consistency-king",
+      title: "30-Day Master",
+      description: "Achieve a 30-day streak of daily consistency",
+      icon: "Crown",
+      rarity: "diamond",
+      unlocked: longestStreak >= 30,
+      progress: Math.min(100, Math.round((longestStreak / 30) * 100)),
+      currentValue: Math.min(longestStreak, 30),
+      targetValue: 30,
+      unit: "days",
+    },
+    {
+      id: "badge-century",
+      title: "Century Club",
+      description: "Complete 100 habits across your journey",
+      icon: "Award",
+      rarity: "diamond",
+      unlocked: totalCompletions >= 100,
+      progress: Math.min(100, Math.round((totalCompletions / 100) * 100)),
+      currentValue: Math.min(totalCompletions, 100),
+      targetValue: 100,
+      unit: "completions",
     },
   ];
 

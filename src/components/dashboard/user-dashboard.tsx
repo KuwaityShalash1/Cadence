@@ -30,7 +30,7 @@ import { useTranslation } from "@/i18n";
 import { useSync } from "@/context/sync-context";
 import { useApp } from "@/stores/app-store";
 import { supabase } from "@/lib/supabase";
-import { calculateGamificationStats, type GamificationBadge } from "@/services/gamification";
+import { calculateGamificationStats } from "@/services/gamification";
 import { HabitIcon, getColorStyle } from "@/components/icon-map";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,25 +40,8 @@ import { UserAvatar } from "@/components/user-avatar";
 import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { AchievementsSection } from "./achievements-section";
 
-/** Map badge icon names to Lucide icons */
-function BadgeIcon({ name, className }: { name: string; className?: string }) {
-  switch (name) {
-    case "Flame":
-      return <Flame className={className} />;
-    case "Crown":
-      return <Crown className={className} />;
-    case "Award":
-      return <Award className={className} />;
-    case "Target":
-      return <Target className={className} />;
-    case "Layers":
-      return <Layers className={className} />;
-    case "Sparkles":
-    default:
-      return <Sparkles className={className} />;
-  }
-}
 
 export function UserDashboard() {
   const { t, language } = useTranslation();
@@ -536,74 +519,7 @@ export function UserDashboard() {
       </div>
 
       {/* ── 4. Gamification Badges & Achievements ────────────────────────── */}
-      <Card className="border-border/80">
-        <CardHeader className="p-5 pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Award className="h-4 w-4 text-primary" />
-                {t("dashboard.achievementsBadges", "Achievements & Badges")}
-              </CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                {t(
-                  "dashboard.achievementsDesc",
-                  "Earn milestone badges as your consistency compounds over time.",
-                )}
-              </CardDescription>
-            </div>
-            <span className="text-xs font-medium text-muted-foreground">
-              {t("dashboard.badgesUnlockedRatio", {
-                unlocked: stats.badges.filter((b) => b.unlocked).length,
-                total: stats.badges.length,
-              })}
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="p-5 pt-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {stats.badges.map((badge: GamificationBadge) => (
-              <div
-                key={badge.id}
-                className={cn(
-                  "flex items-start gap-3 p-3.5 rounded-xl border transition-all",
-                  badge.unlocked
-                    ? "border-primary/30 bg-primary/5 text-foreground shadow-xs"
-                    : "border-border/50 bg-muted/20 opacity-70",
-                )}
-              >
-                <div
-                  className={cn(
-                    "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
-                    badge.unlocked
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  <BadgeIcon name={badge.icon} className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-sm font-semibold truncate">
-                      {t(`dashboard.badge.${badge.id}.title`, badge.title)}
-                    </p>
-                    {badge.unlocked ? (
-                      <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                        {t("dashboard.badgeUnlocked", "Unlocked")}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">{badge.progress}%</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {t(`dashboard.badge.${badge.id}.desc`, badge.description)}
-                  </p>
-                  {!badge.unlocked && <Progress value={badge.progress} className="h-1.5 mt-2" />}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <AchievementsSection badges={stats.badges} />
 
       {/* ── 6. Analytics Link & Data Overview Footer ─────────────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-border bg-card/60 text-xs text-muted-foreground">
