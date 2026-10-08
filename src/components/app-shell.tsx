@@ -137,7 +137,9 @@ function Shell({ children }: { children: ReactNode }) {
           className={cn(
             "flex h-14 w-full items-center border-b border-border/40 shrink-0",
             enableSidebarTransition && "transition-all duration-200",
-            isSidebarCollapsed ? "justify-center px-0" : "justify-between px-3 mb-2",
+            // ps-2 aligns the logo's visual left edge with the navigation icons below,
+            // while pe-3 preserves the collapse button's alignment with the sidebar content edge.
+            isSidebarCollapsed ? "justify-center px-0" : "justify-between ps-2 pe-3 mb-2",
           )}
         >
           {isSidebarCollapsed ? (
