@@ -424,12 +424,13 @@ function RootShell({ children }: { children: ReactNode }) {
                 visibility: hidden !important;
               }
               /* Apply Cairo Arabic web font when Arabic locale is active */
-              html.font-arabic, html.font-arabic * {
-                font-family: Cairo, sans-serif !important;
+              html.font-arabic {
+                font-family: "Cairo", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
               }
             `,
           }}
         />
+        <link rel="stylesheet" href={appCss} />
         <HeadContent />
       </head>
       <body>

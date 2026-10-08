@@ -21,7 +21,7 @@ export function CadenceLogo({
 
   const logoImg = (
     <img
-      src="/logo.png"
+      src="/logo.svg"
       alt="Cadence logo"
       /**
        * The wordmark "Cadence" is always rendered next to the logo (or the
@@ -30,8 +30,9 @@ export function CadenceLogo({
        */
       aria-hidden="true"
       draggable={false}
-      width={iconSize}
-      height={iconSize}
+      width={iconSize ?? 32}
+      height={iconSize ?? 32}
+      style={{ maxWidth: iconSize ?? 32, maxHeight: iconSize ?? 32 }}
       className={cn(
         "shrink-0 h-8 w-8 object-contain",
         iconClassName,
