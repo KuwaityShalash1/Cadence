@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/auth/auth-context";
 import { useApp } from "@/stores/app-store";
 import { deleteUserAccount } from "@/lib/account";
+import { useTranslation } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ const CONFIRMATION_PHRASE = "DELETE";
 export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogProps) {
   const { user, session } = useAuth();
   const { resetAll } = useApp();
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [confirmInput, setConfirmInput] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -53,7 +55,7 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
       const result = await deleteUserAccount(user);
 
       if (!result.success) {
-        toast.error(result.error || "Failed to delete account. Please try again.");
+        toast.error(result.error || t("deleteAccount.failed", "Failed to delete account. Please try again."));
         setIsDeleting(false);
         return;
       }
@@ -61,7 +63,7 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
       // Clear local device data so no orphaned database records remain
       await resetAll();
 
-      toast.success("Account and cloud data permanently deleted.");
+      toast.success(t("deleteAccount.success", "Account and cloud data permanently deleted."));
       setIsOpen(false);
 
       if (onDeleted) {
@@ -72,7 +74,7 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
       }
     } catch (err) {
       console.error("Error executing account deletion:", err);
-      toast.error("An unexpected error occurred during account deletion.");
+      toast.error(t("deleteAccount.unexpectedError", "An unexpected error occurred during account deletion."));
       setIsDeleting(false);
     }
   };
@@ -93,7 +95,7 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
         ) : (
           <Button variant="destructive" size="sm" className="gap-2">
             <Trash2 className="h-4 w-4" />
-            <span>Delete Account</span>
+            <span>{t("deleteAccount.trigger", "Delete Account")}</span>
           </Button>
         )}
       </AlertDialogTrigger>
@@ -104,27 +106,26 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
             <AlertTriangle className="h-6 w-6" />
           </div>
           <AlertDialogTitle className="text-xl">
-            Delete Account Permanently?
+            {t("deleteAccount.title", "Delete Account Permanently?")}
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground text-start">
             <span>
-              This action is <strong>irreversible</strong>. All your synchronized
-              cloud records, habit logs, completion streaks, and account settings
-              will be permanently removed from the Supabase database.
+              {t("deleteAccount.description", "This action is irreversible. All your synchronized cloud records, habit logs, completion streaks, and account settings will be permanently removed from the Supabase database.")}
             </span>
             <span className="block font-medium text-foreground pt-1">
-              To proceed, please type <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-destructive font-bold">{CONFIRMATION_PHRASE}</code> below:
+              {t("deleteAccount.confirmPrompt", "To proceed, please type {phrase} below:", { phrase: CONFIRMATION_PHRASE })}{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-destructive font-bold">{CONFIRMATION_PHRASE}</code>
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-2 py-2">
           <Label htmlFor="delete-account-confirm" className="sr-only">
-            Type DELETE to confirm
+            {t("deleteAccount.inputLabel", "Type DELETE to confirm")}
           </Label>
           <Input
             id="delete-account-confirm"
-            placeholder={`Type "${CONFIRMATION_PHRASE}" to confirm`}
+            placeholder={t("deleteAccount.inputPlaceholder", `Type "${CONFIRMATION_PHRASE}" to confirm`, { phrase: CONFIRMATION_PHRASE })}
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}
             disabled={isDeleting}
@@ -134,7 +135,9 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
         </div>
 
         <AlertDialogFooter className="gap-2 pt-2">
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>
+            {t("deleteAccount.cancel", "Cancel")}
+          </AlertDialogCancel>
           <Button
             type="button"
             variant="destructive"
@@ -145,12 +148,12 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
             {isDeleting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Deleting Account...</span>
+                <span>{t("deleteAccount.deleting", "Deleting Account...")}</span>
               </>
             ) : (
               <>
                 <Trash2 className="h-4 w-4" />
-                <span>Delete My Account</span>
+                <span>{t("deleteAccount.confirmButton", "Delete My Account")}</span>
               </>
             )}
           </Button>

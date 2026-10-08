@@ -731,7 +731,7 @@ export function AnalyticsDashboard() {
           icon={<Target className="h-4 w-4" />}
           label={t("analytics.completion")}
           value={`${Math.round(overallCompletion)}%`}
-          hint={t("analytics.scheduledOf").replace("{completed}", String(totalCompleted)).replace("{scheduled}", String(totalScheduled))}
+          hint={t("analytics.scheduledOf", { completed: totalCompleted, scheduled: totalScheduled })}
         />
         <StatCard
           icon={<TrendingUp className="h-4 w-4" />}

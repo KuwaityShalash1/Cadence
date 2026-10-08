@@ -661,14 +661,14 @@ export function SettingsPage() {
         <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium text-destructive">
             <AlertTriangle className="h-4 w-4" />
-            <span>Account & Session</span>
+            <span>{t("account.dangerZone", "Account & Session")}</span>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
             <div>
-              <p className="text-sm font-medium text-foreground">Sign Out</p>
+              <p className="text-sm font-medium text-foreground">{t("account.signOut", "Sign Out")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Sign out of your active Cadence account on this device.
+                {t("account.signOutDesc", "Sign out of your active Cadence account on this device.")}
               </p>
             </div>
             <Button
@@ -679,15 +679,15 @@ export function SettingsPage() {
               onClick={handleSignOut}
             >
               <LogOut className="h-4 w-4" />
-              <span>Sign Out</span>
+              <span>{t("account.signOut", "Sign Out")}</span>
             </Button>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-1">
             <div>
-              <p className="text-sm font-medium text-destructive">Delete Account</p>
+              <p className="text-sm font-medium text-destructive">{t("account.deleteAccount", "Delete Account")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Permanently delete your account, synced habits, streaks, and all cloud backups.
+                {t("account.deleteAccountDesc", "Permanently delete your account, synced habits, streaks, and all cloud backups.")}
               </p>
             </div>
             <DeleteAccountDialog />

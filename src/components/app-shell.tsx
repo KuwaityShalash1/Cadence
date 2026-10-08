@@ -417,7 +417,7 @@ function Shell({ children }: { children: ReactNode }) {
           aria-label={fabConfig.label}
           onClick={fabConfig.action}
           className={cn(
-            "fixed bottom-24 right-6 z-50 flex items-center justify-center rounded-full p-4 md:hidden",
+            "fixed bottom-24 end-6 z-50 flex items-center justify-center rounded-full p-4 md:hidden",
             "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
             "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
           )}

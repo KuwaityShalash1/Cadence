@@ -35,14 +35,14 @@ export function AboutPage() {
 
         {/* ── Maker's note ── */}
         <p className="max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base">
-          I'm{" "}
-          <span className="font-semibold text-foreground">Mohamed Shalash</span>
-          , a solo developer who got tired of bloated, subscription-based habit
-          trackers. I built Cadence to be completely offline-first, ridiculously
-          fast, and 100% private. Your data lives strictly in your browser's
-          IndexedDB.{" "}
+          {t("about.makerNotePrefix", "I'm")}{" "}
+          <span className="font-semibold text-foreground">{t("about.makerName", "Mohamed Shalash")}</span>
+          {t(
+            "about.makerNoteBody",
+            ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence to be completely offline-first, ridiculously fast, and 100% private. Your data lives strictly in your browser's IndexedDB.",
+          )}{" "}
           <span className="font-semibold text-foreground">
-            Zero tracking, zero cookies.
+            {t("about.makerNoteHighlight", "Zero tracking, zero cookies.")}
           </span>
         </p>
 
@@ -52,7 +52,7 @@ export function AboutPage() {
             href="https://github.com/KuwaityShalash1/Cadence"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="View source on GitHub"
+            aria-label={t("about.viewSourceGithub", "View source on GitHub")}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             {/* GitHub icon */}
@@ -71,7 +71,7 @@ export function AboutPage() {
             href="https://www.producthunt.com/products/cadence-habit-tracker"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="View on Product Hunt"
+            aria-label={t("about.viewOnProductHunt", "View on Product Hunt")}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             {/* Product Hunt logo mark */}

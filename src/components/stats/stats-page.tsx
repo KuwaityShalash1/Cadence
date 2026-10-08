@@ -158,7 +158,7 @@ export function StatsPage() {
           icon={Target}
           label={t("analytics.completion")}
           value={`${Math.round(overallCompletion * 100)}%`}
-          hint={t("analytics.rangeAverage").replace("{range}", rangeLabel)}
+          hint={t("analytics.rangeAverage", { range: rangeLabel })}
         />
         <MetricCard
           icon={TrendingUp}
@@ -183,7 +183,7 @@ export function StatsPage() {
       <div className="rounded-2xl border border-border bg-card p-4">
         <h2 className="font-display text-lg">{t("analytics.completionTrend")}</h2>
         <p className="text-xs text-muted-foreground">
-          {t("analytics.dailyCompletionOver").replace("{range}", rangeLabel)}
+          {t("analytics.dailyCompletionOver", { range: rangeLabel })}
         </p>
         <div className="mt-4 flex h-32 items-end gap-px">
           {trendPoints.map((p, i) => (

@@ -432,7 +432,7 @@ export const HabitRow = memo(
       }
       startTimer(habit.id);
       toast.success(
-        t("habitRow.timerStarted", "Timer started for {name}").replace("{name}", habit.name),
+        t("habitRow.timerStarted", "Timer started for {name}", { name: habit.name }),
       );
     }
 
@@ -585,9 +585,10 @@ export const HabitRow = memo(
         );
       } else if (result.reason === "limit") {
         toast.error(
-          t("habitRow.noFreezesLeftMonth", "No freezes left this month — {used} of {max} used")
-            .replace("{used}", String(result.used))
-            .replace("{max}", String(result.max)),
+          t("habitRow.noFreezesLeftMonth", "No freezes left this month — {used} of {max} used", {
+            used: result.used,
+            max: result.max,
+          }),
         );
       } else if (result.ok) {
         toast.success(t("habitRow.streakUnfrozen", "Streak unfrozen — back in action"));
@@ -608,10 +609,9 @@ export const HabitRow = memo(
           ? t("habitRow.unfreezeStreak", "Unfreeze Streak")
           : freezesExhausted
             ? t("habitRow.noFreezesLeftShort", "No freezes left this month")
-            : t("habitRow.freezeStreakWithCount", "Freeze Streak ({count} left)").replace(
-                "{count}",
-                String(freezeQuota.max - freezeQuota.used),
-              ),
+            : t("habitRow.freezeStreakWithCount", "Freeze Streak ({count} left)", {
+                count: freezeQuota.max - freezeQuota.used,
+              }),
         Icon: Snowflake,
         iconClassName: "text-cyan-400",
         disabled: freezesExhausted || readOnlyMode,
@@ -880,7 +880,7 @@ export const HabitRow = memo(
           renderStepperButton(
             `-${dec}`,
             -dec,
-            t("habitRow.subtractAmount", `Subtract ${dec}`).replace("{amount}", String(dec)),
+            t("habitRow.subtractAmount", `Subtract ${dec}`, { amount: dec }),
           ),
         )}
         {renderStepperButton("-1", -1, t("habitRow.subtractOne", "Subtract 1"))}
@@ -890,7 +890,7 @@ export const HabitRow = memo(
           renderStepperButton(
             `+${inc}`,
             inc,
-            t("habitRow.addAmount", `Add ${inc}`).replace("{amount}", String(inc)),
+            t("habitRow.addAmount", `Add ${inc}`, { amount: inc }),
           ),
         )}
       </div>
@@ -935,7 +935,7 @@ export const HabitRow = memo(
             <span
               role="button"
               tabIndex={0}
-              aria-label={t("habitRow.editNamedHabit").replace("{name}", habit.name)}
+              aria-label={t("habitRow.editNamedHabit", { name: habit.name })}
               className={cn(
                 "flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-transform hover:scale-105",
                 accentTileClass,
@@ -995,7 +995,7 @@ export const HabitRow = memo(
                   title={
                     currentStreak === 1
                       ? t("habitRow.oneDayStreak")
-                      : t("habitRow.daysStreak").replace("{count}", String(currentStreak))
+                      : t("habitRow.daysStreak", { count: currentStreak })
                   }
                 >
                   🔥 {currentStreak} {currentStreak === 1 ? t("habitRow.day") : t("habitRow.days")}
@@ -1033,7 +1033,7 @@ export const HabitRow = memo(
         {/* Dedicated visual progress bar — accent fill, smooth width animation */}
         <div
           role="progressbar"
-          aria-label={t("habitRow.progressFor").replace("{name}", habit.name)}
+          aria-label={t("habitRow.progressFor", { name: habit.name })}
           aria-valuemin={0}
           aria-valuemax={target}
           aria-valuenow={value}
@@ -1134,7 +1134,7 @@ export const HabitRow = memo(
                   renderStepperButton(
                     `-${dec}`,
                     -dec,
-                    t("habitRow.subtractAmount").replace("{amount}", String(dec)),
+                    t("habitRow.subtractAmount", undefined, { amount: dec }),
                     true,
                   ),
                 )}
@@ -1144,7 +1144,7 @@ export const HabitRow = memo(
                   renderStepperButton(
                     `+${inc}`,
                     inc,
-                    t("habitRow.addAmount").replace("{amount}", String(inc)),
+                    t("habitRow.addAmount", undefined, { amount: inc }),
                     true,
                   ),
                 )}
@@ -1269,7 +1269,7 @@ export const HabitRow = memo(
             <span
               role="button"
               tabIndex={0}
-              aria-label={t("habitRow.editNamedHabit").replace("{name}", habit.name)}
+              aria-label={t("habitRow.editNamedHabit", { name: habit.name })}
               className={cn(
                 "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-transform hover:scale-105",
                 accentTileClass,
@@ -1331,7 +1331,7 @@ export const HabitRow = memo(
                   title={
                     currentStreak === 1
                       ? t("habitRow.oneDayStreak")
-                      : t("habitRow.daysStreak").replace("{count}", String(currentStreak))
+                      : t("habitRow.daysStreak", { count: currentStreak })
                   }
                 >
                   🔥 {currentStreak}
@@ -1385,7 +1385,7 @@ export const HabitRow = memo(
           {/* Dedicated visual progress bar — accent fill, smooth width animation */}
           <div
             role="progressbar"
-            aria-label={t("habitRow.progressFor").replace("{name}", habit.name)}
+            aria-label={t("habitRow.progressFor", { name: habit.name })}
             aria-valuemin={0}
             aria-valuemax={target}
             aria-valuenow={value}

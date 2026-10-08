@@ -38,7 +38,7 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
           size="icon"
           className="h-8 w-8 rounded-full border-slate-200 bg-white shadow-sm hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
           onClick={() => adjustGoalValue(goal.id, -1)}
-          aria-label={t("goal.decreaseGoalAria").replace("{name}", goal.name)}
+          aria-label={t("goal.decreaseGoalAria", { name: goal.name })}
         >
           <Minus className="h-3.5 w-3.5" />
         </Button>
@@ -47,7 +47,7 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
           size="icon"
           className="h-8 w-8 rounded-full shadow-sm"
           onClick={() => adjustGoalValue(goal.id, 1)}
-          aria-label={t("goal.increaseGoalAria").replace("{name}", goal.name)}
+          aria-label={t("goal.increaseGoalAria", { name: goal.name })}
         >
           <Plus className="h-3.5 w-3.5" />
         </Button>
@@ -135,7 +135,7 @@ export function GoalCard({
         </div>
         <Progress
           value={Math.round(progress * 100)}
-          aria-label={t("goal.goalProgressFor").replace("{name}", goal.name)}
+          aria-label={t("goal.goalProgressFor", { name: goal.name })}
           className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
         />
       </div>

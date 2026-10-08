@@ -180,7 +180,8 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
             <HabitIcon
               name={habit.icon ?? "Flame"}
               customIcons={customIcons}
-              className={cn("h-5 w-5", { color: styles.rawColor })}
+              className="h-5 w-5"
+              style={{ color: styles.rawColor }}
             />
           </span>
           <div className="min-w-0 flex-1">

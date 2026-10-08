@@ -929,5 +929,32 @@ export const en = {
   "seo.authTitle": "Sign in — Cadence",
   "seo.authDesc": "Sign in or create a Cadence account to prepare for cloud sync.",
   "seo.dashboardTitle": "User Dashboard — Cadence Habit Tracker",
-  "seo.dashboardDesc": "View your habit streaks, monthly completion rates, and account profile."
+  "seo.dashboardDesc": "View your habit streaks, monthly completion rates, and account profile.",
+
+  // Account & Danger Zone
+  "account.dangerZone": "Account & Session",
+  "account.signOut": "Sign Out",
+  "account.signOutDesc": "Sign out of your active Cadence account on this device.",
+  "account.deleteAccount": "Delete Account",
+  "account.deleteAccountDesc": "Permanently delete your account, synced habits, streaks, and all cloud backups.",
+  "deleteAccount.trigger": "Delete Account",
+  "deleteAccount.title": "Delete Account Permanently?",
+  "deleteAccount.description": "This action is irreversible. All your synchronized cloud records, habit logs, completion streaks, and account settings will be permanently removed from the Supabase database.",
+  "deleteAccount.confirmPrompt": "To proceed, please type {phrase} below:",
+  "deleteAccount.inputPlaceholder": "Type \"{phrase}\" to confirm",
+  "deleteAccount.inputLabel": "Type DELETE to confirm",
+  "deleteAccount.cancel": "Cancel",
+  "deleteAccount.confirmButton": "Delete My Account",
+  "deleteAccount.deleting": "Deleting Account...",
+  "deleteAccount.success": "Account and cloud data permanently deleted.",
+  "deleteAccount.failed": "Failed to delete account. Please try again.",
+  "deleteAccount.unexpectedError": "An unexpected error occurred during account deletion.",
+
+  // About Maker
+  "about.makerNotePrefix": "I'm",
+  "about.makerName": "Mohamed Shalash",
+  "about.makerNoteBody": ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence to be completely offline-first, ridiculously fast, and 100% private. Your data lives strictly in your browser's IndexedDB.",
+  "about.makerNoteHighlight": "Zero tracking, zero cookies.",
+  "about.viewSourceGithub": "View source on GitHub",
+  "about.viewOnProductHunt": "View on Product Hunt"
 };

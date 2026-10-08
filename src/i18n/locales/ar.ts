@@ -929,5 +929,32 @@ export const ar = {
   "seo.authTitle": "تسجيل الدخول — كادنس",
   "seo.authDesc": "سجل الدخول أو أنشئ حساب كادنس للاستعداد للمزامنة السحابية.",
   "seo.dashboardTitle": "لوحة التحكم — متتبع العادات كادنس",
-  "seo.dashboardDesc": "استعرض سلاسل عاداتك ومعدلات الإنجاز الشهرية وملفك الشخصي."
+  "seo.dashboardDesc": "استعرض سلاسل عاداتك ومعدلات الإنجاز الشهرية وملفك الشخصي.",
+
+  // Account & Danger Zone
+  "account.dangerZone": "الحساب والجلسة",
+  "account.signOut": "تسجيل الخروج",
+  "account.signOutDesc": "تسجيل الخروج من حساب كادنس الحالي على هذا الجهاز.",
+  "account.deleteAccount": "حذف الحساب",
+  "account.deleteAccountDesc": "حذف حسابك نهائياً مع كافة العادات المتزامنة والسلاسل والنسخ السحابية الاحتياطية.",
+  "deleteAccount.trigger": "حذف الحساب",
+  "deleteAccount.title": "هل تريد حذف الحساب نهائياً؟",
+  "deleteAccount.description": "هذا الإجراء لا رجعة فيه. سيتم حذف جميع سجلاتك السحابية المتزامنة، وسجلات العادات، وسلاسل الإنجاز، وإعدادات الحساب نهائياً من قاعدة بيانات Supabase.",
+  "deleteAccount.confirmPrompt": "للمتابعة، يرجى كتابة {phrase} أدناه:",
+  "deleteAccount.inputPlaceholder": "اكتب \"{phrase}\" للتأكيد",
+  "deleteAccount.inputLabel": "اكتب DELETE للتأكيد",
+  "deleteAccount.cancel": "إلغاء",
+  "deleteAccount.confirmButton": "حذف حسابي",
+  "deleteAccount.deleting": "جارٍ حذف الحساب...",
+  "deleteAccount.success": "تم حذف الحساب والبيانات السحابية نهائياً.",
+  "deleteAccount.failed": "فشل حذف الحساب. يرجى المحاولة مرة أخرى.",
+  "deleteAccount.unexpectedError": "حدث خطأ غير متوقع أثناء حذف الحساب.",
+
+  // About Maker
+  "about.makerNotePrefix": "أنا",
+  "about.makerName": "محمد شلاش",
+  "about.makerNoteBody": "، مطور مستقل سئم من متتبعات العادات المليئة بالتعقيدات والاشتراكات الشهرية. بنيت كادنس ليكون محلياً بالكامل، فائق السرعة، وخاصاً بنسبة 100%. بياناتك تعيش حصرياً في IndexedDB داخل متصفحك.",
+  "about.makerNoteHighlight": "بدون أي تتبع، وبدون ملفات تعريف ارتباط.",
+  "about.viewSourceGithub": "عرض الشيفرة المصدرية على GitHub",
+  "about.viewOnProductHunt": "عرض على Product Hunt"
 };

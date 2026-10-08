@@ -338,7 +338,7 @@ export function GoalsPage() {
                             </div>
                             <Progress
                               value={pct}
-                              aria-label={t("goal.goalProgressFor").replace("{name}", goal.name)}
+                              aria-label={t("goal.goalProgressFor", { name: goal.name })}
                               className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
                             />
                           </div>

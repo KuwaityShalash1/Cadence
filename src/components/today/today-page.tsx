@@ -68,16 +68,19 @@ const FILTER_LABELS: Record<FilterMode, string> = {
   completed: "Done",
 };
 
-function getGreeting(t: (key: string, fallback?: string) => string, name?: string): string {
+function getGreeting(
+  t: (key: string, fallbackOrParams?: string | Record<string, string | number | undefined | null>, params?: Record<string, string | number | undefined | null>) => string,
+  name?: string,
+): string {
   const h = new Date().getHours();
   const displayName = name?.trim() || t("nav.user", "User");
   if (h < 12) {
-    return t("today.greetingMorning", "Good morning, {name}").replace("{name}", displayName);
+    return t("today.greetingMorning", "Good morning, {name}", { name: displayName });
   }
   if (h < 18) {
-    return t("today.greetingAfternoon", "Good afternoon, {name}").replace("{name}", displayName);
+    return t("today.greetingAfternoon", "Good afternoon, {name}", { name: displayName });
   }
-  return t("today.greetingEvening", "Good evening, {name}").replace("{name}", displayName);
+  return t("today.greetingEvening", "Good evening, {name}", { name: displayName });
 }
 
 /** User's actual timezone detected via Intl — used for the header timezone label. */
@@ -521,7 +524,7 @@ export function TodayPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("today.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("today.deleteDesc").replace("{name}", habitToDelete?.name ?? "")}
+              {t("today.deleteDesc", { name: habitToDelete?.name ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
