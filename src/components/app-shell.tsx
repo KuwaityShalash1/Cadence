@@ -149,7 +149,7 @@ function Shell({ children }: { children: ReactNode }) {
             >
               {/* Static Default Logo */}
               <div className="absolute inset-0 flex items-center justify-center transition-all duration-200 group-hover:opacity-0 group-hover:scale-75 pointer-events-none">
-                <CadenceLogo iconClassName="h-8 w-8 text-primary" showText={false} />
+                <CadenceLogo iconSrc="/logo.png" iconClassName="h-8 w-8 text-primary" showText={false} />
               </div>
               {/* Hover Arrow — direction-aware: PanelLeftOpen points the right way */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 pointer-events-none">
@@ -161,7 +161,7 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center">
-                  <CadenceLogo iconClassName="h-8 w-8 text-primary" showText={false} />
+                  <CadenceLogo iconSrc="/logo.png" iconClassName="h-8 w-8 text-primary" showText={false} />
                 </span>
                 <span className="font-semibold text-base leading-none tracking-tight truncate">
                   Cadence

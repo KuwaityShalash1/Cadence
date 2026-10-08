@@ -5,6 +5,7 @@ interface CadenceLogoProps extends React.HTMLAttributes<HTMLElement> {
   className?: string;
   size?: number | string;
   showText?: boolean;
+  iconSrc?: string;
   iconClassName?: string | undefined;
   textClassName?: string | undefined;
 }
@@ -13,6 +14,7 @@ export function CadenceLogo({
   className,
   size,
   showText = true,
+  iconSrc = "/logo.svg",
   iconClassName,
   textClassName,
   ...props
@@ -21,7 +23,7 @@ export function CadenceLogo({
 
   const logoImg = (
     <img
-      src="/logo.png"
+      src={iconSrc}
       alt="Cadence logo"
       /**
        * The wordmark "Cadence" is always rendered next to the logo (or the
