@@ -184,7 +184,7 @@ function Shell({ children }: { children: ReactNode }) {
               {/* Static Default Logo */}
               <div className="absolute inset-0 flex items-center justify-center transition-all duration-200 group-hover:opacity-0 group-hover:scale-75 pointer-events-none">
                 <img
-                  src="/logo.png"
+                  src="/logo.svg"
                   alt="Logo"
                   className="h-8 w-8 object-contain"
                   draggable={false}
@@ -200,7 +200,7 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <img
-                  src="/logo.png"
+                  src="/logo.svg"
                   alt="Logo"
                   className="h-8 w-8 shrink-0 object-contain"
                   draggable={false}

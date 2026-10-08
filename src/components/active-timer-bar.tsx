@@ -53,94 +53,96 @@ export function ActiveTimerBar() {
   const decrements = normalizeQuickDecrements(habit.quickDecrement);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div
-        role="status"
-        aria-live="polite"
-        className="w-full max-w-lg bg-background text-foreground border border-border rounded-2xl p-6 shadow-2xl transition-colors"
-      >
-        <div className="flex flex-col gap-6">
-          {/* Timer title & live duration count */}
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">{t("timer.title")} · {habit.name}</p>
-            <p className="numeric font-display text-5xl font-semibold text-foreground tracking-tight">
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-24 right-4 left-4 md:left-auto md:w-96 z-[60] bg-background/95 backdrop-blur-md text-foreground border border-border rounded-2xl p-4 shadow-xl transition-all"
+    >
+      <div className="flex flex-col gap-3">
+        {/* Timer title & live duration count */}
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-muted-foreground truncate">
+              {t("timer.title")} · {habit.name}
+            </p>
+            <p className="numeric font-display text-2xl md:text-3xl font-semibold text-foreground tracking-tight">
               {format(elapsed)}
             </p>
           </div>
 
-          {/* Quick adjust chips — configured decrement jumps, then configured
-              increments. Hidden entirely when the user configured no steps. */}
-          {decrements.length > 0 || increments.length > 0 ? (
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {decrements.map((dec) => (
-                <Button
-                  key={`dec-${dec}`}
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 rounded-full px-3 text-xs"
-                  onClick={() => adjustTimer(-dec)}
-                >
-                  -{dec}m
-                </Button>
-              ))}
-              {increments.map((inc) => (
-                <Button
-                  key={inc}
-                  variant="secondary"
-                  size="sm"
-                  className="h-8 rounded-full px-3 text-xs"
-                  onClick={() => adjustTimer(inc)}
-                >
-                  +{inc}m
-                </Button>
-              ))}
-            </div>
-          ) : null}
-
           {/* Action group */}
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center gap-1.5 shrink-0">
             {timer.startedAt ? (
               <Button
-                size="lg"
+                size="icon"
                 variant="outline"
-                className="h-14 w-14 rounded-full"
+                className="h-9 w-9 rounded-full"
                 aria-label={t("timer.pauseAria")}
                 onClick={pauseTimer}
               >
-                <Pause className="h-6 w-6" />
+                <Pause className="h-4 w-4" />
               </Button>
             ) : (
               <Button
-                size="lg"
+                size="icon"
                 variant="outline"
-                className="h-14 w-14 rounded-full"
+                className="h-9 w-9 rounded-full"
                 aria-label={t("timer.resumeAria")}
                 onClick={resumeTimer}
               >
-                <Play className="h-6 w-6" />
+                <Play className="h-4 w-4" />
               </Button>
             )}
             <Button
-              size="lg"
-              className="h-14 px-8 bg-primary text-primary-foreground hover:bg-primary/90 text-lg font-medium"
+              size="sm"
+              className="h-9 px-3 bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium rounded-xl"
               onClick={() => {
                 stopTimer(true);
                 toast.success(t("timer.sessionSaved"));
               }}
             >
-              <Square className="me-2 h-5 w-5" /> {t("timer.save")}
+              <Square className="me-1.5 h-3.5 w-3.5" /> {t("timer.save")}
             </Button>
             <Button
-              size="lg"
+              size="icon"
               variant="ghost"
-              className="h-14 w-14 rounded-full text-muted-foreground hover:text-foreground"
+              className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
               aria-label={t("timer.discardAria")}
               onClick={() => stopTimer(false)}
             >
-              <X className="h-6 w-6" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        {/* Quick adjust chips — configured decrement jumps, then configured
+            increments. Hidden entirely when the user configured no steps. */}
+        {decrements.length > 0 || increments.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/50">
+            {decrements.map((dec) => (
+              <Button
+                key={`dec-${dec}`}
+                variant="secondary"
+                size="sm"
+                className="h-7 rounded-full px-2.5 text-xs"
+                onClick={() => adjustTimer(-dec)}
+              >
+                -{dec}m
+              </Button>
+            ))}
+            {increments.map((inc) => (
+              <Button
+                key={inc}
+                variant="secondary"
+                size="sm"
+                className="h-7 rounded-full px-2.5 text-xs"
+                onClick={() => adjustTimer(inc)}
+              >
+                +{inc}m
+              </Button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

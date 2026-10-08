@@ -18,6 +18,7 @@
 /** Every SSR route of the app; kept in sync with `APP_ROUTES` in public/sw.js. */
 export const APP_ROUTE_PATHS = [
   "/",
+  "/dashboard",
   "/calendar",
   "/goals",
   "/quit-tracker",

@@ -81,6 +81,7 @@ const PRECACHE_URLS = [
  */
 const APP_ROUTES = [
   "/",
+  "/dashboard",
   "/calendar",
   "/goals",
   "/quit-tracker",

@@ -119,7 +119,7 @@ export function CalendarPage() {
             onClick={prevMonth}
             aria-label={t("calendar.prevMonth")}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
           </Button>
           <h2 className="font-display text-base font-semibold tracking-tight">{monthLabel}</h2>
           <Button
@@ -129,7 +129,7 @@ export function CalendarPage() {
             onClick={nextMonth}
             aria-label={t("calendar.nextMonth")}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 rtl:rotate-180" />
           </Button>
         </div>
 
