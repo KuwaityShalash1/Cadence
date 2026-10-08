@@ -22,7 +22,6 @@ import type { ReactNode } from "react";
 import { HabitEditorProvider, useHabitEditor } from "@/features/habits/habit-editor";
 import { TimerDock } from "@/components/timer-dock";
 import { Button } from "@/components/ui/button";
-import { CadenceLogo } from "@/components/ui/CadenceLogo";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
@@ -164,7 +163,7 @@ function Shell({ children }: { children: ReactNode }) {
           ) : (
             /* EXPANDED HEADER CONTAINER */
             <div className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-2.5 pl-0">
+              <div className="flex items-center gap-2.5">
                 <img
                   src="/logo.png"
                   alt="Logo"
@@ -296,11 +295,15 @@ function Shell({ children }: { children: ReactNode }) {
         {/* Safe area top padding ensures the header sits below the iOS status bar / dynamic island */}
         {/* Horizontal gutter matches the page container so header and feed stay aligned */}
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-4 md:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur md:justify-end">
-          <div className="md:hidden">
-            <Link to="/" className="flex items-center">
-              <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-xl">
-                <CadenceLogo iconClassName="w-6 h-6" textClassName="text-lg" />
-              </div>
+          <div className="flex items-center md:hidden">
+            <Link to="/" className="flex items-center gap-2.5">
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="h-7 w-7 object-contain"
+                draggable={false}
+              />
+              <span className="font-semibold text-base leading-none tracking-tight">Cadence</span>
             </Link>
           </div>
           <div className="flex items-center gap-2">
