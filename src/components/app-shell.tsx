@@ -54,7 +54,7 @@ const NAV_ITEMS = [
 const MOBILE_NAV = [
   { labelKey: "nav.today", icon: Sun, to: "/" as const, exact: true },
   { labelKey: "nav.routines", icon: ListChecks, to: "/routines" as const, exact: false },
-  { labelKey: "nav.dashboard", icon: LayoutDashboard, to: "/dashboard" as const, exact: false },
+  { labelKey: "nav.goals", icon: Target, to: "/goals" as const, exact: false },
   { labelKey: "nav.quitTracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
 ];
 
@@ -431,14 +431,6 @@ function Shell({ children }: { children: ReactNode }) {
             >
               <LayoutDashboard className="h-5 w-5 text-primary" />
               {t("nav.dashboard")}
-            </Link>
-            <Link
-              to="/goals"
-              onClick={() => setMoreOpen(false)}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-sm font-medium transition-colors hover:bg-accent"
-            >
-              <Target className="h-5 w-5 text-primary" />
-              {t("nav.goals")}
             </Link>
             <Link
               to="/calendar"
