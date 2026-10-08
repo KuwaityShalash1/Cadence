@@ -12,8 +12,7 @@ export function extractUserAvatarUrl(
   if (user?.user_metadata) {
     const meta = user.user_metadata as Record<string, unknown>;
     const googleAvatar =
-      (meta["avatar_url"] as string | undefined) ||
-      (meta["picture"] as string | undefined);
+      (meta["avatar_url"] as string | undefined) || (meta["picture"] as string | undefined);
 
     if (
       typeof googleAvatar === "string" &&
@@ -31,8 +30,7 @@ export function extractUserAvatarUrl(
       const data = identity.identity_data as Record<string, unknown> | undefined;
       if (data) {
         const identityAvatar =
-          (data["avatar_url"] as string | undefined) ||
-          (data["picture"] as string | undefined);
+          (data["avatar_url"] as string | undefined) || (data["picture"] as string | undefined);
         if (
           typeof identityAvatar === "string" &&
           identityAvatar.trim().length > 0 &&
@@ -62,40 +60,44 @@ export function extractUserAvatarUrl(
 }
 
 /**
- * Extracts the user's display name from Supabase session metadata,
- * falling back to local settings display name or email prefix.
+ * Extracts the user's display name, giving top priority to any custom local settings
+ * display name, then Supabase session metadata / Google Auth metadata, and finally email prefix.
  */
 export function extractUserDisplayName(
   user: User | null | undefined,
-  fallbackName?: string,
+  customDisplayName?: string,
 ): string {
+  // 1. Give precedence to custom display name configured in local settings
+  if (
+    customDisplayName &&
+    typeof customDisplayName === "string" &&
+    customDisplayName.trim().length > 0
+  ) {
+    return customDisplayName.trim();
+  }
+
+  // 2. Fall back to Supabase / OAuth user metadata (e.g. Google full_name)
   if (user?.user_metadata) {
     const meta = user.user_metadata as Record<string, unknown>;
-    const name =
-      (meta["full_name"] as string | undefined) ||
-      (meta["name"] as string | undefined);
+    const name = (meta["full_name"] as string | undefined) || (meta["name"] as string | undefined);
 
     if (typeof name === "string" && name.trim().length > 0) {
       return name.trim();
     }
   }
 
+  // 3. Fall back to identities data
   if (user?.identities && Array.isArray(user.identities)) {
     for (const identity of user.identities) {
       const data = identity.identity_data as Record<string, unknown> | undefined;
       if (data) {
         const identityName =
-          (data["full_name"] as string | undefined) ||
-          (data["name"] as string | undefined);
+          (data["full_name"] as string | undefined) || (data["name"] as string | undefined);
         if (typeof identityName === "string" && identityName.trim().length > 0) {
           return identityName.trim();
         }
       }
     }
-  }
-
-  if (fallbackName && typeof fallbackName === "string" && fallbackName.trim().length > 0) {
-    return fallbackName.trim();
   }
 
   if (user?.email) {
@@ -121,4 +123,3 @@ export function getInitials(name?: string | null): string {
   }
   return name.substring(0, 2).toUpperCase();
 }
-

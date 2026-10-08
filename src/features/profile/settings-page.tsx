@@ -17,6 +17,7 @@ import {
   Volume2,
   VolumeX,
   AlertTriangle,
+  LogOut,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -94,7 +95,7 @@ export function SettingsPage() {
     dismissReminder,
   } = useWeeklyBackupReminder(exportData);
   const { shareApp, isInstallAvailable, isStandalone, triggerInstall } = usePWA();
-  const { session, user } = useAuth();
+  const { session, user, signOut } = useAuth();
   const { t, language, setLanguage, isRtl } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
   const activeAvatar = session ? extractUserAvatarUrl(user, settings.avatar) : settings.avatar;
@@ -105,6 +106,13 @@ export function SettingsPage() {
   const [isIOS, setIsIOS] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
+
+  // Synchronize local displayName state whenever global settings update
+  useEffect(() => {
+    if (settings.displayName !== undefined) {
+      setDisplayName(settings.displayName);
+    }
+  }, [settings.displayName]);
 
   useEffect(() => {
     setNotificationPermission(getNotificationPermission());
@@ -188,6 +196,15 @@ export function SettingsPage() {
     const outcome = await triggerInstall();
     if (outcome === "accepted") toast.success(t("settings.installingApp"));
     else if (outcome === "unavailable") toast.error(t("settings.installUnavailable"));
+  }
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+      toast.success(t("settings.signedOut", "Signed out successfully."));
+    } catch {
+      toast.error(t("settings.signOutError", "Error signing out."));
+    }
   }
 
   return (
@@ -602,25 +619,6 @@ export function SettingsPage() {
         </div>
       </section>
 
-      {/* ── Danger Zone / Account Deletion ───────────────────────────────── */}
-      {session && (
-        <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <span>Danger Zone</span>
-          </div>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">Delete Account</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Permanently delete your account, synced habits, streaks, and all cloud backups.
-              </p>
-            </div>
-            <DeleteAccountDialog />
-          </div>
-        </section>
-      )}
-
       {/* ── Help & Support ───────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 text-sm font-medium">
@@ -641,6 +639,45 @@ export function SettingsPage() {
           </a>
         </div>
       </section>
+
+      {/* ── Account & Danger Zone Actions ─────────────────────────────────── */}
+      {session && (
+        <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <span>Account & Session</span>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">Sign Out</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Sign out of your active Cadence account on this device.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 h-9 text-muted-foreground hover:text-foreground"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-1">
+            <div>
+              <p className="text-sm font-medium text-destructive">Delete Account</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Permanently delete your account, synced habits, streaks, and all cloud backups.
+              </p>
+            </div>
+            <DeleteAccountDialog />
+          </div>
+        </section>
+      )}
 
       {/* Cropper Modal */}
       <ImageCropperModal

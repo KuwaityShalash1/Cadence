@@ -4,10 +4,11 @@ import {
   Award,
   CalendarCheck,
   CheckCircle2,
+  Cloud,
+  CloudOff,
   Crown,
   Flame,
   Layers,
-  LogOut,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -20,11 +21,8 @@ import {
   ArrowRight,
   Radio,
   Clock,
-  Settings,
   LogIn,
-  AlertTriangle,
 } from "lucide-react";
-import { toast } from "sonner";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 import { useAuth } from "@/auth/auth-context";
@@ -38,7 +36,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserAvatar } from "@/components/user-avatar";
-import { DeleteAccountDialog } from "@/components/delete-account-dialog";
 import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -63,13 +60,11 @@ function BadgeIcon({ name, className }: { name: string; className?: string }) {
 }
 
 export function UserDashboard() {
-  const { user: authUser, session, signOut, isConfigured } = useAuth();
+  const { user: authUser, session, isConfigured } = useAuth();
   const { habits, logMap, settings } = useApp();
-  const { isOnline, isSyncing, isRealtimeConnected, pendingCount, lastSyncedAt, triggerSync } =
-    useSync();
+  const { isOnline, isSyncing, isRealtimeConnected, pendingCount, lastSyncedAt } = useSync();
 
   const [refreshedUser, setRefreshedUser] = useState<SupabaseUser | null>(null);
-  const [isSyncTriggering, setIsSyncTriggering] = useState(false);
 
   // Retrieve latest authenticated user metadata from Supabase
   useEffect(() => {
@@ -111,32 +106,6 @@ export function UserDashboard() {
   // Compute optimized gamification and streak statistics
   const stats = useMemo(() => calculateGamificationStats(habits, logMap), [habits, logMap]);
 
-  const handleManualSync = async () => {
-    if (isSyncTriggering || isSyncing) return;
-    setIsSyncTriggering(true);
-    try {
-      const result = await triggerSync();
-      if (result) {
-        toast.success("Synchronized successfully with cloud.");
-      } else {
-        toast.info("Data is already up to date.");
-      }
-    } catch {
-      toast.error("Failed to sync data with cloud.");
-    } finally {
-      setIsSyncTriggering(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success("Signed out successfully.");
-    } catch {
-      toast.error("Error signing out.");
-    }
-  };
-
   return (
     <div className="space-y-6 pb-12">
       {/* ── 1. User Profile & Cloud Sync Hero Card ────────────────────────── */}
@@ -149,7 +118,9 @@ export function UserDashboard() {
             <div className="flex items-center gap-4 sm:gap-5 min-w-0">
               <div className="relative shrink-0">
                 <UserAvatar
-                  avatar={avatarUrl || (!avatarUrl && settings.avatar ? settings.avatar : undefined)}
+                  avatar={
+                    avatarUrl || (!avatarUrl && settings.avatar ? settings.avatar : undefined)
+                  }
                   name={fullName}
                   className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-border/80 shadow-md ring-4 ring-primary/10"
                   fallbackClassName="text-2xl font-bold"
@@ -217,45 +188,34 @@ export function UserDashboard() {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex flex-wrap items-center gap-2.5 pt-2 md:pt-0">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 h-9"
-                onClick={handleManualSync}
-                disabled={isSyncTriggering || isSyncing || !isOnline}
+            {/* Minimal non-clickable sync status indicator */}
+            <div className="flex items-center gap-2 self-start md:self-center">
+              <div
+                className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 backdrop-blur-xs px-3.5 py-1.5 text-xs font-medium text-muted-foreground select-none"
+                aria-live="polite"
               >
-                <RefreshCw
-                  className={cn("h-4 w-4", (isSyncTriggering || isSyncing) && "animate-spin")}
-                />
-                <span>{isSyncing ? "Syncing..." : "Sync Now"}</span>
-              </Button>
+                {isSyncing ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                    <span className="text-foreground">Syncing…</span>
+                  </>
+                ) : !isOnline ? (
+                  <>
+                    <CloudOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>Offline</span>
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-3.5 w-3.5 text-emerald-500" />
+                    <span className="text-foreground/90">Synced</span>
+                  </>
+                )}
+              </div>
 
-              <Link to="/settings">
-                <Button variant="outline" size="sm" className="gap-2 h-9">
-                  <Settings className="h-4 w-4" />
-                  <span>Settings</span>
-                </Button>
-              </Link>
-
-              {session ? (
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 h-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span className="hidden sm:inline">Sign Out</span>
-                  </Button>
-                  <DeleteAccountDialog />
-                </div>
-              ) : (
+              {!session && (
                 <Link to="/auth">
-                  <Button size="sm" className="gap-2 h-9 font-medium shadow-xs">
-                    <LogIn className="h-4 w-4" />
+                  <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs font-medium">
+                    <LogIn className="h-3.5 w-3.5" />
                     <span>Sign In</span>
                   </Button>
                 </Link>
@@ -265,37 +225,53 @@ export function UserDashboard() {
         </CardContent>
       </Card>
 
-      {/* ── 2. Hero Gamification Statistics Grid ─────────────────────────── */}
+      {/* ── 2. Gamification Statistics Cards ─────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {/* Current Streak */}
-        <Card className="border-border/70 bg-card/80 transition-all duration-200 hover:shadow-md">
-          <CardHeader className="p-4 pb-2">
+        {/* Current Streak — Primary Gamification Metric */}
+        <Card className="relative overflow-hidden border-amber-500/40 dark:border-amber-500/30 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-card dark:from-amber-500/20 dark:via-card/90 dark:to-card ring-1 ring-amber-500/20 dark:ring-amber-500/30 shadow-xs shadow-amber-500/10 transition-all duration-200 hover:shadow-md hover:border-amber-500/60">
+          <div className="absolute -top-8 -end-8 h-28 w-28 rounded-full bg-amber-500/15 blur-2xl pointer-events-none" />
+          <CardHeader className="p-4 pb-2 relative z-10">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Current Streak
-              </span>
-              <div className="grid h-8 w-8 place-items-center rounded-xl bg-amber-500/10 text-amber-500 dark:text-amber-400">
-                <Flame className="h-4 w-4" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  Current Streak
+                </span>
+                <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  Hero
+                </span>
+              </div>
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm shadow-amber-500/30">
+                <Flame className="h-5 w-5 fill-current" />
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-4 pt-0 relative z-10">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-3xl font-extrabold tracking-tight text-foreground">
+              <span className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-foreground">
                 {stats.currentStreak}
               </span>
-              <span className="text-xs font-medium text-muted-foreground">days</span>
+              <span className="text-sm font-semibold text-amber-600/90 dark:text-amber-400/90">
+                days
+              </span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {stats.currentStreak > 0
-                ? "Active streak in progress"
-                : "Complete a habit today to start"}
-            </p>
+            <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+              {stats.currentStreak > 0 ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                  </span>
+                  <span className="font-medium text-foreground/90">Active streak in progress</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground">Complete a habit today to start</span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Longest Streak */}
-        <Card className="border-border/70 bg-card/80 transition-all duration-200 hover:shadow-md">
+        <Card className="border-border/70 bg-card/80 transition-all duration-200 hover:shadow-md hover:border-border">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -313,12 +289,12 @@ export function UserDashboard() {
               </span>
               <span className="text-xs font-medium text-muted-foreground">days</span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Personal all-time record</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">Personal all-time record</p>
           </CardContent>
         </Card>
 
         {/* Weekly Completion Rate */}
-        <Card className="border-border/70 bg-card/80 transition-all duration-200 hover:shadow-md">
+        <Card className="border-border/70 bg-card/80 transition-all duration-200 hover:shadow-md hover:border-border">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -352,12 +328,12 @@ export function UserDashboard() {
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Last 7 days completion</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">Last 7 days completion</p>
           </CardContent>
         </Card>
 
         {/* Monthly Completion Rate */}
-        <Card className="border-border/70 bg-card/80 transition-all duration-200 hover:shadow-md">
+        <Card className="border-border/70 bg-card/80 transition-all duration-200 hover:shadow-md hover:border-border">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -374,7 +350,7 @@ export function UserDashboard() {
                 {stats.monthlyRate}%
               </span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               {stats.perfectDaysCount} perfect days in last 30d
             </p>
           </CardContent>
@@ -574,27 +550,6 @@ export function UserDashboard() {
           </div>
         </CardContent>
       </Card>
-
-      {/* ── 5. Account Security & Danger Zone ───────────────────────────── */}
-      {session && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardHeader className="p-5 pb-3">
-            <CardTitle className="text-base font-semibold text-destructive flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Account Security & Danger Zone
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Permanently delete your account, synced habits, streaks, and all cloud backups from Supabase.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-5 pt-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground">
-              Once deleted, your cloud account and habit history cannot be recovered.
-            </p>
-            <DeleteAccountDialog />
-          </CardContent>
-        </Card>
-      )}
 
       {/* ── 6. Analytics Link & Data Overview Footer ─────────────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-border bg-card/60 text-xs text-muted-foreground">
