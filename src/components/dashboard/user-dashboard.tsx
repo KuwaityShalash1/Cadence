@@ -108,29 +108,27 @@ export function UserDashboard() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* ── 1. User Profile & Cloud Sync Hero Card ────────────────────────── */}
-      <Card className="relative overflow-hidden border-border/80 bg-gradient-to-br from-card via-card to-primary/5 shadow-xs">
-        <div className="absolute end-0 top-0 h-48 w-48 -translate-y-12 translate-x-12 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-
-        <CardContent className="p-6 sm:p-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            {/* User Avatar + Identity */}
-            <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+      {/* ── 1. Condensed User Profile & Cloud Sync Bar ─────────────────── */}
+      <Card className="border-border/80 bg-card/90 shadow-2xs">
+        <CardContent className="p-3.5 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* User Avatar + Identity (Compact) */}
+            <div className="flex items-center gap-3 min-w-0">
               <div className="relative shrink-0">
                 <UserAvatar
                   avatar={
                     avatarUrl || (!avatarUrl && settings.avatar ? settings.avatar : undefined)
                   }
                   name={fullName}
-                  className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-border/80 shadow-md ring-4 ring-primary/10"
-                  fallbackClassName="text-2xl font-bold"
-                  iconClassName="h-10 w-10 text-muted-foreground"
+                  className="h-10 w-10 border border-border/80 shadow-2xs"
+                  fallbackClassName="text-sm font-semibold"
+                  iconClassName="h-5 w-5 text-muted-foreground"
                 />
                 {/* Realtime Live Indicator Dot */}
                 <span
                   title={isRealtimeConnected ? "Realtime sync connected" : "Offline"}
                   className={cn(
-                    "absolute bottom-1 end-1 h-4 w-4 rounded-full border-2 border-card ring-1",
+                    "absolute -bottom-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-card ring-1",
                     isRealtimeConnected
                       ? "bg-emerald-500 ring-emerald-300 animate-pulse"
                       : isOnline
@@ -140,39 +138,36 @@ export function UserDashboard() {
                 />
               </div>
 
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate text-foreground">
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <h1 className="text-sm sm:text-base font-semibold tracking-tight truncate text-foreground">
                     {fullName}
                   </h1>
                   <Badge
                     variant="secondary"
-                    className="text-[10px] font-medium tracking-wide uppercase px-2 py-0.5"
+                    className="text-[9px] font-medium tracking-wide uppercase px-1.5 py-0 h-4"
                   >
                     {authProvider}
                   </Badge>
                   {isRealtimeConnected && (
                     <Badge
                       variant="outline"
-                      className="text-[10px] gap-1 font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5"
+                      className="text-[9px] gap-1 font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0 h-4"
                     >
-                      <Radio className="h-3 w-3 animate-pulse" />
+                      <Radio className="h-2.5 w-2.5 animate-pulse" />
                       Live Sync
                     </Badge>
                   )}
                 </div>
 
-                <p className="text-sm text-muted-foreground truncate">{email}</p>
-
-                <div className="flex flex-wrap items-center gap-y-1 gap-x-4 pt-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    Member since {memberSince}
+                <div className="flex flex-wrap items-center gap-x-2.5 text-xs text-muted-foreground">
+                  <span className="truncate">{email}</span>
+                  <span className="hidden md:inline-flex items-center gap-1">
+                    • Member since {memberSince}
                   </span>
                   {lastSyncedAt && (
-                    <span className="flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      Synced{" "}
+                    <span className="hidden sm:inline-flex items-center gap-1">
+                      • Synced{" "}
                       {new Date(lastSyncedAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -181,32 +176,32 @@ export function UserDashboard() {
                   )}
                   {pendingCount > 0 && (
                     <span className="text-amber-500 font-medium">
-                      ({pendingCount} pending cloud upload)
+                      • {pendingCount} pending upload
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Minimal non-clickable sync status indicator */}
-            <div className="flex items-center gap-2 self-start md:self-center">
+            {/* Sync status indicator + Quick Actions */}
+            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
               <div
-                className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 backdrop-blur-xs px-3.5 py-1.5 text-xs font-medium text-muted-foreground select-none"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground select-none"
                 aria-live="polite"
               >
                 {isSyncing ? (
                   <>
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                    <RefreshCw className="h-3 w-3 animate-spin text-primary" />
                     <span className="text-foreground">Syncing…</span>
                   </>
                 ) : !isOnline ? (
                   <>
-                    <CloudOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    <CloudOff className="h-3 w-3 text-muted-foreground" />
                     <span>Offline</span>
                   </>
                 ) : (
                   <>
-                    <Cloud className="h-3.5 w-3.5 text-emerald-500" />
+                    <Cloud className="h-3 w-3 text-emerald-500" />
                     <span className="text-foreground/90">Synced</span>
                   </>
                 )}
@@ -214,8 +209,8 @@ export function UserDashboard() {
 
               {!session && (
                 <Link to="/auth">
-                  <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs font-medium">
-                    <LogIn className="h-3.5 w-3.5" />
+                  <Button size="sm" variant="outline" className="gap-1.5 h-7 px-2.5 text-xs font-medium">
+                    <LogIn className="h-3 w-3" />
                     <span>Sign In</span>
                   </Button>
                 </Link>

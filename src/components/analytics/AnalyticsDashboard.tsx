@@ -333,17 +333,20 @@ function CompletionTrendTooltip({
 /** Donut chart showing moderation (limit) adherence */
 function ModerationPieChart({ data }: { data: ModerationSlice[] }) {
   return (
-    <ChartContainer config={ANALYTICS_CHART_CONFIG} className="h-48 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="mx-auto w-full max-w-xs sm:max-w-sm">
+      <ChartContainer
+        config={ANALYTICS_CHART_CONFIG}
+        className="mx-auto aspect-auto h-52 sm:h-56 max-h-64 w-full"
+      >
         <PieChart>
           <Pie
             data={data}
             dataKey="value"
             nameKey="name"
             cx="50%"
-            cy="50%"
-            outerRadius={80}
-            innerRadius={52}
+            cy="45%"
+            outerRadius={68}
+            innerRadius={46}
             paddingAngle={3}
             strokeWidth={2}
             stroke="var(--background)"
@@ -353,10 +356,13 @@ function ModerationPieChart({ data }: { data: ModerationSlice[] }) {
             ))}
           </Pie>
           <Tooltip content={<ChartTooltipContent />} />
-          <Legend content={<ChartLegendContent nameKey="name" />} verticalAlign="bottom" />
+          <Legend
+            content={<ChartLegendContent nameKey="name" />}
+            verticalAlign="bottom"
+          />
         </PieChart>
-      </ResponsiveContainer>
-    </ChartContainer>
+      </ChartContainer>
+    </div>
   );
 }
 

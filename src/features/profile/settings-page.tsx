@@ -564,14 +564,30 @@ export function SettingsPage() {
         </div>
         <p className="mt-2 text-sm text-muted-foreground">{t("settings.dataDescription")}</p>
 
-        <Alert className="mt-4 border-amber-200/50 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800/40">
-          <AlertTitle className="text-amber-800 dark:text-amber-300">
-            {t("settings.dataAlert")}
-          </AlertTitle>
-          <AlertDescription className="text-amber-700 dark:text-amber-400">
-            {t("settings.dataAlertDesc")}
-          </AlertDescription>
-        </Alert>
+        {session ? (
+          <Alert className="mt-4 border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/30 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <AlertTitle className="text-emerald-800 dark:text-emerald-300">
+              {t("settings.cloudSyncActive", "Cloud sync active")}
+            </AlertTitle>
+            <AlertDescription className="text-emerald-700 dark:text-emerald-400">
+              {t(
+                "settings.cloudSyncActiveDesc",
+                "Your data is safely backed up and synced to your Cadence cloud account.",
+              )}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="mt-4 border-amber-200/50 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800/40">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertTitle className="text-amber-800 dark:text-amber-300">
+              {t("settings.dataAlert")}
+            </AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-400">
+              {t("settings.dataAlertDesc")}
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Button variant="outline" className="h-11 flex-1" onClick={handleExport}>
             <Download className="me-2 h-4 w-4" /> {t("settings.export")}

@@ -71,6 +71,8 @@ export const en = {
   "settings.iosInstallInstruction": "To install on iOS: tap the Share button, then 'Add to Home Screen'",
   "settings.dataAlert": "Your data lives only on this device",
   "settings.dataAlertDesc": "Cadence is a 100% offline-first application. Your data is stored locally on this device and is not synced to the cloud. To prevent data loss if your browser cache is cleared, please export a backup of your data regularly.",
+  "settings.cloudSyncActive": "Cloud sync active",
+  "settings.cloudSyncActiveDesc": "Your data is safely backed up and synced to your Cadence cloud account.",
   "settings.help": "Help & Support",
   "settings.helpDesc": "Found a bug or have feedback? We'd love to hear from you.",
   "settings.reportBug": "Report a Bug / Feedback",
