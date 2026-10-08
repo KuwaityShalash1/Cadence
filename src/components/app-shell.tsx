@@ -423,7 +423,7 @@ function Shell({ children }: { children: ReactNode }) {
 
       <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} title={t("nav.more")}>
         <div className="space-y-4 py-2">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Link
               to="/dashboard"
               onClick={() => setMoreOpen(false)}
@@ -470,16 +470,6 @@ function Shell({ children }: { children: ReactNode }) {
                 />
               )}
             </Link>
-            {!session && (
-              <Link
-                to="/auth"
-                onClick={() => setMoreOpen(false)}
-                className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-              >
-                <LogIn className="h-5 w-5" />
-                <span>{t("nav.signIn", "Sign In")}</span>
-              </Link>
-            )}
           </div>
         </div>
       </ResponsiveSheet>
