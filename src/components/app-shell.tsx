@@ -47,12 +47,12 @@ import { useAuth } from "@/auth/auth-context";
  */
 const NAV_ITEMS = [
   { labelKey: "nav.today", icon: Sun, to: "/" as const, exact: true },
-  { labelKey: "nav.dashboard", icon: LayoutDashboard, to: "/dashboard" as const, exact: false },
   { labelKey: "nav.calendar", icon: CalendarDays, to: "/calendar" as const, exact: false },
-  { labelKey: "nav.stats", icon: BarChart3, to: "/stats" as const, exact: false },
-  { labelKey: "nav.goals", icon: Target, to: "/goals" as const, exact: false },
   { labelKey: "nav.routines", icon: ListChecks, to: "/routines" as const, exact: false },
   { labelKey: "nav.quitTracker", icon: ShieldAlert, to: "/quit-tracker" as const, exact: false },
+  { labelKey: "nav.goals", icon: Target, to: "/goals" as const, exact: false },
+  { labelKey: "nav.dashboard", icon: LayoutDashboard, to: "/dashboard" as const, exact: false },
+  { labelKey: "nav.stats", icon: BarChart3, to: "/stats" as const, exact: false },
 ];
 
 const MOBILE_NAV = [
