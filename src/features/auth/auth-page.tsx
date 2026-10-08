@@ -121,7 +121,7 @@ export function AuthPage() {
     }
     if (mode === "signup") {
       setMessage(
-        t("auth.accountCreated", "Account created. Check your email if confirmation is required.")
+        t("auth.accountCreated", "Account created. Check your email if confirmation is required."),
       );
     } else {
       setMessage(t("auth.signedInRedirecting", "You are signed in. Redirecting..."));
@@ -153,7 +153,9 @@ export function AuthPage() {
             className="h-8 w-8 animate-spin text-primary"
             aria-label={t("common.loading", "Loading")}
           />
-          <p className="text-sm text-muted-foreground">{t("auth.authenticating", "Authenticating...")}</p>
+          <p className="text-sm text-muted-foreground">
+            {t("auth.authenticating", "Authenticating...")}
+          </p>
         </div>
       </main>
     );
@@ -179,7 +181,10 @@ export function AuthPage() {
             <CardDescription className="mt-2">
               {mode === "login"
                 ? t("auth.signInDescription", "Sign in to prepare Cadence for cloud sync.")
-                : t("auth.signUpDescription", "Create an account to enable cloud sync when it arrives.")}
+                : t(
+                    "auth.signUpDescription",
+                    "Create an account to enable cloud sync when it arrives.",
+                  )}
             </CardDescription>
           </div>
         </CardHeader>
@@ -188,7 +193,7 @@ export function AuthPage() {
             <div className="mb-5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
               {t(
                 "auth.notConfigured",
-                "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment."
+                "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.",
               )}
             </div>
           )}
@@ -237,7 +242,9 @@ export function AuthPage() {
             {message && <p className="text-sm text-success">{message}</p>}
             <Button type="submit" className="w-full" disabled={isSubmitting || !isConfigured}>
               {isSubmitting && <Loader2 className="animate-spin" />}
-              {mode === "login" ? t("auth.signIn", "Sign in") : t("auth.createAccount", "Create account")}
+              {mode === "login"
+                ? t("auth.signIn", "Sign in")
+                : t("auth.createAccount", "Create account")}
             </Button>
           </form>
           <div className="mt-5 flex items-center justify-between text-sm">
@@ -264,6 +271,22 @@ export function AuthPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-6 flex items-center justify-center gap-4 text-xs text-muted-foreground">
+        <Link
+          to="/privacy"
+          className="transition-colors hover:text-foreground underline-offset-4 hover:underline"
+        >
+          {t("legal.privacyPolicy", "Privacy Policy")}
+        </Link>
+        <span>•</span>
+        <Link
+          to="/terms"
+          className="transition-colors hover:text-foreground underline-offset-4 hover:underline"
+        >
+          {t("legal.termsOfService", "Terms of Service")}
+        </Link>
+      </div>
     </main>
   );
 }

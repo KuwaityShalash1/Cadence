@@ -15,10 +15,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GoalsRouteImport } from './routes/goals'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as QuitTrackerRouteImport } from './routes/quit-tracker'
 import { Route as RoutinesRouteImport } from './routes/routines'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as TermsRouteImport } from './routes/terms'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -50,6 +52,11 @@ const GoalsRoute = GoalsRouteImport.update({
   path: '/goals',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuitTrackerRoute = QuitTrackerRouteImport.update({
   id: '/quit-tracker',
   path: '/quit-tracker',
@@ -70,6 +77,11 @@ const StatsRoute = StatsRouteImport.update({
   path: '/stats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -78,10 +90,12 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/dashboard': typeof DashboardRoute
   '/goals': typeof GoalsRoute
+  '/privacy': typeof PrivacyRoute
   '/quit-tracker': typeof QuitTrackerRoute
   '/routines': typeof RoutinesRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -90,10 +104,12 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/dashboard': typeof DashboardRoute
   '/goals': typeof GoalsRoute
+  '/privacy': typeof PrivacyRoute
   '/quit-tracker': typeof QuitTrackerRoute
   '/routines': typeof RoutinesRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,10 +119,12 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/dashboard': typeof DashboardRoute
   '/goals': typeof GoalsRoute
+  '/privacy': typeof PrivacyRoute
   '/quit-tracker': typeof QuitTrackerRoute
   '/routines': typeof RoutinesRoute
   '/settings': typeof SettingsRoute
   '/stats': typeof StatsRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,10 +135,12 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/dashboard'
     | '/goals'
+    | '/privacy'
     | '/quit-tracker'
     | '/routines'
     | '/settings'
     | '/stats'
+    | '/terms'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,10 +149,12 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/dashboard'
     | '/goals'
+    | '/privacy'
     | '/quit-tracker'
     | '/routines'
     | '/settings'
     | '/stats'
+    | '/terms'
   id:
     | '__root__'
     | '/'
@@ -141,10 +163,12 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/dashboard'
     | '/goals'
+    | '/privacy'
     | '/quit-tracker'
     | '/routines'
     | '/settings'
     | '/stats'
+    | '/terms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -154,10 +178,12 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   DashboardRoute: typeof DashboardRoute
   GoalsRoute: typeof GoalsRoute
+  PrivacyRoute: typeof PrivacyRoute
   QuitTrackerRoute: typeof QuitTrackerRoute
   RoutinesRoute: typeof RoutinesRoute
   SettingsRoute: typeof SettingsRoute
   StatsRoute: typeof StatsRoute
+  TermsRoute: typeof TermsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -204,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GoalsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quit-tracker': {
       id: '/quit-tracker'
       path: '/quit-tracker'
@@ -232,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -242,10 +282,12 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   DashboardRoute: DashboardRoute,
   GoalsRoute: GoalsRoute,
+  PrivacyRoute: PrivacyRoute,
   QuitTrackerRoute: QuitTrackerRoute,
   RoutinesRoute: RoutinesRoute,
   SettingsRoute: SettingsRoute,
   StatsRoute: StatsRoute,
+  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

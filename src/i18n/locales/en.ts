@@ -1013,4 +1013,11 @@ export const en = {
   "auth.signInOrLogin": "Sign In / Login",
   "sidebar.toggle": "Toggle Sidebar",
   "quitTracker.limitPlaceholder": "e.g., 120",
+
+  // Legal
+  "legal.privacyPolicy": "Privacy Policy",
+  "legal.termsOfService": "Terms of Service",
+  "legal.backToApp": "Back to Cadence",
+  "legal.lastUpdated": "Last updated",
+  "legal.effectiveDate": "Effective Date",
 };

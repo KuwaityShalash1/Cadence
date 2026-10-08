@@ -1005,4 +1005,11 @@ export const ar = {
   "auth.signInOrLogin": "تسجيل الدخول",
   "sidebar.toggle": "تبديل الشريط الجانبي",
   "quitTracker.limitPlaceholder": "مثال: 120",
+
+  // Legal
+  "legal.privacyPolicy": "سياسة الخصوصية",
+  "legal.termsOfService": "شروط الخدمة",
+  "legal.backToApp": "العودة إلى Cadence",
+  "legal.lastUpdated": "آخر تحديث",
+  "legal.effectiveDate": "تاريخ السريان",
 };
