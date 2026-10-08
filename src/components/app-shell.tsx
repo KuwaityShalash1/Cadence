@@ -186,7 +186,7 @@ function Shell({ children }: { children: ReactNode }) {
           aria-label={t("nav.mainNavigation", "Main navigation")}
           className={cn(
             "flex flex-col gap-1.5 w-full flex-1",
-            isSidebarCollapsed ? "items-center px-2" : "px-3",
+            isSidebarCollapsed ? "items-center px-2" : "px-0",
           )}
         >
           {NAV_ITEMS.map((item) => {
@@ -199,7 +199,7 @@ function Shell({ children }: { children: ReactNode }) {
                 aria-label={label}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
-                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-0 gap-3",
+                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
               >
                 <item.icon className="h-[22px] w-[22px] shrink-0" />
@@ -232,7 +232,7 @@ function Shell({ children }: { children: ReactNode }) {
                 aria-label={settingsLabel}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
-                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-0 gap-3",
+                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
                 )}
               >
                 <div className="relative inline-flex items-center justify-center h-[22px] w-[22px] shrink-0">
