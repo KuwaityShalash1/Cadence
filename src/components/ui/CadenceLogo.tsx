@@ -21,7 +21,7 @@ export function CadenceLogo({
 
   const logoImg = (
     <img
-      src="/logo.svg"
+      src="/logo.png"
       alt="Cadence logo"
       /**
        * The wordmark "Cadence" is always rendered next to the logo (or the
