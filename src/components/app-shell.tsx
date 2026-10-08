@@ -24,9 +24,6 @@ import { TimerDock } from "@/components/timer-dock";
 import { Button } from "@/components/ui/button";
 import { CadenceLogo } from "@/components/ui/CadenceLogo";
 
-const LogoIcon = (props: { className?: string; [key: string]: unknown }) => (
-  <CadenceLogo showText={false} iconClassName={props.className} {...props} />
-);
 import { UserAvatar } from "@/components/user-avatar";
 import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -137,9 +134,7 @@ function Shell({ children }: { children: ReactNode }) {
           className={cn(
             "flex h-14 w-full items-center border-b border-border/40 shrink-0",
             enableSidebarTransition && "transition-all duration-200",
-            // ps-2 aligns the logo's visual left edge with the navigation icons below,
-            // while pe-3 preserves the collapse button's alignment with the sidebar content edge.
-            isSidebarCollapsed ? "justify-center px-0" : "justify-between ps-2 pe-3 mb-2",
+            isSidebarCollapsed ? "justify-center px-0" : "justify-between px-3 mb-2",
           )}
         >
           {isSidebarCollapsed ? (
@@ -191,7 +186,7 @@ function Shell({ children }: { children: ReactNode }) {
           aria-label={t("nav.mainNavigation", "Main navigation")}
           className={cn(
             "flex flex-col gap-1.5 w-full flex-1",
-            isSidebarCollapsed ? "items-center px-2" : "px-0",
+            isSidebarCollapsed ? "items-center px-2" : "px-3",
           )}
         >
           {NAV_ITEMS.map((item) => {
@@ -204,7 +199,7 @@ function Shell({ children }: { children: ReactNode }) {
                 aria-label={label}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
-                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
+                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-0 gap-3",
                 )}
               >
                 <item.icon className="h-[22px] w-[22px] shrink-0" />
@@ -237,7 +232,7 @@ function Shell({ children }: { children: ReactNode }) {
                 aria-label={settingsLabel}
                 className={cn(
                   "flex items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-primary/10 data-[status=active]:text-primary",
-                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-3 gap-3",
+                  isSidebarCollapsed ? "h-11 w-11 justify-center" : "h-10 w-full px-0 gap-3",
                 )}
               >
                 <div className="relative inline-flex items-center justify-center h-[22px] w-[22px] shrink-0">
