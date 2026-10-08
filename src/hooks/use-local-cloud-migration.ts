@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/auth-context";
+import { useTranslation } from "@/i18n/context";
 import { hasUserBeenMigrated, mergeLocalDataToCloud } from "@/lib/data-merge";
 import type { MigrationResult, MigrationStats, MigrationStatus } from "@/types";
 
@@ -45,6 +46,7 @@ export interface UseLocalCloudMigrationReturn {
 export function useLocalCloudMigration(
   options: UseLocalCloudMigrationOptions = {},
 ): UseLocalCloudMigrationReturn {
+  const { t } = useTranslation();
   const { autoMigrate = true, notifyOnSuccess = true, onSuccess, onError } = options;
   const { session, user } = useAuth();
 
@@ -93,21 +95,32 @@ export function useLocalCloudMigration(
 
           if (notifyOnSuccess && hasUploadedData) {
             const count = result.stats.habitsUpserted + result.stats.habitsResolved;
-            const habitText = count === 1 ? "habit" : "habits";
-            toast.success(`Synced ${count} offline ${habitText} with your cloud account.`);
+            const habitText =
+              count === 1 ? t("habit.singular", "habit") : t("habit.plural", "habits");
+            toast.success(
+              t(
+                "migration.syncedSuccess",
+                `Synced ${count} offline ${habitText} with your cloud account.`,
+                { count, habitText },
+              ),
+            );
           }
 
           onSuccess?.(result);
           return result;
         } else {
-          const errMsg = result.error ?? "Failed to merge data with cloud.";
+          const errMsg =
+            result.error ?? t("migration.failedMerge", "Failed to merge data with cloud.");
           setStatus("error");
           setError(errMsg);
           onError?.(errMsg);
           return result;
         }
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : "Unexpected migration failure";
+        const errMsg =
+          err instanceof Error
+            ? err.message
+            : t("migration.unexpectedError", "Unexpected migration failure");
         setStatus("error");
         setError(errMsg);
         onError?.(errMsg);

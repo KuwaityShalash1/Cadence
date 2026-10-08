@@ -66,17 +66,7 @@ export async function deleteUserAccount(user: User): Promise<DeleteAccountResult
   try {
     const userId = user.id;
 
-    // 1. Explicitly remove all cloud sync records belonging to this user
-    const { error: dataDeleteError } = await supabase
-      .from("cadence_sync_records")
-      .delete()
-      .eq("user_id", userId);
-
-    if (dataDeleteError) {
-      console.warn("Failed to delete user records from cadence_sync_records:", dataDeleteError);
-    }
-
-    // 2. Invoke the server-side RPC procedure to delete the user from auth.users
+    // 1. Invoke the server-side RPC procedure to delete the user from auth.users FIRST
     const { error: rpcError } = await supabase.rpc("delete_user_account");
 
     if (rpcError) {
@@ -88,6 +78,16 @@ export async function deleteUserAccount(user: User): Promise<DeleteAccountResult
         success: false,
         error: rpcError.message || "Failed to delete account on the server.",
       };
+    }
+
+    // 2. Only if server-side deletion succeeded, clean up cloud sync records
+    const { error: dataDeleteError } = await supabase
+      .from("cadence_sync_records")
+      .delete()
+      .eq("user_id", userId);
+
+    if (dataDeleteError) {
+      console.warn("Failed to delete user records from cadence_sync_records:", dataDeleteError);
     }
 
     // 3. Complete client-side sign out to clear session tokens and storage
@@ -105,4 +105,3 @@ export async function deleteUserAccount(user: User): Promise<DeleteAccountResult
     };
   }
 }
-

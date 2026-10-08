@@ -484,9 +484,9 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppProvider>
-          <SyncProvider>
-            <LanguageProvider>
+        <LanguageProvider>
+          <AppProvider>
+            <SyncProvider>
               <HeadMetadataSync />
               <NotificationScheduler />
               <ServiceWorkerBootstrap />
@@ -506,9 +506,9 @@ function RootComponent() {
                 </ErrorBoundary>
               </TooltipProvider>
               <Toaster />
-            </LanguageProvider>
-          </SyncProvider>
-        </AppProvider>
+            </SyncProvider>
+          </AppProvider>
+        </LanguageProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

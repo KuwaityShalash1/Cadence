@@ -71,7 +71,8 @@ function Shell({ children }: { children: ReactNode }) {
   useAppBadge();
   const editor = useHabitEditor();
   const location = useLocation();
-  const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
+  const { settings, ready, isCollapsed, toggleSidebar, timer } = useAppStore();
+  const isTimerActive = Boolean(timer?.habitId);
   const { isDue: isBackupDue } = useBackupReminderStatus();
   const { t, isRtl } = useTranslation();
   const { session, user } = useAuth();
@@ -333,7 +334,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="flex items-center md:hidden">
             <Link to="/" className="flex items-center gap-2.5">
               <img
-                src="/logo.png"
+                src="/logo.svg"
                 alt="Logo"
                 className="h-7 w-7 object-contain"
                 draggable={false}
@@ -378,7 +379,7 @@ function Shell({ children }: { children: ReactNode }) {
                 <Link
                   to="/dashboard"
                   className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card py-1 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  aria-label="Dashboard"
+                  aria-label={t("nav.dashboard", "Dashboard")}
                 >
                   <User className="h-3.5 w-3.5" />
                   <span>{t("nav.dashboard", "Dashboard")}</span>
@@ -388,7 +389,7 @@ function Shell({ children }: { children: ReactNode }) {
                   size="sm"
                   className="gap-1.5 h-8 px-3 text-xs font-semibold shadow-xs"
                 >
-                  <Link to="/auth" aria-label="Sign In / Login">
+                  <Link to="/auth" aria-label={t("auth.signInOrLogin", "Sign In / Login")}>
                     <LogIn className="h-3.5 w-3.5" />
                     <span>{t("nav.signIn", "Sign In")}</span>
                   </Link>
@@ -403,9 +404,9 @@ function Shell({ children }: { children: ReactNode }) {
           16px (px-4) horizontal gutter on mobile, widening to 24px (px-6) from
           the md breakpoint up. Page roots inside must NOT add their own
           horizontal padding or mx-auto, otherwise the mobile gutter compounds.
-          `pb-40` keeps the last card clear of the fixed bottom navigation bar.
+          `pb-40` keeps the last card clear of the fixed bottom navigation bar on mobile.
         */}
-        <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-6 pb-40 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+        <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-6 pb-40 md:pb-12 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
           {children}
         </div>
       </main>
@@ -417,8 +418,9 @@ function Shell({ children }: { children: ReactNode }) {
           aria-label={fabConfig.label}
           onClick={fabConfig.action}
           className={cn(
-            "fixed bottom-24 end-6 z-50 flex items-center justify-center rounded-full p-4 md:hidden",
-            "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
+            "fixed end-6 z-50 flex items-center justify-center rounded-full p-4 md:hidden",
+            isTimerActive ? "bottom-[136px] sm:bottom-[140px]" : "bottom-24",
+            "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all duration-300 active:scale-95",
             "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
           )}
         >

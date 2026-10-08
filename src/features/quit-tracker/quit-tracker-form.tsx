@@ -46,8 +46,22 @@ interface QuitSuggestion {
 
 /** Ready-made quit-tracker templates for the collapsible Quick Suggestions card list. */
 const QUIT_SUGGESTIONS: QuitSuggestion[] = [
-  { key: "smoking", name: "Smoking / Vaping", icon: "flame", color: "#EF4444", badge: "Health", strategy: "cold-turkey" },
-  { key: "junkFood", name: "Junk Food & Sugar", icon: "pizza", color: "#F97316", badge: "Diet", strategy: "cold-turkey" },
+  {
+    key: "smoking",
+    name: "Smoking / Vaping",
+    icon: "flame",
+    color: "#EF4444",
+    badge: "Health",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "junkFood",
+    name: "Junk Food & Sugar",
+    icon: "pizza",
+    color: "#F97316",
+    badge: "Diet",
+    strategy: "cold-turkey",
+  },
   {
     key: "doomscrolling",
     name: "Social Media Doomscrolling",
@@ -58,17 +72,102 @@ const QUIT_SUGGESTIONS: QuitSuggestion[] = [
     limitType: "time",
     limitValue: 120,
   },
-  { key: "procrastination", name: "Procrastination", icon: "clock", color: "#64748B", badge: "Productivity", strategy: "cold-turkey" },
-  { key: "nailBiting", name: "Nail Biting", icon: "hand", color: "#EC4899", badge: "Habit", strategy: "cold-turkey" },
-  { key: "lateNightScrolling", name: "Late-Night Scrolling", icon: "moon", color: "#6366F1", badge: "Sleep", strategy: "cold-turkey" },
-  { key: "impulseShopping", name: "Impulse Shopping", icon: "wallet", color: "#10B981", badge: "Finance", strategy: "cold-turkey" },
-  { key: "sugaryDrinks", name: "Sugary Drinks", icon: "droplets", color: "#0EA5E9", badge: "Health", strategy: "limit", limitType: "count", limitValue: 1 },
-  { key: "energyDrinks", name: "Energy Drink Dependence", icon: "flame", color: "#EAB308", badge: "Health", strategy: "limit", limitType: "count", limitValue: 1 },
-  { key: "excessiveGaming", name: "Excessive Gaming", icon: "tv", color: "#8B5CF6", badge: "Digital", strategy: "limit", limitType: "time", limitValue: 60 },
-  { key: "constantNews", name: "Constant News Checking", icon: "globe", color: "#3B82F6", badge: "Mental health", strategy: "limit", limitType: "time", limitValue: 30 },
-  { key: "negativeSelfTalk", name: "Negative Self-Talk", icon: "heart", color: "#EC4899", badge: "Wellbeing", strategy: "cold-turkey" },
-  { key: "skippingMeals", name: "Skipping Meals", icon: "utensils", color: "#F97316", badge: "Health", strategy: "cold-turkey" },
-  { key: "workAfterHours", name: "Work After Hours", icon: "briefcase", color: "#64748B", badge: "Boundaries", strategy: "cold-turkey" },
+  {
+    key: "procrastination",
+    name: "Procrastination",
+    icon: "clock",
+    color: "#64748B",
+    badge: "Productivity",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "nailBiting",
+    name: "Nail Biting",
+    icon: "hand",
+    color: "#EC4899",
+    badge: "Habit",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "lateNightScrolling",
+    name: "Late-Night Scrolling",
+    icon: "moon",
+    color: "#6366F1",
+    badge: "Sleep",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "impulseShopping",
+    name: "Impulse Shopping",
+    icon: "wallet",
+    color: "#10B981",
+    badge: "Finance",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "sugaryDrinks",
+    name: "Sugary Drinks",
+    icon: "droplets",
+    color: "#0EA5E9",
+    badge: "Health",
+    strategy: "limit",
+    limitType: "count",
+    limitValue: 1,
+  },
+  {
+    key: "energyDrinks",
+    name: "Energy Drink Dependence",
+    icon: "flame",
+    color: "#EAB308",
+    badge: "Health",
+    strategy: "limit",
+    limitType: "count",
+    limitValue: 1,
+  },
+  {
+    key: "excessiveGaming",
+    name: "Excessive Gaming",
+    icon: "tv",
+    color: "#8B5CF6",
+    badge: "Digital",
+    strategy: "limit",
+    limitType: "time",
+    limitValue: 60,
+  },
+  {
+    key: "constantNews",
+    name: "Constant News Checking",
+    icon: "globe",
+    color: "#3B82F6",
+    badge: "Mental health",
+    strategy: "limit",
+    limitType: "time",
+    limitValue: 30,
+  },
+  {
+    key: "negativeSelfTalk",
+    name: "Negative Self-Talk",
+    icon: "heart",
+    color: "#EC4899",
+    badge: "Wellbeing",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "skippingMeals",
+    name: "Skipping Meals",
+    icon: "utensils",
+    color: "#F97316",
+    badge: "Health",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "workAfterHours",
+    name: "Work After Hours",
+    icon: "briefcase",
+    color: "#64748B",
+    badge: "Boundaries",
+    strategy: "cold-turkey",
+  },
   {
     key: "checkingMessages",
     name: "Checking Messages Constantly",
@@ -79,9 +178,32 @@ const QUIT_SUGGESTIONS: QuitSuggestion[] = [
     limitType: "time",
     limitValue: 60,
   },
-  { key: "alcohol", name: "Alcohol", icon: "ban", color: "#DC2626", badge: "Health", strategy: "cold-turkey" },
-  { key: "compulsiveSnacking", name: "Compulsive Snacking", icon: "apple", color: "#EF4444", badge: "Nutrition", strategy: "limit", limitType: "count", limitValue: 3 },
-  { key: "avoidingDifficultTasks", name: "Avoiding Difficult Tasks", icon: "lock", color: "#7C3AED", badge: "Growth", strategy: "cold-turkey" },
+  {
+    key: "alcohol",
+    name: "Alcohol",
+    icon: "ban",
+    color: "#DC2626",
+    badge: "Health",
+    strategy: "cold-turkey",
+  },
+  {
+    key: "compulsiveSnacking",
+    name: "Compulsive Snacking",
+    icon: "apple",
+    color: "#EF4444",
+    badge: "Nutrition",
+    strategy: "limit",
+    limitType: "count",
+    limitValue: 3,
+  },
+  {
+    key: "avoidingDifficultTasks",
+    name: "Avoiding Difficult Tasks",
+    icon: "lock",
+    color: "#7C3AED",
+    badge: "Growth",
+    strategy: "cold-turkey",
+  },
 ];
 
 function toLocalDateTimeString(ts: number): string {
@@ -112,14 +234,11 @@ export function QuitTrackerForm({
     setQuery: setSuggestionSearch,
   } = useProgressiveDisclosure();
 
-
   // Strategy configuration (new feature)
   const [strategy, setStrategy] = useState<"cold-turkey" | "limit">(
     habit?.strategy ?? "cold-turkey",
   );
-  const [limitType, setLimitType] = useState<"time" | "count">(
-    habit?.limitType ?? "time",
-  );
+  const [limitType, setLimitType] = useState<"time" | "count">(habit?.limitType ?? "time");
   const [limitValue, setLimitValue] = useState(habit?.limitValue ?? 120);
 
   // Accent tint for the selected icon tile in the picker grid.
@@ -212,17 +331,14 @@ export function QuitTrackerForm({
               PERMANENT toggle rendered in BOTH collapsed and expanded states —
               only the body below this header toggles. */}
           <div className="flex items-start justify-between gap-3 mb-2">
-            <div
-              className="flex-1 cursor-pointer select-none"
-              onClick={toggleSuggestions}
-            >
+            <div className="flex-1 cursor-pointer select-none" onClick={toggleSuggestions}>
               <div className="flex items-center gap-2">
                 <span className="text-xs">✨</span>
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <span className="text-xs font-semibold text-foreground">
                   {t("quitTracker.quickSuggestions")}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-0.5">
                 {t("quitTracker.quickSuggestionsDesc")}
               </p>
             </div>
@@ -232,8 +348,12 @@ export function QuitTrackerForm({
               type="button"
               onClick={toggleSuggestions}
               aria-expanded={isSuggestionsOpen}
-              aria-label={isSuggestionsOpen ? t("habit.collapseSuggestions", "Collapse suggestions") : t("habit.expandSuggestions", "Expand suggestions")}
-              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors shrink-0 cursor-pointer"
+              aria-label={
+                isSuggestionsOpen
+                  ? t("habit.collapseSuggestions", "Collapse suggestions")
+                  : t("habit.expandSuggestions", "Expand suggestions")
+              }
+              className="p-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer"
             >
               <ChevronDown
                 className={cn(
@@ -256,10 +376,12 @@ export function QuitTrackerForm({
                   <button
                     key={suggestion.key}
                     type="button"
-                    aria-label={t("habit.useTemplateAria", "Use template: {name}", { name: locName })}
+                    aria-label={t("habit.useTemplateAria", "Use template: {name}", {
+                      name: locName,
+                    })}
                     aria-pressed={isSelected}
                     onClick={() => applySuggestion(suggestion)}
-                    className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition active:scale-95 cursor-pointer"
+                    className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-card hover:bg-muted/50 border border-border transition active:scale-95 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div
@@ -275,7 +397,7 @@ export function QuitTrackerForm({
                           style={{ color: suggestion.color }}
                         />
                       </div>
-                      <span className="min-w-0 flex-1 text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      <span className="min-w-0 flex-1 text-xs font-semibold text-foreground truncate">
                         {locName}
                       </span>
                     </div>
@@ -297,7 +419,7 @@ export function QuitTrackerForm({
             <div className="overflow-hidden">
               <div className="relative mt-2">
                 <Search
-                  className="absolute top-2.5 start-3 h-4 w-4 text-slate-400"
+                  className="absolute top-2.5 start-3 h-4 w-4 text-muted-foreground"
                   aria-hidden="true"
                 />
                 <input
@@ -306,7 +428,7 @@ export function QuitTrackerForm({
                   value={suggestionSearch}
                   onChange={(e) => setSuggestionSearch(e.target.value)}
                   aria-label={t("quitTracker.searchTemplatesAria")}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pe-3 ps-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-100"
+                  className="w-full rounded-lg border border-border bg-muted/60 py-1.5 pe-3 ps-9 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
               {filteredQuitSuggestions().length > 0 ? (
@@ -318,7 +440,9 @@ export function QuitTrackerForm({
                       <button
                         key={suggestion.key}
                         type="button"
-                        aria-label={t("habit.useTemplateAria", "Use template: {name}", { name: locName })}
+                        aria-label={t("habit.useTemplateAria", "Use template: {name}", {
+                          name: locName,
+                        })}
                         aria-pressed={isSelected}
                         onClick={() => applySuggestion(suggestion)}
                         style={
@@ -329,7 +453,7 @@ export function QuitTrackerForm({
                               }
                             : undefined
                         }
-                        className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-slate-200/80 bg-white px-3 py-2 transition active:scale-[0.99] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:bg-slate-800/80"
+                        className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-border bg-card px-3 py-2 transition active:scale-[0.99] hover:bg-muted/40"
                       >
                         <span className="flex min-w-0 flex-1 items-center gap-2.5">
                           <span
@@ -345,7 +469,7 @@ export function QuitTrackerForm({
                               style={{ color: suggestion.color }}
                             />
                           </span>
-                          <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-slate-800 dark:text-slate-200">
+                          <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-foreground">
                             {locName}
                           </span>
                         </span>
@@ -390,10 +514,7 @@ export function QuitTrackerForm({
       {/* Strategy Selection — Complete Cessation vs Moderation / Limit */}
       <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t("quitTracker.cessationStrategy")}</legend>
-        <Select
-          value={strategy}
-          onValueChange={(v) => setStrategy(v as "cold-turkey" | "limit")}
-        >
+        <Select value={strategy} onValueChange={(v) => setStrategy(v as "cold-turkey" | "limit")}>
           <SelectTrigger className="h-11">
             <SelectValue placeholder={t("quitTracker.selectStrategy")} />
           </SelectTrigger>
@@ -414,10 +535,7 @@ export function QuitTrackerForm({
         <div className="space-y-4">
           <fieldset className="space-y-2">
             <legend className="mb-2 text-sm font-medium">{t("quitTracker.limitType")}</legend>
-            <Select
-              value={limitType}
-              onValueChange={(v) => setLimitType(v as "time" | "count")}
-            >
+            <Select value={limitType} onValueChange={(v) => setLimitType(v as "time" | "count")}>
               <SelectTrigger className="h-11">
                 <SelectValue placeholder={t("quitTracker.selectLimitType")} />
               </SelectTrigger>
@@ -436,7 +554,10 @@ export function QuitTrackerForm({
           <div className="space-y-2">
             <Label htmlFor="limit-value">
               {t("quitTracker.dailyLimitLabel", {
-                unit: limitType === "time" ? t("quitTracker.minutes").toLowerCase() : t("quitTracker.units").toLowerCase(),
+                unit:
+                  limitType === "time"
+                    ? t("quitTracker.minutes").toLowerCase()
+                    : t("quitTracker.units").toLowerCase(),
               })}
             </Label>
             <Input
@@ -445,7 +566,7 @@ export function QuitTrackerForm({
               min={1}
               value={limitValue}
               onChange={(e) => setLimitValue(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              placeholder="e.g., 120"
+              placeholder={t("quitTracker.limitPlaceholder", "e.g., 120")}
               autoComplete="off"
               className="h-11"
             />

@@ -5,8 +5,8 @@ import { LanguageCode, LanguageMeta } from "./types";
 // ─── Language metadata ────────────────────────────────────────────────────────
 
 export const LANGUAGES: LanguageMeta[] = [
-  { code: "en", name: "English",  nativeName: "English",   flag: "🇺🇸", dir: "ltr" },
-  { code: "ar", name: "Arabic",   nativeName: "العربية",   flag: "🇸🇦", dir: "rtl" },
+  { code: "en", name: "English", nativeName: "English", flag: "🇺🇸", dir: "ltr" },
+  { code: "ar", name: "Arabic", nativeName: "العربية", flag: "🇸🇦", dir: "rtl" },
 ];
 
 // ─── localStorage persistence key ─────────────────────────────────────────────
@@ -86,7 +86,10 @@ export type TranslationParams = Record<string, string | number | undefined | nul
 function interpolate(text: string, params?: TranslationParams): string {
   if (!params) return text;
   return Object.entries(params).reduce((acc, [k, v]) => {
-    return acc.replace(new RegExp(`\\{${k}\\}`, "g"), v !== undefined && v !== null ? String(v) : "");
+    return acc.replace(
+      new RegExp(`\\{${k}\\}`, "g"),
+      v !== undefined && v !== null ? String(v) : "",
+    );
   }, text);
 }
 
@@ -150,10 +153,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
       const dict = dictionaries[language] as Record<string, string> | undefined;
       const raw =
-        dict?.[key] ??
-        (dictionaries.en as Record<string, string>)[key] ??
-        fallback ??
-        key;
+        dict?.[key] ?? (dictionaries.en as Record<string, string>)[key] ?? fallback ?? key;
 
       return interpolate(raw, actualParams);
     },
@@ -196,4 +196,27 @@ export function useTranslation(): LanguageContextType {
     };
   }
   return ctx;
+}
+
+/** Standalone translation helper for use in stores, services, or outside component tree */
+export function translate(
+  key: string,
+  fallbackOrParams?: string | TranslationParams,
+  params?: TranslationParams,
+): string {
+  const lang = getStoredLanguage();
+  let fallback: string | undefined;
+  let actualParams: TranslationParams | undefined;
+
+  if (typeof fallbackOrParams === "object" && fallbackOrParams !== null) {
+    actualParams = fallbackOrParams;
+  } else {
+    fallback = fallbackOrParams;
+    actualParams = params;
+  }
+
+  const dict = dictionaries[lang] as Record<string, string> | undefined;
+  const raw = dict?.[key] ?? (dictionaries.en as Record<string, string>)[key] ?? fallback ?? key;
+
+  return interpolate(raw, actualParams);
 }

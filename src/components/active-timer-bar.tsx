@@ -56,7 +56,7 @@ export function ActiveTimerBar() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-24 end-4 start-4 md:start-auto md:w-96 z-[60] bg-background/95 backdrop-blur-md text-foreground border border-border rounded-2xl p-4 shadow-xl transition-all"
+      className="fixed bottom-20 md:bottom-6 end-4 start-4 md:start-auto md:w-96 z-[60] bg-background/95 backdrop-blur-md text-foreground border border-border rounded-2xl p-4 shadow-xl transition-all"
     >
       <div className="flex flex-col gap-3">
         {/* Timer title & live duration count */}

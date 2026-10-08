@@ -135,7 +135,9 @@ const getContext = (): AudioContext | null => {
   if (isServer) return null;
   try {
     if (!sharedAudioCtx) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioContextClass) {
         sharedAudioCtx = new AudioContextClass();
       }

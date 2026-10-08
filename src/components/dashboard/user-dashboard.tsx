@@ -109,7 +109,7 @@ export function UserDashboard() {
   const stats = useMemo(() => calculateGamificationStats(habits, logMap), [habits, logMap]);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6">
       {/* ── 1. Condensed User Profile & Cloud Sync Bar ─────────────────── */}
       <Card className="border-border/80 bg-card/90 shadow-2xs">
         <CardContent className="p-3.5 sm:p-4">
@@ -169,19 +169,23 @@ export function UserDashboard() {
                 <div className="flex flex-wrap items-center gap-x-2.5 text-xs text-muted-foreground">
                   <span className="truncate">{email}</span>
                   <span className="hidden md:inline-flex items-center gap-1">
-                    • {memberSince ? t("dashboard.memberSince", { date: memberSince }) : t("dashboard.localDevice", "Local Device")}
+                    •{" "}
+                    {memberSince
+                      ? t("dashboard.memberSince", { date: memberSince })
+                      : t("dashboard.localDevice", "Local Device")}
                   </span>
                   {lastSyncedAt && (
                     <span className="hidden sm:inline-flex items-center gap-1">
-                      • {t("dashboard.syncedAt", {
-                          time: new Date(lastSyncedAt).toLocaleTimeString(
-                            language === "ar" ? "ar-SA" : "en-US",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          ),
-                        })}
+                      •{" "}
+                      {t("dashboard.syncedAt", {
+                        time: new Date(lastSyncedAt).toLocaleTimeString(
+                          language === "ar" ? "ar-SA" : "en-US",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          },
+                        ),
+                      })}
                     </span>
                   )}
                   {pendingCount > 0 && (
@@ -219,7 +223,11 @@ export function UserDashboard() {
 
               {!session && (
                 <Link to="/auth">
-                  <Button size="sm" variant="outline" className="gap-1.5 h-7 px-2.5 text-xs font-medium">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 h-7 px-2.5 text-xs font-medium"
+                  >
                     <LogIn className="h-3 w-3" />
                     <span>{t("dashboard.signIn", "Sign In")}</span>
                   </Button>
@@ -389,7 +397,7 @@ export function UserDashboard() {
                 <CardDescription className="text-xs mt-0.5">
                   {t(
                     "dashboard.levelDesc",
-                    "Keep completing habits daily to unlock higher ranks and milestone badges."
+                    "Keep completing habits daily to unlock higher ranks and milestone badges.",
                   )}
                 </CardDescription>
               </div>
@@ -431,7 +439,7 @@ export function UserDashboard() {
                 {stats.weeklyBreakdown.map((day) => {
                   const formattedDayLabel = new Date(day.date + "T00:00:00").toLocaleDateString(
                     language === "ar" ? "ar-SA" : "en-US",
-                    { weekday: "narrow" }
+                    { weekday: "narrow" },
                   );
                   return (
                     <div
@@ -512,9 +520,14 @@ export function UserDashboard() {
             ) : (
               <div className="text-center py-6 text-muted-foreground">
                 <ShieldCheck className="h-8 w-8 mx-auto opacity-50 mb-2" />
-                <p className="text-xs">{t("dashboard.noActiveStreaks", "No active habit streaks yet.")}</p>
+                <p className="text-xs">
+                  {t("dashboard.noActiveStreaks", "No active habit streaks yet.")}
+                </p>
                 <p className="text-[11px] mt-0.5">
-                  {t("dashboard.unlockLeadersDesc", "Complete habits consecutively to unlock leaders.")}
+                  {t(
+                    "dashboard.unlockLeadersDesc",
+                    "Complete habits consecutively to unlock leaders.",
+                  )}
                 </p>
               </div>
             )}
@@ -534,7 +547,7 @@ export function UserDashboard() {
               <CardDescription className="text-xs mt-0.5">
                 {t(
                   "dashboard.achievementsDesc",
-                  "Earn milestone badges as your consistency compounds over time."
+                  "Earn milestone badges as your consistency compounds over time.",
                 )}
               </CardDescription>
             </div>

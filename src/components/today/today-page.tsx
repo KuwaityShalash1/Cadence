@@ -69,7 +69,11 @@ const FILTER_LABELS: Record<FilterMode, string> = {
 };
 
 function getGreeting(
-  t: (key: string, fallbackOrParams?: string | Record<string, string | number | undefined | null>, params?: Record<string, string | number | undefined | null>) => string,
+  t: (
+    key: string,
+    fallbackOrParams?: string | Record<string, string | number | undefined | null>,
+    params?: Record<string, string | number | undefined | null>,
+  ) => string,
   name?: string,
 ): string {
   const h = new Date().getHours();
@@ -89,16 +93,8 @@ const USER_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 export function TodayPage() {
   const { t } = useTranslation();
   const { session } = useAuth();
-  const {
-    habits,
-    logMap,
-    ready,
-    archiveHabit,
-    removeHabit,
-    settings,
-    reorderHabits,
-    customIcons,
-  } = useApp();
+  const { habits, logMap, ready, archiveHabit, removeHabit, settings, reorderHabits, customIcons } =
+    useApp();
   const editor = useHabitEditor();
   const date = todayKey();
 
@@ -225,7 +221,7 @@ export function TodayPage() {
      * px-6 from md up) and the max width. Repeating them would compound the
      * mobile gutter to 48px and squeeze the habit cards.
      */
-    <div className="mx-0 w-full space-y-8 pb-28 md:pb-0">
+    <div className="mx-0 w-full space-y-8">
       <header className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -249,7 +245,7 @@ export function TodayPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {!session && (
               <Button asChild variant="outline" size="sm" className="gap-2">
-                <Link to="/auth" aria-label="Sign In or Login">
+                <Link to="/auth" aria-label={t("auth.signInOrLogin", "Sign In / Login")}>
                   <LogIn className="h-4 w-4" />
                   <span>{t("nav.signIn", "Sign In")}</span>
                 </Link>

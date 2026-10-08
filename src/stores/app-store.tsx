@@ -16,6 +16,7 @@ import { diffDays, toDateKey, todayKey } from "@/services/dates";
 import { buildLogMap, logKey, type LogMap } from "@/services/stats";
 import { playCompleteHabitSound, setSoundEnabled } from "@/lib/sound";
 import { useAuth } from "@/auth/auth-context";
+import { useTranslation } from "@/i18n/context";
 import { subscribeToSync, syncNow } from "@/lib/sync";
 import { useLocalCloudMigration } from "@/hooks/use-local-cloud-migration";
 import type {
@@ -56,6 +57,19 @@ const DEFAULT_GROUPS: Group[] = [
  * limit.
  */
 export const DEFAULT_MONTHLY_FREEZE_LIMIT = 3;
+
+interface PersistedStorageShape {
+  state?: {
+    theme?: string;
+    isSidebarCollapsed?: boolean;
+    isCollapsed?: boolean;
+    [key: string]: unknown;
+  };
+  isSidebarCollapsed?: boolean;
+  isCollapsed?: boolean;
+  theme?: string;
+  [key: string]: unknown;
+}
 
 /** Freeze quota snapshot for the current calendar month. */
 export interface FreezeQuota {
@@ -285,6 +299,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return EMPTY;
   });
+  const { t } = useTranslation();
   const [ready, setReady] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(getInitialCollapsed);
@@ -305,7 +320,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Sync to cadence-storage
         const raw = localStorage.getItem("cadence-storage");
-        let existing: any = {};
+        let existing: PersistedStorageShape = {};
         try {
           existing = JSON.parse(raw || "{}");
         } catch {
@@ -391,7 +406,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         try {
           const currentTheme = snapshot?.settings?.theme || "system";
           const raw = localStorage.getItem("cadence-storage");
-          let existing: any = {};
+          let existing: PersistedStorageShape = {};
           try {
             existing = JSON.parse(raw || "{}");
           } catch {
@@ -418,7 +433,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.error("Failed to load store snapshot from repository:", err);
-        toast.error("Local data could not be loaded. Your existing data was not changed.");
+        toast.error(
+          t(
+            "appStore.loadFailed",
+            "Local data could not be loaded. Your existing data was not changed.",
+          ),
+        );
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -664,7 +684,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Always update cadence-storage with latest settings and state
         const raw = localStorage.getItem("cadence-storage");
-        let existing: any = {};
+        let existing: PersistedStorageShape = {};
         try {
           existing = JSON.parse(raw || "{}");
         } catch {
@@ -713,7 +733,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const dayKey = date || todayKey();
         // Defense-in-depth: future dates are preview-only, never frozen.
         if (dayKey > todayKey()) {
-          toast.info("You cannot log habits for future dates");
+          toast.info(t("appStore.futureDateError", "You cannot log habits for future dates"));
           return buildFreezeFailure("missing", 0, 0);
         }
         const monthKey = dayKey.slice(0, 7);
@@ -861,7 +881,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return result;
       } catch (error) {
         console.error("Unexpected error in freezeHabit:", error);
-        toast.error("Failed to update streak freeze");
+        toast.error(t("appStore.freezeFailed", "Failed to update streak freeze"));
         return buildFreezeFailure("missing", 0, 0);
       }
     };
@@ -1742,7 +1762,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return changed;
       },
     };
-  }, [writeLog, setCollapsed, toggleCollapse, isCollapsed]);
+  }, [writeLog, setCollapsed, toggleCollapse]);
 
   const value = useMemo<Store>(
     () => ({

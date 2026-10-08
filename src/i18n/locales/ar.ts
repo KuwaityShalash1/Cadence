@@ -20,7 +20,8 @@ export const ar = {
   "sync.realtimeConnected": "التزامن المباشر متصل",
   "sync.realtimeConnectedTooltip": "التزامن الفوري نشط عبر Supabase WebSockets",
   "backup.title": "احمِ سجل عاداتك",
-  "backup.desc": "لم تقم بتصدير نسخة احتياطية من ملف JSON مؤخراً. نظراً لأن كادنس يعمل محلياً دون اتصال، فإن النسخ الاحتياطية اليدوية تضمن عدم فقدان تقدمك أبداً.",
+  "backup.desc":
+    "لم تقم بتصدير نسخة احتياطية من ملف JSON مؤخراً. نظراً لأن كادنس يعمل محلياً دون اتصال، فإن النسخ الاحتياطية اليدوية تضمن عدم فقدان تقدمك أبداً.",
   "backup.descShort": "صدّر نسخة احتياطية للحفاظ على سجل عاداتك بأمان.",
   "backup.export": "تصدير نسخة احتياطية (JSON)",
   "backup.later": "لاحقاً",
@@ -38,12 +39,14 @@ export const ar = {
   "settings.themeDark": "داكن",
   "settings.themeSystem": "النظام",
   "settings.data": "البيانات",
-  "settings.dataDescription": "قم بتصدير بياناتك كملف JSON أو استيراد نسخة سابقة أو مسح كل شيء للبدء من جديد.",
+  "settings.dataDescription":
+    "قم بتصدير بياناتك كملف JSON أو استيراد نسخة سابقة أو مسح كل شيء للبدء من جديد.",
   "settings.export": "تصدير البيانات",
   "settings.import": "استيراد البيانات",
   "settings.clear": "مسح جميع البيانات",
   "settings.clearConfirmTitle": "مسح جميع البيانات؟",
-  "settings.clearConfirmDesc": "سيؤدي هذا إلى حذف جميع العادات والسجلات والأهداف والروتينات والإعدادات بشكل دائم. لا يمكن التراجع عن ذلك. فكّر في تصدير نسخة احتياطية أولاً.",
+  "settings.clearConfirmDesc":
+    "سيؤدي هذا إلى حذف جميع العادات والسجلات والأهداف والروتينات والإعدادات بشكل دائم. لا يمكن التراجع عن ذلك. فكّر في تصدير نسخة احتياطية أولاً.",
   "settings.cancel": "إلغاء",
   "settings.clearConfirmYes": "نعم، مسح كل شيء",
   "settings.profile": "الملف الشخصي",
@@ -60,7 +63,8 @@ export const ar = {
   "settings.browserPermission": "إذن المتصفح:",
   "settings.permissionNotSupported": "غير مدعوم",
   "settings.requestPermission": "طلب إذن المتصفح",
-  "settings.permissionBlocked": "الإشعارات محظورة. اسمح لكادنس بإرسال إشعارات في إعدادات المتصفح أو الجهاز، ثم أعد تحميل التطبيق.",
+  "settings.permissionBlocked":
+    "الإشعارات محظورة. اسمح لكادنس بإرسال إشعارات في إعدادات المتصفح أو الجهاز، ثم أعد تحميل التطبيق.",
   "settings.permissionGranted": "الإشعارات جاهزة للاستخدام.",
   "settings.permissionUnsupported": "هذا المتصفح لا يدعم إشعارات الويب.",
   "settings.sendTestNotification": "إرسال إشعار تجريبي",
@@ -68,9 +72,11 @@ export const ar = {
   "settings.appDesc": "شارك كادنس مع أصدقائك أو ثبّته كتطبيق مستقل على جهازك.",
   "settings.shareCadence": "مشاركة كادنس",
   "settings.installApp": "تثبيت التطبيق",
-  "settings.iosInstallInstruction": "للتثبيت على iOS: اضغط على زر المشاركة، ثم 'إضافة إلى الشاشة الرئيسية'",
+  "settings.iosInstallInstruction":
+    "للتثبيت على iOS: اضغط على زر المشاركة، ثم 'إضافة إلى الشاشة الرئيسية'",
   "settings.dataAlert": "بياناتك محفوظة على هذا الجهاز فقط",
-  "settings.dataAlertDesc": "كادنس تطبيق يعمل دون اتصال بالكامل. بياناتك مخزنة محلياً على هذا الجهاز ولا تتزامن مع السحابة. لتجنب فقدان البيانات، يرجى تصدير نسخة احتياطية بانتظام.",
+  "settings.dataAlertDesc":
+    "كادنس تطبيق يعمل دون اتصال بالكامل. بياناتك مخزنة محلياً على هذا الجهاز ولا تتزامن مع السحابة. لتجنب فقدان البيانات، يرجى تصدير نسخة احتياطية بانتظام.",
   "settings.cloudSyncActive": "النسخ الاحتياطي السحابي نشط",
   "settings.cloudSyncActiveDesc": "بياناتك محفوظة بأمان ومتزامنة مع حسابك على السحابة.",
   "settings.help": "المساعدة والدعم",
@@ -100,7 +106,8 @@ export const ar = {
   "habit.newHabitDesc": "حدد الهدف والجدول الزمني — يمكنك تغييره لاحقاً.",
   "habit.editHabitDesc": "تسري التغييرات من اليوم فصاعداً. تظل السجلات السابقة كما هي.",
   "habit.quickSuggestions": "اقتراحات سريعة",
-  "habit.quickSuggestionsDesc": "انقر على نموذج لملء النموذج مسبقاً — لا يزال بإمكانك تعديل كل شيء أدناه.",
+  "habit.quickSuggestionsDesc":
+    "انقر على نموذج لملء النموذج مسبقاً — لا يزال بإمكانك تعديل كل شيء أدناه.",
   "habit.searchTemplates": "ابحث في العادات...",
   "habit.noTemplates": "لم يتم العثور على نماذج مطابقة",
   "habit.name": "الاسم",
@@ -141,7 +148,8 @@ export const ar = {
   "habit.remindersDesc": "اختر متى تريد أن يذكرك كادنس.",
   "habit.addTime": "إضافة وقت",
   "habit.reminderTime": "وقت التذكير",
-  "habit.reminderOfflineHint": "كادنس تطبيق يعمل دون اتصال أولاً. لضمان وصول التذكيرات في وقتها، اترك المتصفح مفتوحاً في الخلفية أو ثبّت كادنس كتطبيق.",
+  "habit.reminderOfflineHint":
+    "كادنس تطبيق يعمل دون اتصال أولاً. لضمان وصول التذكيرات في وقتها، اترك المتصفح مفتوحاً في الخلفية أو ثبّت كادنس كتطبيق.",
   "habit.deleteHabit": "حذف العادة",
   "habit.deleteConfirm": "هل أنت متأكد من رغبتك في حذف هذه العادة؟",
   "habit.saveChanges": "حفظ التغييرات",
@@ -155,7 +163,8 @@ export const ar = {
   "routine.newDesc": "ابنِ روتيناً خطوة بخطوة لصباحك، مسائك، أو جلسات عملك.",
   "routine.editDesc": "عدّل الخطوات أو الجدول الزمني لهذا الروتين.",
   "routine.quickSuggestions": "اقتراحات سريعة",
-  "routine.quickSuggestionsDesc": "انقر على نموذج لملء النموذج مسبقاً — لا يزال بإمكانك تعديل كل شيء أدناه.",
+  "routine.quickSuggestionsDesc":
+    "انقر على نموذج لملء النموذج مسبقاً — لا يزال بإمكانك تعديل كل شيء أدناه.",
   "routine.searchRoutines": "ابحث في الروتينات...",
   "routine.noTemplates": "لم يتم العثور على نماذج مطابقة",
   "routine.name": "الاسم",
@@ -191,7 +200,8 @@ export const ar = {
   "goal.newDesc": "حدد معالم مهمة واربط عاداتك اليومية لتتبع تقدمك نحو تحقيقها.",
   "goal.editDesc": "حدّث مستهدفات هدفك، الموعد النهائي، أو العادات المرتبطة به.",
   "goal.quickSuggestions": "اقتراحات سريعة",
-  "goal.quickSuggestionsDesc": "انقر على نموذج لملء النموذج مسبقاً — لا يزال بإمكانك تعديل كل شيء أدناه.",
+  "goal.quickSuggestionsDesc":
+    "انقر على نموذج لملء النموذج مسبقاً — لا يزال بإمكانك تعديل كل شيء أدناه.",
   "goal.searchGoals": "ابحث في الأهداف...",
   "goal.noTemplates": "لم يتم العثور على نماذج مطابقة",
   "goal.name": "الاسم",
@@ -245,11 +255,13 @@ export const ar = {
   "analytics.completionTrend": "منحنى الإنجاز",
   "analytics.completionTrendDesc": "نسبة العادات المجدولة المكتملة في كل يوم.",
   "analytics.moderationAdherence": "الالتزام بالاعتدال",
-  "analytics.moderationAdherenceDesc": "مدى التزامك بحدودك اليومية المحددة للعادات غير المرغوبة (استراتيجية الحد).",
+  "analytics.moderationAdherenceDesc":
+    "مدى التزامك بحدودك اليومية المحددة للعادات غير المرغوبة (استراتيجية الحد).",
   "analytics.perHabitBreakdown": "تفصيل كل عادة",
   "analytics.noActiveHabits": "لا توجد عادات نشطة بعد.",
   "analytics.noDataChart": "أكمل عادة واحدة على الأقل لرؤية مخطط الإنجاز.",
-  "analytics.noModerationChart": "أضف عادة سيئة باستراتيجية الحد وابدأ بتسجيل الاستخدام لرؤية هذا المخطط.",
+  "analytics.noModerationChart":
+    "أضف عادة سيئة باستراتيجية الحد وابدأ بتسجيل الاستخدام لرؤية هذا المخطط.",
   "analytics.range7Days": "7 أيام",
   "analytics.range30Days": "30 يوماً",
   "analytics.range90Days": "90 يوماً",
@@ -305,14 +317,17 @@ export const ar = {
   "quitTracker.filterAbstinence": "الامتناع",
   "quitTracker.filterModeration": "الاعتدال",
   "quitTracker.emptyTitle": "لا توجد مؤقتات عادات سيئة بعد",
-  "quitTracker.emptyDesc": "تحكم في عاداتك. ابدأ تتبع سلسلة نقائك من التدخين، الوجبات السريعة، أو وسائل التواصل.",
+  "quitTracker.emptyDesc":
+    "تحكم في عاداتك. ابدأ تتبع سلسلة نقائك من التدخين، الوجبات السريعة، أو وسائل التواصل.",
   "quitTracker.startFirst": "ابدأ تتبع عادتك الأولى",
   "relapseModal.title": "تسجيل الانتكاسة وتحليل المسبب",
   "relapseModal.description": "تقبل ما حدث. التأمل يساعد في بناء إرادة من حديد.",
-  "relapseModal.banner": "الانتكاسة جزء من الرحلة. المفتاح هو فهم سبب حدوثها لتجنبها في المرة القادمة.",
+  "relapseModal.banner":
+    "الانتكاسة جزء من الرحلة. المفتاح هو فهم سبب حدوثها لتجنبها في المرة القادمة.",
   "relapseModal.triggerPrompt": "١. المسبب السياقي الحقيقي",
   "relapseModal.reasonPrompt": "٢. ملاحظات تفصيلية / سياق محدد (اختياري)",
-  "relapseModal.reasonPlaceholder": "ماذا كنت تفعل أو تشعر قبله مباشرة؟ مثل: العمل حتى وقت متأخر...",
+  "relapseModal.reasonPlaceholder":
+    "ماذا كنت تفعل أو تشعر قبله مباشرة؟ مثل: العمل حتى وقت متأخر...",
   "relapseModal.submit": "إعادة ضبط المؤقت والتسجيل",
   "trigger.social": "البيئة الاجتماعية / ضغط الأقران",
   "trigger.socialDesc": "كنت حول أشخاص يفعلون ذلك أو في تجمع اجتماعي",
@@ -335,10 +350,12 @@ export const ar = {
   "today.of": "من",
   "today.timesIn": "التوقيت في",
   "today.welcomeTitle": "أهلاً بك في كادنس",
-  "today.welcomeDesc": "ابدأ بإنشاء عادتك الأولى — اختر هدفاً وجدولاً زمنياً، وستظهر هنا كل يوم في موعدها.",
+  "today.welcomeDesc":
+    "ابدأ بإنشاء عادتك الأولى — اختر هدفاً وجدولاً زمنياً، وستظهر هنا كل يوم في موعدها.",
   "today.createFirst": "أنشئ عادتك الأولى",
   "today.nothingTitle": "لا شيء مجدول لليوم",
-  "today.nothingDesc": "عاداتك غير مجدولة اليوم. يمكنك إنشاء عادة جديدة أو العودة في الأيام المجدولة.",
+  "today.nothingDesc":
+    "عاداتك غير مجدولة اليوم. يمكنك إنشاء عادة جديدة أو العودة في الأيام المجدولة.",
   "today.newHabit": "عادة جديدة",
   "today.archivedHabits": "العادات المؤرشفة",
   "today.archivedHabitsDesc": "أدر عاداتك المؤرشفة. استعدها أو احذفها نهائياً.",
@@ -347,7 +364,7 @@ export const ar = {
   "today.restore": "استعادة",
   "today.delete": "حذف",
   "today.deleteTitle": "حذف العادة نهائياً؟",
-  "today.deleteDesc": "سيؤدي هذا إلى الحذف الدائم لـ \"{name}\" وكامل سجلها. لا يمكن التراجع.",
+  "today.deleteDesc": 'سيؤدي هذا إلى الحذف الدائم لـ "{name}" وكامل سجلها. لا يمكن التراجع.',
   "today.deletePermanently": "حذف نهائي",
   "today.cancel": "إلغاء",
   "command.title": "لوحة الأوامر",
@@ -536,7 +553,8 @@ export const ar = {
   "quitTracker.updatedToast": "تم تحديث العادة السيئة بنجاح",
   "quitTracker.createdToast": "تم إنشاء متتبع الإقلاع! ابقَ قوياً.",
   "quitTracker.quickSuggestions": "اقتراحات سريعة",
-  "quitTracker.quickSuggestionsDesc": "انقر على نموذج لملء النموذج مسبقاً — يمكنك تعديل كل شيء أدناه.",
+  "quitTracker.quickSuggestionsDesc":
+    "انقر على نموذج لملء النموذج مسبقاً — يمكنك تعديل كل شيء أدناه.",
   "quitTracker.searchHabitsPlaceholder": "ابحث عن عادات للإقلاع عنها...",
   "quitTracker.searchTemplatesAria": "البحث في القوالب",
   "quitTracker.noTemplates": "لم يتم العثور على قوالب مطابقة",
@@ -553,12 +571,16 @@ export const ar = {
   "quitTracker.timeLimitDesc": "حدد استخدامك اليومي بالوقت (مثلاً، 120 دقيقة على وسائل التواصل).",
   "quitTracker.countLimitDesc": "حدد استهلاكك اليومي بالكمية (مثلاً، مشروب سكري واحد).",
   "quitTracker.dailyLimitLabel": "الحد اليومي ({unit})",
-  "quitTracker.minutesHelpText": "يمكنك استخدام ما يصل إلى هذا العدد من الدقائق يومياً دون كسر سلسلتك.",
-  "quitTracker.unitsHelpText": "يمكنك استهلاك ما يصل إلى هذا العدد من الوحدات يومياً دون كسر سلسلتك.",
+  "quitTracker.minutesHelpText":
+    "يمكنك استخدام ما يصل إلى هذا العدد من الدقائق يومياً دون كسر سلسلتك.",
+  "quitTracker.unitsHelpText":
+    "يمكنك استهلاك ما يصل إلى هذا العدد من الوحدات يومياً دون كسر سلسلتك.",
   "quitTracker.selectTriggerCategory": "يرجى تحديد فئة المحفز",
-  "quitTracker.relapseLoggedToast": "تم تسجيل الانتكاس لـ \"{title}\". أُعيد ضبط المؤقت. ابقَ قوياً! 💪",
+  "quitTracker.relapseLoggedToast":
+    'تم تسجيل الانتكاس لـ "{title}". أُعيد ضبط المؤقت. ابقَ قوياً! 💪',
   "quitTracker.triggerInsights": "رؤى المحفزات",
-  "quitTracker.triggerInsightsDesc": "سجّل الانتكاسات لاكتشاف أنماط المحفزات الشخصية وتجنب العثرات.",
+  "quitTracker.triggerInsightsDesc":
+    "سجّل الانتكاسات لاكتشاف أنماط المحفزات الشخصية وتجنب العثرات.",
   "quitTracker.relapseTriggerInsights": "رؤى محفزات الانتكاس",
   "quitTracker.basedOnRelapses": "بناءً على {count} من إجمالي الانتكاسات المسجلة.",
   "quitTracker.topTrigger": "المحفز الأكبر: {percent}% {name}",
@@ -636,7 +658,8 @@ export const ar = {
   "errorPage.tryAgain": "إعادة المحاولة",
   "errorPage.goHome": "العودة للرئيسية",
   "toast.habitFrozenTitle": "❄️ تم تجميد العادة!",
-  "toast.freezesThisMonth": "مرات التجميد هذا الشهر: {used} من {max}. يتجدد الحد خلال {days} {unit}.",
+  "toast.freezesThisMonth":
+    "مرات التجميد هذا الشهر: {used} من {max}. يتجدد الحد خلال {days} {unit}.",
   "toast.dismissNotification": "إغلاق الإشعار",
   "habit.nameRequired": "يرجى إدخال اسم العادة",
   "habit.monthDaysRequired": "يرجى تحديد يوم واحد على الأقل من الشهر",
@@ -821,30 +844,37 @@ export const ar = {
   "quitSuggestion.avoidingDifficultTasks.name": "تجنب المهام الصعبة",
   "quitSuggestion.avoidingDifficultTasks.badge": "تطوير الذات",
   "seo.defaultTitle": "كادنس | متتبع العادات البسيط والفعّال",
-  "seo.defaultDesc": "كادنس هو متتبع عادات بسيط يعمل بالكامل دون اتصال بالإنترنت لمساعدتك على بناء روتين يومي، وتحقيق الأهداف، ومواصلة التقدم بخصوصية تامة وبدون إعلانات.",
+  "seo.defaultDesc":
+    "كادنس هو متتبع عادات بسيط يعمل بالكامل دون اتصال بالإنترنت لمساعدتك على بناء روتين يومي، وتحقيق الأهداف، ومواصلة التقدم بخصوصية تامة وبدون إعلانات.",
   "seo.todayTitle": "اليوم — متتبع العادات كادنس",
   "seo.todayDesc": "تابع عاداتك اليومية وسجل إنجازاتك وحافظ على استمرارية سلاسل العادات بكل سهولة.",
   "seo.calendarTitle": "التقويم — متتبع العادات كادنس",
-  "seo.calendarDesc": "استعرض مدى التزامك بالعادات عبر تقويم تفاعلي وخريطة حرارية وسجل إنجاز تاريخي.",
+  "seo.calendarDesc":
+    "استعرض مدى التزامك بالعادات عبر تقويم تفاعلي وخريطة حرارية وسجل إنجاز تاريخي.",
   "seo.analyticsTitle": "التحليلات — متتبع العادات كادنس",
-  "seo.analyticsDesc": "حلل معدلات إنجاز عاداتك واتجاهاتك ومستوى انضباطك بإحصاءات ورسوم بيانية دقيقة.",
+  "seo.analyticsDesc":
+    "حلل معدلات إنجاز عاداتك واتجاهاتك ومستوى انضباطك بإحصاءات ورسوم بيانية دقيقة.",
   "seo.goalsTitle": "الأهداف — متتبع العادات كادنس",
   "seo.goalsDesc": "حدد أهدافك وطموحاتك طويلة المدى واربطها بعاداتك اليومية للوصول إليها بنجاح.",
   "seo.routinesTitle": "الروتين — متتبع العادات كادنس",
   "seo.routinesDesc": "نظم عاداتك في روتين صباحي ومسائي متكامل لتعزيز تركيزك وإنتاجيتك اليومية.",
   "seo.quitTrackerTitle": "متتبع الإقلاع — كادنس",
-  "seo.quitTrackerDesc": "تخلص من العادات غير المرغوبة عبر تتبع أيام الامتناع التام أو استراتيجيات التقليل التدريجي.",
+  "seo.quitTrackerDesc":
+    "تخلص من العادات غير المرغوبة عبر تتبع أيام الامتناع التام أو استراتيجيات التقليل التدريجي.",
   "seo.settingsTitle": "الإعدادات — متتبع العادات كادنس",
-  "seo.settingsDesc": "إدارة ملفك الشخصي والمظهر واللغة والإشعارات وبياناتك المحلية المحفوظة بأمان على جهازك.",
+  "seo.settingsDesc":
+    "إدارة ملفك الشخصي والمظهر واللغة والإشعارات وبياناتك المحلية المحفوظة بأمان على جهازك.",
   "seo.aboutTitle": "من نحن — متتبع العادات كادنس",
-  "seo.aboutDesc": "تعرف على رؤية كادنس لتطوير الذات وبناء العادات بتركيز عالٍ وخصوصية تامة بدون تشتيت.",
+  "seo.aboutDesc":
+    "تعرف على رؤية كادنس لتطوير الذات وبناء العادات بتركيز عالٍ وخصوصية تامة بدون تشتيت.",
 
   // Auth Page
   "auth.welcomeBack": "مرحباً بعودتك",
   "auth.createYourAccount": "إنشاء حسابك",
   "auth.signInDescription": "سجل الدخول لإعداد كادنس للمزامنة السحابية.",
   "auth.signUpDescription": "أنشئ حساباً لتفعيل المزامنة السحابية فور توفرها.",
-  "auth.notConfigured": "المصادقة السحابية غير مهيأة بعد. أضف VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY إلى بيئة التشغيل الخاصة بك.",
+  "auth.notConfigured":
+    "المصادقة السحابية غير مهيأة بعد. أضف VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY إلى بيئة التشغيل الخاصة بك.",
   "auth.continueWithGoogle": "المتابعة باستخدام Google",
   "auth.or": "أو",
   "auth.email": "البريد الإلكتروني",
@@ -936,12 +966,14 @@ export const ar = {
   "account.signOut": "تسجيل الخروج",
   "account.signOutDesc": "تسجيل الخروج من حساب كادنس الحالي على هذا الجهاز.",
   "account.deleteAccount": "حذف الحساب",
-  "account.deleteAccountDesc": "حذف حسابك نهائياً مع كافة العادات المتزامنة والسلاسل والنسخ السحابية الاحتياطية.",
+  "account.deleteAccountDesc":
+    "حذف حسابك نهائياً مع كافة العادات المتزامنة والسلاسل والنسخ السحابية الاحتياطية.",
   "deleteAccount.trigger": "حذف الحساب",
   "deleteAccount.title": "هل تريد حذف الحساب نهائياً؟",
-  "deleteAccount.description": "هذا الإجراء لا رجعة فيه. سيتم حذف جميع سجلاتك السحابية المتزامنة، وسجلات العادات، وسلاسل الإنجاز، وإعدادات الحساب نهائياً من قاعدة بيانات Supabase.",
+  "deleteAccount.description":
+    "هذا الإجراء لا رجعة فيه. سيتم حذف جميع سجلاتك السحابية المتزامنة، وسجلات العادات، وسلاسل الإنجاز، وإعدادات الحساب نهائياً من قاعدة بيانات Supabase.",
   "deleteAccount.confirmPrompt": "للمتابعة، يرجى كتابة {phrase} أدناه:",
-  "deleteAccount.inputPlaceholder": "اكتب \"{phrase}\" للتأكيد",
+  "deleteAccount.inputPlaceholder": 'اكتب "{phrase}" للتأكيد',
   "deleteAccount.inputLabel": "اكتب DELETE للتأكيد",
   "deleteAccount.cancel": "إلغاء",
   "deleteAccount.confirmButton": "حذف حسابي",
@@ -953,8 +985,24 @@ export const ar = {
   // About Maker
   "about.makerNotePrefix": "أنا",
   "about.makerName": "محمد شلاش",
-  "about.makerNoteBody": "، مطور مستقل سئم من متتبعات العادات المليئة بالتعقيدات والاشتراكات الشهرية. بنيت كادنس ليكون محلياً بالكامل، فائق السرعة، وخاصاً بنسبة 100%. بياناتك تعيش حصرياً في IndexedDB داخل متصفحك.",
+  "about.makerNoteBody":
+    "، مطور مستقل سئم من متتبعات العادات المليئة بالتعقيدات والاشتراكات الشهرية. بنيت كادنس ليكون محلياً بالكامل، فائق السرعة، وخاصاً بنسبة 100%. بياناتك تعيش حصرياً في IndexedDB داخل متصفحك.",
   "about.makerNoteHighlight": "بدون أي تتبع، وبدون ملفات تعريف ارتباط.",
   "about.viewSourceGithub": "عرض الشيفرة المصدرية على GitHub",
-  "about.viewOnProductHunt": "عرض على Product Hunt"
+  "about.viewOnProductHunt": "عرض على Product Hunt",
+
+  // App Store & Migration Toasts
+  "habit.singular": "عادة",
+  "habit.plural": "عادات",
+  "appStore.loadFailed": "تعذر تحميل البيانات المحلية. لم يتم تغيير بياناتك الحالية.",
+  "appStore.futureDateError": "لا يمكنك تسجيل العادات لتواريخ مستقبلية",
+  "appStore.freezeFailed": "فشل تحديث تجميد السلسلة",
+  "migration.syncedSuccess": "تمت مزامنة {count} من العادات دون اتصال مع حسابك السحابي.",
+  "migration.failedMerge": "فشل دمج البيانات مع السحابة.",
+  "migration.unexpectedError": "حدث خطأ غير متوقع أثناء المزامنة.",
+
+  // Navigation & Shell Aria Labels
+  "auth.signInOrLogin": "تسجيل الدخول",
+  "sidebar.toggle": "تبديل الشريط الجانبي",
+  "quitTracker.limitPlaceholder": "مثال: 120",
 };

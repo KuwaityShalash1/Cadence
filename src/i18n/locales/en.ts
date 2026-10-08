@@ -20,7 +20,8 @@ export const en = {
   "sync.realtimeConnected": "Live sync connected",
   "sync.realtimeConnectedTooltip": "Realtime sync active via Supabase WebSockets",
   "backup.title": "Protect your habit history",
-  "backup.desc": "You haven't exported a JSON backup recently. Since Cadence is offline-first, manual backups ensure your progress is never lost.",
+  "backup.desc":
+    "You haven't exported a JSON backup recently. Since Cadence is offline-first, manual backups ensure your progress is never lost.",
   "backup.descShort": "Export a backup copy to keep your habit history safe.",
   "backup.export": "Export Backup (JSON)",
   "backup.later": "Later",
@@ -38,12 +39,14 @@ export const en = {
   "settings.themeDark": "Dark",
   "settings.themeSystem": "System",
   "settings.data": "Data",
-  "settings.dataDescription": "Export your data as a JSON file, import a previous backup, or clear everything to start fresh.",
+  "settings.dataDescription":
+    "Export your data as a JSON file, import a previous backup, or clear everything to start fresh.",
   "settings.export": "Export data",
   "settings.import": "Import data",
   "settings.clear": "Clear all data",
   "settings.clearConfirmTitle": "Clear all data?",
-  "settings.clearConfirmDesc": "This permanently deletes all habits, logs, goals, routines, and settings. This cannot be undone. Consider exporting a backup first.",
+  "settings.clearConfirmDesc":
+    "This permanently deletes all habits, logs, goals, routines, and settings. This cannot be undone. Consider exporting a backup first.",
   "settings.cancel": "Cancel",
   "settings.clearConfirmYes": "Yes, clear everything",
   "settings.profile": "Profile",
@@ -60,19 +63,24 @@ export const en = {
   "settings.browserPermission": "Browser permission:",
   "settings.permissionNotSupported": "Not supported",
   "settings.requestPermission": "Request Browser Permission",
-  "settings.permissionBlocked": "Notifications are blocked. Allow them for Cadence in your browser or device settings, then reload the app.",
+  "settings.permissionBlocked":
+    "Notifications are blocked. Allow them for Cadence in your browser or device settings, then reload the app.",
   "settings.permissionGranted": "Notifications are ready to use.",
   "settings.permissionUnsupported": "This browser does not provide web notifications.",
   "settings.sendTestNotification": "Send Test Notification",
   "settings.app": "App",
-  "settings.appDesc": "Share Cadence with friends, or install it as a standalone app on your device.",
+  "settings.appDesc":
+    "Share Cadence with friends, or install it as a standalone app on your device.",
   "settings.shareCadence": "Share Cadence",
   "settings.installApp": "Install App",
-  "settings.iosInstallInstruction": "To install on iOS: tap the Share button, then 'Add to Home Screen'",
+  "settings.iosInstallInstruction":
+    "To install on iOS: tap the Share button, then 'Add to Home Screen'",
   "settings.dataAlert": "Your data lives only on this device",
-  "settings.dataAlertDesc": "Cadence is a 100% offline-first application. Your data is stored locally on this device and is not synced to the cloud. To prevent data loss if your browser cache is cleared, please export a backup of your data regularly.",
+  "settings.dataAlertDesc":
+    "Cadence is a 100% offline-first application. Your data is stored locally on this device and is not synced to the cloud. To prevent data loss if your browser cache is cleared, please export a backup of your data regularly.",
   "settings.cloudSyncActive": "Cloud sync active",
-  "settings.cloudSyncActiveDesc": "Your data is safely backed up and synced to your Cadence cloud account.",
+  "settings.cloudSyncActiveDesc":
+    "Your data is safely backed up and synced to your Cadence cloud account.",
   "settings.help": "Help & Support",
   "settings.helpDesc": "Found a bug or have feedback? We'd love to hear from you.",
   "settings.reportBug": "Report a Bug / Feedback",
@@ -100,7 +108,8 @@ export const en = {
   "habit.newHabitDesc": "Set the target and schedule — you can change it later.",
   "habit.editHabitDesc": "Changes apply from today onward. Past records stay untouched.",
   "habit.quickSuggestions": "Quick Suggestions",
-  "habit.quickSuggestionsDesc": "Tap a template to prefill the form — you can still edit everything below.",
+  "habit.quickSuggestionsDesc":
+    "Tap a template to prefill the form — you can still edit everything below.",
   "habit.searchTemplates": "Search habits...",
   "habit.noTemplates": "No matching templates found",
   "habit.name": "Name",
@@ -141,7 +150,8 @@ export const en = {
   "habit.remindersDesc": "Choose when Cadence should remind you.",
   "habit.addTime": "Add time",
   "habit.reminderTime": "Reminder time",
-  "habit.reminderOfflineHint": "Cadence is offline-first. To ensure reminders arrive on time, keep your browser open in the background or install Cadence as an app (Add to Home Screen).",
+  "habit.reminderOfflineHint":
+    "Cadence is offline-first. To ensure reminders arrive on time, keep your browser open in the background or install Cadence as an app (Add to Home Screen).",
   "habit.deleteHabit": "Delete Habit",
   "habit.deleteConfirm": "Are you sure you want to delete this habit?",
   "habit.saveChanges": "Save changes",
@@ -155,7 +165,8 @@ export const en = {
   "routine.newDesc": "Build a step-by-step routine for your morning, evening, or work sessions.",
   "routine.editDesc": "Modify the steps or schedule for this routine.",
   "routine.quickSuggestions": "Quick Suggestions",
-  "routine.quickSuggestionsDesc": "Tap a template to prefill the form — you can still edit everything below.",
+  "routine.quickSuggestionsDesc":
+    "Tap a template to prefill the form — you can still edit everything below.",
   "routine.searchRoutines": "Search routines...",
   "routine.noTemplates": "No matching templates found",
   "routine.name": "Name",
@@ -191,7 +202,8 @@ export const en = {
   "goal.newDesc": "Set meaningful milestones and link your daily habits to track progress.",
   "goal.editDesc": "Update your goal targets, deadline, or linked habits.",
   "goal.quickSuggestions": "Quick Suggestions",
-  "goal.quickSuggestionsDesc": "Tap a template to prefill the form — you can still edit everything below.",
+  "goal.quickSuggestionsDesc":
+    "Tap a template to prefill the form — you can still edit everything below.",
   "goal.searchGoals": "Search goals...",
   "goal.noTemplates": "No matching templates found",
   "goal.name": "Name",
@@ -245,11 +257,13 @@ export const en = {
   "analytics.completionTrend": "Completion trend",
   "analytics.completionTrendDesc": "Percentage of scheduled habits completed each day.",
   "analytics.moderationAdherence": "Moderation adherence",
-  "analytics.moderationAdherenceDesc": "How often you stay within your self-imposed daily limits on bad habits (limit strategy).",
+  "analytics.moderationAdherenceDesc":
+    "How often you stay within your self-imposed daily limits on bad habits (limit strategy).",
   "analytics.perHabitBreakdown": "Per-habit breakdown",
   "analytics.noActiveHabits": "No active habits yet.",
   "analytics.noDataChart": "Complete at least one habit to see your completion chart.",
-  "analytics.noModerationChart": "Add a bad habit with a Limit strategy and start logging usage to see this chart.",
+  "analytics.noModerationChart":
+    "Add a bad habit with a Limit strategy and start logging usage to see this chart.",
   "analytics.range7Days": "7 days",
   "analytics.range30Days": "30 days",
   "analytics.range90Days": "90 days",
@@ -305,14 +319,17 @@ export const en = {
   "quitTracker.filterAbstinence": "Abstinence",
   "quitTracker.filterModeration": "Moderation",
   "quitTracker.emptyTitle": "No bad habit timers yet",
-  "quitTracker.emptyDesc": "Take control of your habits. Start tracking your clean streak for smoking, junk food, social media, or any addiction.",
+  "quitTracker.emptyDesc":
+    "Take control of your habits. Start tracking your clean streak for smoking, junk food, social media, or any addiction.",
   "quitTracker.startFirst": "Start tracking your first habit",
   "relapseModal.title": "Record Relapse & Analyze Trigger",
   "relapseModal.description": "Acknowledge what happened. Reflecting helps build iron will.",
-  "relapseModal.banner": "Relapsing is part of the journey. The key is understanding why it happened so you can prevent it next time.",
+  "relapseModal.banner":
+    "Relapsing is part of the journey. The key is understanding why it happened so you can prevent it next time.",
   "relapseModal.triggerPrompt": "1. Real Contextual Trigger",
   "relapseModal.reasonPrompt": "2. Detailed Notes / Specific Context (Optional)",
-  "relapseModal.reasonPlaceholder": "What exactly were you doing or feeling right before? E.g., working late on project X...",
+  "relapseModal.reasonPlaceholder":
+    "What exactly were you doing or feeling right before? E.g., working late on project X...",
   "relapseModal.submit": "Reset Timer & Log",
   "trigger.social": "Social Environment / Peer Pressure",
   "trigger.socialDesc": "Was around people doing it or in a social gathering",
@@ -335,19 +352,23 @@ export const en = {
   "today.of": "of",
   "today.timesIn": "Times in",
   "today.welcomeTitle": "Welcome to Cadence",
-  "today.welcomeDesc": "Start by creating your first habit — pick a target and a schedule, and it will show up here every day it's due.",
+  "today.welcomeDesc":
+    "Start by creating your first habit — pick a target and a schedule, and it will show up here every day it's due.",
   "today.createFirst": "Create your first habit",
   "today.nothingTitle": "Nothing scheduled for today",
-  "today.nothingDesc": "Your habits aren't due today. You can still create a new one or check back on your scheduled days.",
+  "today.nothingDesc":
+    "Your habits aren't due today. You can still create a new one or check back on your scheduled days.",
   "today.newHabit": "New habit",
   "today.archivedHabits": "Archived Habits",
-  "today.archivedHabitsDesc": "Manage your archived habits. Restore them to active view or delete them permanently.",
+  "today.archivedHabitsDesc":
+    "Manage your archived habits. Restore them to active view or delete them permanently.",
   "today.noArchived": "No archived habits yet",
   "today.noArchivedDesc": "Habits you archive will appear here.",
   "today.restore": "Restore",
   "today.delete": "Delete",
   "today.deleteTitle": "Permanently delete habit?",
-  "today.deleteDesc": "This will permanently delete \"{name}\" and all its history from IndexedDB. This action cannot be undone.",
+  "today.deleteDesc":
+    'This will permanently delete "{name}" and all its history from IndexedDB. This action cannot be undone.',
   "today.deletePermanently": "Delete permanently",
   "today.cancel": "Cancel",
   "command.title": "Command Palette",
@@ -515,9 +536,11 @@ export const en = {
   "quitTracker.badge": "Quit & Abstinence Tracker",
   "quitTracker.editorDesc": "Track abstinence and build unbreakable willpower.",
   "quitTracker.noAbstinenceTitle": "No abstinence trackers yet",
-  "quitTracker.noAbstinenceDesc": "Track a habit with total abstinence to see its live clean-streak timer here.",
+  "quitTracker.noAbstinenceDesc":
+    "Track a habit with total abstinence to see its live clean-streak timer here.",
   "quitTracker.noModerationTitle": "No moderation trackers yet",
-  "quitTracker.noModerationDesc": "Track a habit with a daily limit to monitor moderation progress here.",
+  "quitTracker.noModerationDesc":
+    "Track a habit with a daily limit to monitor moderation progress here.",
   "quitTracker.showAll": "Show all trackers",
   "quitTracker.currentAbstinenceStreak": "Current Abstinence Streak",
   "quitTracker.relapseSingular": "relapse",
@@ -536,7 +559,8 @@ export const en = {
   "quitTracker.updatedToast": "Bad habit updated successfully",
   "quitTracker.createdToast": "Quit tracker created! Stay strong.",
   "quitTracker.quickSuggestions": "Quick Suggestions",
-  "quitTracker.quickSuggestionsDesc": "Tap a template to prefill the form — you can still edit everything below.",
+  "quitTracker.quickSuggestionsDesc":
+    "Tap a template to prefill the form — you can still edit everything below.",
   "quitTracker.searchHabitsPlaceholder": "Search habits to quit...",
   "quitTracker.searchTemplatesAria": "Search templates",
   "quitTracker.noTemplates": "No matching templates found",
@@ -550,15 +574,19 @@ export const en = {
   "quitTracker.selectLimitType": "Select limit type",
   "quitTracker.timeLimitOption": "Time (minutes/day)",
   "quitTracker.countLimitOption": "Count (units/day)",
-  "quitTracker.timeLimitDesc": "Limit your daily usage by time (e.g., 120 minutes of social media).",
+  "quitTracker.timeLimitDesc":
+    "Limit your daily usage by time (e.g., 120 minutes of social media).",
   "quitTracker.countLimitDesc": "Limit your daily usage by quantity (e.g., 1 sugary drink).",
   "quitTracker.dailyLimitLabel": "Daily Limit ({unit})",
-  "quitTracker.minutesHelpText": "You can use up to this many minutes per day without breaking your streak.",
-  "quitTracker.unitsHelpText": "You can consume up to this many units per day without breaking your streak.",
+  "quitTracker.minutesHelpText":
+    "You can use up to this many minutes per day without breaking your streak.",
+  "quitTracker.unitsHelpText":
+    "You can consume up to this many units per day without breaking your streak.",
   "quitTracker.selectTriggerCategory": "Please select a trigger category",
-  "quitTracker.relapseLoggedToast": "Relapse logged for \"{title}\". Timer reset. Stay strong! 💪",
+  "quitTracker.relapseLoggedToast": 'Relapse logged for "{title}". Timer reset. Stay strong! 💪',
   "quitTracker.triggerInsights": "Trigger Insights",
-  "quitTracker.triggerInsightsDesc": "Log relapses to discover your personal trigger patterns and prevent setbacks.",
+  "quitTracker.triggerInsightsDesc":
+    "Log relapses to discover your personal trigger patterns and prevent setbacks.",
   "quitTracker.relapseTriggerInsights": "Relapse Trigger Insights",
   "quitTracker.basedOnRelapses": "Based on {count} total recorded relapses.",
   "quitTracker.topTrigger": "Top Trigger: {percent}% {name}",
@@ -708,7 +736,8 @@ export const en = {
   "habitTemplate.coursework-preset.name": "Complete Coursework",
   "habitTemplate.coursework-preset.desc": "Make steady progress on your current class work",
   "habitTemplate.budget-check-preset.name": "Check Spending",
-  "habitTemplate.budget-check-preset.desc": "Review today's purchases and stay aware of your budget",
+  "habitTemplate.budget-check-preset.desc":
+    "Review today's purchases and stay aware of your budget",
   "habitTemplate.gratitude-preset.name": "Write Three Good Things",
   "habitTemplate.gratitude-preset.desc": "Notice small wins and moments worth remembering",
   "habitTemplate.breathing-preset.name": "Mindful Breathing",
@@ -779,7 +808,8 @@ export const en = {
   "goalSuggestion.improveSleep.desc": "Protect a reliable bedtime and wake-up rhythm",
   "goalSuggestion.improveSleep.badge": "30 nights",
   "goalSuggestion.learnNewLanguage.name": "Learn a New Language",
-  "goalSuggestion.learnNewLanguage.desc": "Reach a useful conversational foundation through practice",
+  "goalSuggestion.learnNewLanguage.desc":
+    "Reach a useful conversational foundation through practice",
   "goalSuggestion.learnNewLanguage.badge": "500 words",
   "goalSuggestion.timeForCreativity.name": "Make Time for Creativity",
   "goalSuggestion.timeForCreativity.desc": "Finish a body of writing, art, music, or design work",
@@ -821,21 +851,27 @@ export const en = {
   "quitSuggestion.avoidingDifficultTasks.name": "Avoiding Difficult Tasks",
   "quitSuggestion.avoidingDifficultTasks.badge": "Growth",
   "seo.defaultTitle": "Cadence | Minimalist Habit Tracker",
-  "seo.defaultDesc": "Cadence is an offline-first habit tracker for building daily routines, tracking goals, and staying consistent without ads or account requirements.",
+  "seo.defaultDesc":
+    "Cadence is an offline-first habit tracker for building daily routines, tracking goals, and staying consistent without ads or account requirements.",
   "seo.todayTitle": "Today — Cadence Habit Tracker",
   "seo.todayDesc": "Track your daily habits, log progress, and build streaks with Cadence.",
   "seo.calendarTitle": "Calendar — Cadence Habit Tracker",
-  "seo.calendarDesc": "Review your habit consistency with interactive calendar heatmaps and completion history.",
+  "seo.calendarDesc":
+    "Review your habit consistency with interactive calendar heatmaps and completion history.",
   "seo.analyticsTitle": "Analytics — Cadence Habit Tracker",
-  "seo.analyticsDesc": "Visualize your habit completion rates, trends, and discipline scores with detailed analytics.",
+  "seo.analyticsDesc":
+    "Visualize your habit completion rates, trends, and discipline scores with detailed analytics.",
   "seo.goalsTitle": "Goals — Cadence Habit Tracker",
   "seo.goalsDesc": "Set and achieve long-term milestones linked to your daily habits.",
   "seo.routinesTitle": "Routines — Cadence Habit Tracker",
-  "seo.routinesDesc": "Chain habits into morning, afternoon, and evening routines for effortless flow.",
+  "seo.routinesDesc":
+    "Chain habits into morning, afternoon, and evening routines for effortless flow.",
   "seo.quitTrackerTitle": "Quit Tracker — Cadence Habit Tracker",
-  "seo.quitTrackerDesc": "Break unwanted habits with abstinence streaks or gradual reduction strategies.",
+  "seo.quitTrackerDesc":
+    "Break unwanted habits with abstinence streaks or gradual reduction strategies.",
   "seo.settingsTitle": "Settings — Cadence Habit Tracker",
-  "seo.settingsDesc": "Manage your profile, theme, language, notifications, and local Cadence data.",
+  "seo.settingsDesc":
+    "Manage your profile, theme, language, notifications, and local Cadence data.",
   "seo.aboutTitle": "About Us — Cadence Habit Tracker",
   "seo.aboutDesc": "Learn about Cadence's mission for private, distraction-free habit building.",
 
@@ -844,7 +880,8 @@ export const en = {
   "auth.createYourAccount": "Create your account",
   "auth.signInDescription": "Sign in to prepare Cadence for cloud sync.",
   "auth.signUpDescription": "Create an account to enable cloud sync when it arrives.",
-  "auth.notConfigured": "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.",
+  "auth.notConfigured":
+    "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.",
   "auth.continueWithGoogle": "Continue with Google",
   "auth.or": "Or",
   "auth.email": "Email",
@@ -883,7 +920,8 @@ export const en = {
   "dashboard.monthlyRate": "Monthly Rate",
   "dashboard.perfectDaysIn30d": "{count} perfect days in last 30d",
   "dashboard.levelDisplay": "Level {level} — {title}",
-  "dashboard.levelDesc": "Keep completing habits daily to unlock higher ranks and milestone badges.",
+  "dashboard.levelDesc":
+    "Keep completing habits daily to unlock higher ranks and milestone badges.",
   "dashboard.xp": "{count} XP",
   "dashboard.rankProgress": "Rank Progress",
   "dashboard.nextTierAt": "Next tier at {xp} XP",
@@ -936,12 +974,14 @@ export const en = {
   "account.signOut": "Sign Out",
   "account.signOutDesc": "Sign out of your active Cadence account on this device.",
   "account.deleteAccount": "Delete Account",
-  "account.deleteAccountDesc": "Permanently delete your account, synced habits, streaks, and all cloud backups.",
+  "account.deleteAccountDesc":
+    "Permanently delete your account, synced habits, streaks, and all cloud backups.",
   "deleteAccount.trigger": "Delete Account",
   "deleteAccount.title": "Delete Account Permanently?",
-  "deleteAccount.description": "This action is irreversible. All your synchronized cloud records, habit logs, completion streaks, and account settings will be permanently removed from the Supabase database.",
+  "deleteAccount.description":
+    "This action is irreversible. All your synchronized cloud records, habit logs, completion streaks, and account settings will be permanently removed from the Supabase database.",
   "deleteAccount.confirmPrompt": "To proceed, please type {phrase} below:",
-  "deleteAccount.inputPlaceholder": "Type \"{phrase}\" to confirm",
+  "deleteAccount.inputPlaceholder": 'Type "{phrase}" to confirm',
   "deleteAccount.inputLabel": "Type DELETE to confirm",
   "deleteAccount.cancel": "Cancel",
   "deleteAccount.confirmButton": "Delete My Account",
@@ -953,8 +993,24 @@ export const en = {
   // About Maker
   "about.makerNotePrefix": "I'm",
   "about.makerName": "Mohamed Shalash",
-  "about.makerNoteBody": ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence to be completely offline-first, ridiculously fast, and 100% private. Your data lives strictly in your browser's IndexedDB.",
+  "about.makerNoteBody":
+    ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence to be completely offline-first, ridiculously fast, and 100% private. Your data lives strictly in your browser's IndexedDB.",
   "about.makerNoteHighlight": "Zero tracking, zero cookies.",
   "about.viewSourceGithub": "View source on GitHub",
-  "about.viewOnProductHunt": "View on Product Hunt"
+  "about.viewOnProductHunt": "View on Product Hunt",
+
+  // App Store & Migration Toasts
+  "habit.singular": "habit",
+  "habit.plural": "habits",
+  "appStore.loadFailed": "Local data could not be loaded. Your existing data was not changed.",
+  "appStore.futureDateError": "You cannot log habits for future dates",
+  "appStore.freezeFailed": "Failed to update streak freeze",
+  "migration.syncedSuccess": "Synced {count} offline {habitText} with your cloud account.",
+  "migration.failedMerge": "Failed to merge data with cloud.",
+  "migration.unexpectedError": "Unexpected migration failure",
+
+  // Navigation & Shell Aria Labels
+  "auth.signInOrLogin": "Sign In / Login",
+  "sidebar.toggle": "Toggle Sidebar",
+  "quitTracker.limitPlaceholder": "e.g., 120",
 };

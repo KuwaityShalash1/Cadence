@@ -34,18 +34,90 @@ interface RoutineSuggestion {
 
 /** Ready-made routine templates for the collapsible Quick Suggestions card list. */
 const ROUTINE_SUGGESTIONS: RoutineSuggestion[] = [
-  { key: "morningSetup", name: "Morning Setup", icon: "sun", color: "#EAB308", badge: "3 steps • 15m" },
-  { key: "eveningWindDown", name: "Evening Wind Down", icon: "moon", color: "#6366F1", badge: "4 steps • 30m" },
-  { key: "deepWorkSession", name: "Deep Work Session", icon: "brain", color: "#3B82F6", badge: "2 steps • 90m" },
-  { key: "sundayReset", name: "Sunday Reset", icon: "refresh-cw", color: "#10B981", badge: "5 steps • 45m" },
-  { key: "examPrepSprint", name: "Exam Prep Sprint", icon: "book-open", color: "#8B5CF6", badge: "4 steps • 60m" },
-  { key: "developerDailyLoop", name: "Developer Daily Loop", icon: "code-2", color: "#0EA5E9", badge: "4 steps • 75m" },
-  { key: "moneyCheckIn", name: "Money Check-In", icon: "wallet", color: "#10B981", badge: "3 steps • 15m" },
-  { key: "mindfulReset", name: "Mindful Reset", icon: "heart", color: "#14B8A6", badge: "3 steps • 20m" },
-  { key: "screenFreeNight", name: "Screen-Free Night", icon: "phone-off", color: "#64748B", badge: "4 steps • 40m" },
-  { key: "creativePractice", name: "Creative Practice", icon: "pen-tool", color: "#EC4899", badge: "3 steps • 45m" },
-  { key: "mealPrepBlock", name: "Meal Prep Block", icon: "utensils", color: "#F97316", badge: "4 steps • 60m" },
-  { key: "homeMaintenance", name: "Home Maintenance", icon: "refresh-cw", color: "#64748B", badge: "5 steps • 30m" },
+  {
+    key: "morningSetup",
+    name: "Morning Setup",
+    icon: "sun",
+    color: "#EAB308",
+    badge: "3 steps • 15m",
+  },
+  {
+    key: "eveningWindDown",
+    name: "Evening Wind Down",
+    icon: "moon",
+    color: "#6366F1",
+    badge: "4 steps • 30m",
+  },
+  {
+    key: "deepWorkSession",
+    name: "Deep Work Session",
+    icon: "brain",
+    color: "#3B82F6",
+    badge: "2 steps • 90m",
+  },
+  {
+    key: "sundayReset",
+    name: "Sunday Reset",
+    icon: "refresh-cw",
+    color: "#10B981",
+    badge: "5 steps • 45m",
+  },
+  {
+    key: "examPrepSprint",
+    name: "Exam Prep Sprint",
+    icon: "book-open",
+    color: "#8B5CF6",
+    badge: "4 steps • 60m",
+  },
+  {
+    key: "developerDailyLoop",
+    name: "Developer Daily Loop",
+    icon: "code-2",
+    color: "#0EA5E9",
+    badge: "4 steps • 75m",
+  },
+  {
+    key: "moneyCheckIn",
+    name: "Money Check-In",
+    icon: "wallet",
+    color: "#10B981",
+    badge: "3 steps • 15m",
+  },
+  {
+    key: "mindfulReset",
+    name: "Mindful Reset",
+    icon: "heart",
+    color: "#14B8A6",
+    badge: "3 steps • 20m",
+  },
+  {
+    key: "screenFreeNight",
+    name: "Screen-Free Night",
+    icon: "phone-off",
+    color: "#64748B",
+    badge: "4 steps • 40m",
+  },
+  {
+    key: "creativePractice",
+    name: "Creative Practice",
+    icon: "pen-tool",
+    color: "#EC4899",
+    badge: "3 steps • 45m",
+  },
+  {
+    key: "mealPrepBlock",
+    name: "Meal Prep Block",
+    icon: "utensils",
+    color: "#F97316",
+    badge: "4 steps • 60m",
+  },
+  {
+    key: "homeMaintenance",
+    name: "Home Maintenance",
+    icon: "refresh-cw",
+    color: "#64748B",
+    badge: "5 steps • 30m",
+  },
   {
     key: "weeklyPlanningReview",
     name: "Weekly Planning Review",
@@ -94,7 +166,6 @@ export function RoutineForm({
     setQuery: setSuggestionSearch,
   } = useProgressiveDisclosure();
 
-
   const activeHabits = habits;
 
   // Accent tint for the selected icon tile in the picker grid.
@@ -136,7 +207,14 @@ export function RoutineForm({
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
   function addStep() {
-    setSteps((prev) => [...prev, { id: uid(), title: "", /** ISO timestamp initialized on creation. */ updatedAt: new Date().toISOString() }]);
+    setSteps((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        title: "",
+        /** ISO timestamp initialized on creation. */ updatedAt: new Date().toISOString(),
+      },
+    ]);
   }
   function removeStep(id: string) {
     setSteps((prev) => prev.filter((s) => s.id !== id));
@@ -184,17 +262,14 @@ export function RoutineForm({
               PERMANENT toggle rendered in BOTH collapsed and expanded states —
               only the body below this header toggles. */}
             <div className="flex items-start justify-between gap-3 mb-2">
-              <div
-                className="flex-1 cursor-pointer select-none"
-                onClick={toggleSuggestions}
-              >
+              <div className="flex-1 cursor-pointer select-none" onClick={toggleSuggestions}>
                 <div className="flex items-center gap-2">
                   <span className="text-xs">✨</span>
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  <span className="text-xs font-semibold text-foreground">
                     {t("routine.quickSuggestions")}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5">
                   {t("routine.quickSuggestionsDesc")}
                 </p>
               </div>
@@ -204,8 +279,10 @@ export function RoutineForm({
                 type="button"
                 onClick={toggleSuggestions}
                 aria-expanded={isSuggestionsOpen}
-                aria-label={isSuggestionsOpen ? t("habit.collapseSuggestions") : t("habit.expandSuggestions")}
-                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300 transition-colors shrink-0 cursor-pointer"
+                aria-label={
+                  isSuggestionsOpen ? t("habit.collapseSuggestions") : t("habit.expandSuggestions")
+                }
+                className="p-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors shrink-0 cursor-pointer"
               >
                 <ChevronDown
                   className={cn(
@@ -222,15 +299,20 @@ export function RoutineForm({
             {!isSuggestionsOpen && (
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {ROUTINE_SUGGESTIONS.slice(0, 2).map((suggestion) => {
-                  const localizedName = t(`routineSuggestion.${suggestion.key}.name`, suggestion.name);
+                  const localizedName = t(
+                    `routineSuggestion.${suggestion.key}.name`,
+                    suggestion.name,
+                  );
                   return (
                     <button
                       key={suggestion.key}
                       type="button"
-                      aria-label={t("habit.useTemplateAria", "Use template: {name}", { name: localizedName })}
+                      aria-label={t("habit.useTemplateAria", "Use template: {name}", {
+                        name: localizedName,
+                      })}
                       aria-pressed={name === localizedName || name === suggestion.name}
                       onClick={() => applySuggestion(suggestion)}
-                      className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition active:scale-95 cursor-pointer"
+                      className="w-full flex items-center justify-start px-3 py-2 rounded-xl bg-card hover:bg-muted/50 border border-border transition active:scale-95 cursor-pointer"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
@@ -246,7 +328,7 @@ export function RoutineForm({
                             style={{ color: suggestion.color }}
                           />
                         </div>
-                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        <span className="text-xs font-semibold text-foreground truncate">
                           {localizedName}
                         </span>
                       </div>
@@ -268,7 +350,7 @@ export function RoutineForm({
               <div className="overflow-hidden">
                 <div className="relative mt-2">
                   <Search
-                    className="absolute top-2.5 start-3 h-4 w-4 text-slate-400"
+                    className="absolute top-2.5 start-3 h-4 w-4 text-muted-foreground"
                     aria-hidden="true"
                   />
                   <input
@@ -277,18 +359,23 @@ export function RoutineForm({
                     value={suggestionSearch}
                     onChange={(e) => setSuggestionSearch(e.target.value)}
                     aria-label={t("routine.searchRoutines")}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pe-3 ps-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-100"
+                    className="w-full rounded-lg border border-border bg-muted/60 py-1.5 pe-3 ps-9 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
                 {filteredRoutineSuggestions().length > 0 ? (
                   <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden mt-2">
                     {filteredRoutineSuggestions().map((suggestion) => {
-                      const localizedName = t(`routineSuggestion.${suggestion.key}.name`, suggestion.name);
+                      const localizedName = t(
+                        `routineSuggestion.${suggestion.key}.name`,
+                        suggestion.name,
+                      );
                       return (
                         <button
                           key={suggestion.key}
                           type="button"
-                          aria-label={t("habit.useTemplateAria", "Use template: {name}", { name: localizedName })}
+                          aria-label={t("habit.useTemplateAria", "Use template: {name}", {
+                            name: localizedName,
+                          })}
                           aria-pressed={name === localizedName || name === suggestion.name}
                           onClick={() => applySuggestion(suggestion)}
                           style={
@@ -299,7 +386,7 @@ export function RoutineForm({
                                 }
                               : undefined
                           }
-                          className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-slate-200/80 bg-white px-3 py-2 transition active:scale-[0.99] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/90 dark:hover:bg-slate-800/80"
+                          className="w-full flex cursor-pointer items-center justify-start rounded-xl border border-border bg-card px-3 py-2 transition active:scale-[0.99] hover:bg-muted/40"
                         >
                           <span className="flex min-w-0 flex-1 items-center gap-2.5">
                             <div
@@ -315,7 +402,7 @@ export function RoutineForm({
                                 style={{ color: suggestion.color }}
                               />
                             </div>
-                            <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-slate-800 dark:text-slate-200">
+                            <span className="min-w-0 flex-1 text-xs font-semibold whitespace-normal text-foreground">
                               {localizedName}
                             </span>
                           </span>
@@ -450,9 +537,7 @@ export function RoutineForm({
         <Button type="button" variant="outline" size="sm" className="mt-2" onClick={addStep}>
           <Plus className="me-1 h-4 w-4" /> {t("routine.addStep")}
         </Button>
-        <p className="text-xs text-muted-foreground">
-          {t("routine.stepsHint")}
-        </p>
+        <p className="text-xs text-muted-foreground">{t("routine.stepsHint")}</p>
       </fieldset>
 
       <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
