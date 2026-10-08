@@ -29,7 +29,9 @@ const readSoundEnabledFromStorage = (): boolean => {
     ) {
       return false;
     }
-  } catch (e) {}
+  } catch {
+    // localStorage unavailable or restricted in iframe/private browsing
+  }
   return true;
 };
 
@@ -71,8 +73,12 @@ const playAudio = (src: string, volume = 0.15) => {
   try {
     const audio = new Audio(src);
     audio.volume = volume;
-    audio.play().catch(() => {});
-  } catch (e) {}
+    audio.play().catch((err) => {
+      console.debug("Audio playback prevented:", err);
+    });
+  } catch (err) {
+    console.debug("Failed to initialize audio:", err);
+  }
 };
 
 export const playSound = (srcOrName?: string, volume = 0.15) => {
@@ -110,7 +116,9 @@ export const playToggleSound = (isOpen: boolean) => {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.04);
-  } catch (e) {}
+  } catch (err) {
+    console.debug("Web Audio synthesizeClick error:", err);
+  }
 };
 
 // 3. Dopamine Success Chime (2 Harmonic Tones for Habit Completion - legacy compatibility)
@@ -158,7 +166,9 @@ export const playAddHabitSound = () => {
     gain.connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.1);
-  } catch (e) {}
+  } catch (err) {
+    console.debug("Web Audio playAddHabitSound error:", err);
+  }
 };
 
 // 2. COMPLETE HABIT SOUND (Dopamine Success Double-Tone)
@@ -190,7 +200,9 @@ export const playCompleteHabitSound = () => {
     g2.connect(ctx.destination);
     osc2.start(now + 0.06);
     osc2.stop(now + 0.16);
-  } catch (e) {}
+  } catch (err) {
+    console.debug("Web Audio playCompleteHabitSound error:", err);
+  }
 };
 
 // 3. UNCHECK HABIT SOUND (Soft Undo Tap)
@@ -209,7 +221,9 @@ export const playUncheckHabitSound = () => {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.03);
-  } catch (e) {}
+  } catch (err) {
+    console.debug("Web Audio playUncheckHabitSound error:", err);
+  }
 };
 
 // 4. DELETE HABIT SOUND (Soft Low Thud)
@@ -228,7 +242,9 @@ export const playDeleteHabitSound = () => {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.05);
-  } catch (e) {}
+  } catch (err) {
+    console.debug("Web Audio playDeleteHabitSound error:", err);
+  }
 };
 
 // 5. FAILURE / RESET SOUND (Descending Tone for Quit Habits Timer Reset / Relapse)
@@ -252,7 +268,9 @@ export const playFailureSound = () => {
 
     osc.start(now);
     osc.stop(now + 0.18);
-  } catch (e) {}
+  } catch (err) {
+    console.debug("Web Audio playFailureSound error:", err);
+  }
 };
 
 // SSR-Safe Freeze Habit Sound (Soft, smooth, elegant crystalline glass chime)
@@ -277,5 +295,7 @@ export const playFreezeSound = () => {
 
     osc.start(now);
     osc.stop(now + 0.15);
-  } catch (e) {}
+  } catch (err) {
+    console.debug("Web Audio playFreezeSound error:", err);
+  }
 };

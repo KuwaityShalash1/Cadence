@@ -280,7 +280,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-    } catch {}
+    } catch {
+      // Ignore corrupted initial localStorage read
+    }
     return EMPTY;
   });
   const [ready, setReady] = useState(false);
@@ -306,7 +308,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         let existing: any = {};
         try {
           existing = JSON.parse(raw || "{}");
-        } catch {}
+        } catch {
+          // Fallback to empty object if storage is unparseable
+        }
         const existingState = existing.state || existing;
         localStorage.setItem(
           "cadence-storage",
@@ -319,7 +323,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             version: 0,
           }),
         );
-      } catch {}
+      } catch (err) {
+        console.debug("Failed to persist sidebar collapse state:", err);
+      }
       return next;
     });
   }, []);
@@ -338,7 +344,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           document.documentElement.removeAttribute("data-sidebar-collapsed");
         }
       }
-    } catch {}
+    } catch {
+      // DOM access not permitted
+    }
   }, [isCollapsed]);
 
   useEffect(() => {
@@ -386,7 +394,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           let existing: any = {};
           try {
             existing = JSON.parse(raw || "{}");
-          } catch {}
+          } catch {
+            // Ignore parse errors from legacy/corrupt storage
+          }
           const existingState = existing.state || existing;
           localStorage.setItem(
             "cadence-storage",
@@ -403,7 +413,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (!localStorage.getItem("theme")) {
             localStorage.setItem("theme", existingState.theme || currentTheme);
           }
-        } catch {}
+        } catch (err) {
+          console.debug("Failed to sync initial theme to cadence-storage:", err);
+        }
       } catch (err) {
         console.error("Failed to load store snapshot from repository:", err);
         toast.error("Local data could not be loaded. Your existing data was not changed.");
@@ -423,7 +435,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       window.cancelAnimationFrame(frame);
       if (timeout !== undefined) window.clearTimeout(timeout);
     };
-  }, []);
+  }, [isCollapsed]);
 
   useLocalCloudMigration({
     onSuccess: async (result) => {
@@ -655,7 +667,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         let existing: any = {};
         try {
           existing = JSON.parse(raw || "{}");
-        } catch {}
+        } catch {
+          // Ignore parse errors from legacy/corrupt storage
+        }
         const existingState = existing.state || existing;
         let currentCollapsed = isCollapsed;
         if (typeof existingState?.isSidebarCollapsed === "boolean") {
@@ -679,7 +693,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             version: 0,
           }),
         );
-      } catch {}
+      } catch (err) {
+        console.debug("Failed to update settings in storage:", err);
+      }
     };
 
     /**
@@ -1726,7 +1742,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return changed;
       },
     };
-  }, [writeLog, setCollapsed, toggleCollapse]);
+  }, [writeLog, setCollapsed, toggleCollapse, isCollapsed]);
 
   const value = useMemo<Store>(
     () => ({
