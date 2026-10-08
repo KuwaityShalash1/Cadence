@@ -24,7 +24,7 @@
 "use strict";
 
 /** Version of the caching scheme. Also part of every cache name. */
-const SW_VERSION = "1.0.4";
+const SW_VERSION = "1.0.5";
 
 const CACHE_NAMESPACE = "cadence";
 /** Core shell files (document + icons + manifest); never trimmed at runtime. */
@@ -317,22 +317,35 @@ async function pruneSupersededAssets(cache, url) {
  * cache immediately and only falls back to the network on a miss.
  */
 async function cacheFirst(event, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(event.request);
-  if (cached) return cached;
+  try {
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(event.request);
+    if (cached) return cached;
+  } catch (e) {}
 
-  const response = await fetch(event.request);
-  if (isCacheableResponse(response)) {
-    const copy = response.clone();
-    const requestUrl = new URL(event.request.url);
-    event.waitUntil(
-      cache
-        .put(event.request, copy)
-        .then(() => pruneSupersededAssets(cache, requestUrl))
-        .catch(() => undefined),
-    );
+  try {
+    const response = await fetch(event.request);
+    if (isCacheableResponse(response)) {
+      const copy = response.clone();
+      const requestUrl = new URL(event.request.url);
+      event.waitUntil(
+        caches
+          .open(cacheName)
+          .then((cache) => cache.put(event.request, copy))
+          .then(() => caches.open(cacheName).then((cache) => pruneSupersededAssets(cache, requestUrl)))
+          .catch(() => undefined),
+      );
+    }
+    return response;
+  } catch (error) {
+    try {
+      const fallbackResponse = await fetch(event.request.url, { cache: "reload" });
+      if (fallbackResponse.ok) return fallbackResponse;
+    } catch (e) {}
+    const anyCached = await caches.match(event.request);
+    if (anyCached) return anyCached;
+    throw error;
   }
-  return response;
 }
 
 /**

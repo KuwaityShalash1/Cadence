@@ -409,6 +409,40 @@ function RootShell({ children }: { children: ReactNode }) {
           }}
         />
 
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Self-healing: if cached HTML references an obsolete hashed CSS file
+                  // that fails to load (404), immediately clear the stale SW cache and reload.
+                  window.addEventListener('error', function(event) {
+                    var el = event.target;
+                    if (el && el.tagName === 'LINK' && el.rel === 'stylesheet') {
+                      if (!sessionStorage.getItem('cadence_css_reloaded')) {
+                        sessionStorage.setItem('cadence_css_reloaded', '1');
+                        if ('caches' in window) {
+                          caches.keys().then(function(keys) {
+                            keys.forEach(function(k) { if (k.indexOf('cadence') !== -1) caches.delete(k); });
+                          });
+                        }
+                        if ('serviceWorker' in navigator) {
+                          navigator.serviceWorker.getRegistrations().then(function(regs) {
+                            regs.forEach(function(r) { r.unregister(); });
+                            window.location.reload();
+                          });
+                        } else {
+                          window.location.reload();
+                        }
+                      }
+                    }
+                  }, true);
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+
         <style
           dangerouslySetInnerHTML={{
             __html: `
