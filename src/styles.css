@@ -205,7 +205,7 @@
 }
 
 .freeze-toast-progress {
-  transform-origin: left;
+  transform-origin: inline-start;
   animation: freeze-toast-progress 4.5s linear forwards;
 }
 

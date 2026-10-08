@@ -305,6 +305,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(getInitialCollapsed);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const isCollapsedRef = useRef(isCollapsed);
+  isCollapsedRef.current = isCollapsed;
 
   const setCollapsed = useCallback((collapsed: boolean | ((prev: boolean) => boolean)) => {
     setIsCollapsed((prev) => {
@@ -419,8 +421,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               state: {
                 ...existingState,
                 theme: existingState.theme || currentTheme,
-                isSidebarCollapsed: isCollapsed,
-                isCollapsed: isCollapsed,
+                isSidebarCollapsed: isCollapsedRef.current,
+                isCollapsed: isCollapsedRef.current,
               },
               version: 0,
             }),
@@ -455,7 +457,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       window.cancelAnimationFrame(frame);
       if (timeout !== undefined) window.clearTimeout(timeout);
     };
-  }, [isCollapsed]);
+  }, []);
 
   useLocalCloudMigration({
     onSuccess: async (result) => {
@@ -463,7 +465,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         result.stats.habitsUpserted > 0 ||
         result.stats.habitsResolved > 0 ||
         result.stats.logsUpserted > 0 ||
-        result.stats.logsResolved > 0
+        result.stats.logsResolved > 0 ||
+        (result.stats.badHabitsUpserted ?? 0) > 0 ||
+        (result.stats.badHabitsResolved ?? 0) > 0
       ) {
         const snapshot = await repo.loadSnapshot();
         setState(snapshot);

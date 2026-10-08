@@ -40,10 +40,10 @@ import { HabitIcon, colorStyles } from "@/components/icon-map";
 // ---------------------------------------------------------------------------
 
 const TIMEFRAME_OPTIONS = [
-  { value: "7days", label: "7 days", days: 7 },
-  { value: "30days", label: "30 days", days: 30 },
-  { value: "90days", label: "90 days", days: 90 },
-  { value: "1year", label: "1 year", days: 365 },
+  { value: "7days", labelKey: "analytics.range7Days", days: 7 },
+  { value: "30days", labelKey: "analytics.range30Days", days: 30 },
+  { value: "90days", labelKey: "analytics.range90Days", days: 90 },
+  { value: "1year", labelKey: "analytics.range1Year", days: 365 },
 ] as const;
 
 const CHART_COLORS = {
@@ -51,17 +51,6 @@ const CHART_COLORS = {
   withinLimit: "var(--color-chart-1)",
   overLimit: "var(--color-chart-4)",
 } as const;
-
-const MODERATION_LABELS = {
-  within: "Within Limit",
-  over: "Over Limit",
-} as const;
-
-const ANALYTICS_CHART_CONFIG = {
-  complete: { label: "Completed", color: "var(--color-chart-1)" },
-  within: { label: "Within Limit", color: "var(--color-chart-1)" },
-  over: { label: "Over Limit", color: "var(--color-chart-4)" },
-};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -97,9 +86,19 @@ function computeDayCompletionData(
   logMap: Record<string, HabitLog>,
   startKey: string,
   endKey: string,
+  t?: (key: string) => string,
 ): DayCompletionData[] {
   const data: DayCompletionData[] = [];
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayKeys = [
+    "weekdays.sun",
+    "weekdays.mon",
+    "weekdays.tue",
+    "weekdays.wed",
+    "weekdays.thu",
+    "weekdays.fri",
+    "weekdays.sat",
+  ];
+  const defaultDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const keys = rangeKeys(startKey, endKey);
   for (const date of keys) {
@@ -113,11 +112,15 @@ function computeDayCompletionData(
     }
 
     const rate = scheduled > 0 ? (completed / scheduled) * 100 : 0;
-    const d = new Date(date);
+    const d = fromDateKey(date);
 
     let label: string;
     if (keys.length <= 30) {
-      label = `${dayNames[d.getDay()]} ${d.getDate()}`;
+      const dayIndex = d.getDay();
+      const dayKey = dayKeys[dayIndex] ?? "weekdays.sun";
+      const fallbackDay = defaultDayNames[dayIndex] ?? "Sun";
+      const dayName = t ? t(dayKey) : fallbackDay;
+      label = `${dayName} ${d.getDate()}`;
     } else {
       label = `${d.getMonth() + 1}/${d.getDate()}`;
     }
@@ -332,10 +335,33 @@ function CompletionTrendTooltip({
 
 /** Donut chart showing moderation (limit) adherence */
 function ModerationPieChart({ data }: { data: ModerationSlice[] }) {
+  const { t } = useTranslation();
+  const chartConfig = useMemo(
+    () => ({
+      withinLimit: {
+        label: t("analytics.withinLimit"),
+        color: CHART_COLORS.withinLimit,
+      },
+      overLimit: {
+        label: t("analytics.overLimit"),
+        color: CHART_COLORS.overLimit,
+      },
+      [t("analytics.withinLimit")]: {
+        label: t("analytics.withinLimit"),
+        color: CHART_COLORS.withinLimit,
+      },
+      [t("analytics.overLimit")]: {
+        label: t("analytics.overLimit"),
+        color: CHART_COLORS.overLimit,
+      },
+    }),
+    [t],
+  );
+
   return (
     <div className="mx-auto w-full max-w-xs sm:max-w-sm">
       <ChartContainer
-        config={ANALYTICS_CHART_CONFIG}
+        config={chartConfig}
         className="mx-auto aspect-auto h-52 sm:h-56 max-h-64 w-full"
       >
         <PieChart>
@@ -424,7 +450,7 @@ function TimeRangeSelector({
           onClick={() => handlePresetChange(option.days)}
           className="transition-all"
         >
-          {option.days === 7 ? t("analytics.range7Days") : option.days === 30 ? t("analytics.range30Days") : option.days === 90 ? t("analytics.range90Days") : t("analytics.range1Year")}
+          {t(option.labelKey)}
         </Button>
       ))}
 
@@ -597,8 +623,8 @@ export function AnalyticsDashboard() {
   // Heavy: builds one entry per day in range (365 for "1 year").
   // Memoized on the resolved window + habit/log inputs only.
   const dayData = useMemo(
-    () => computeDayCompletionData(activeHabits, logMap, startKey, endKey),
-    [activeHabits, logMap, startKey, endKey],
+    () => computeDayCompletionData(activeHabits, logMap, startKey, endKey, t),
+    [activeHabits, logMap, startKey, endKey, t],
   );
 
   // Heavy: aggregates moderation (limit) usage logs across the window.
@@ -806,3 +832,5 @@ export function AnalyticsDashboard() {
     </div>
   );
 }
+
+export default AnalyticsDashboard;

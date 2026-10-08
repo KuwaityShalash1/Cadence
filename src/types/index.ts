@@ -226,6 +226,9 @@ export interface MigrationStats {
   logsChecked: number;
   logsUpserted: number;
   logsResolved: number;
+  badHabitsChecked?: number;
+  badHabitsUpserted?: number;
+  badHabitsResolved?: number;
   durationMs: number;
 }
 

@@ -10,8 +10,10 @@ import type {
   HabitLog,
   MigrationResult,
   MigrationStats,
+  RelapseRecord,
   Routine,
   RoutineLog,
+  UsageLog,
 } from "@/types";
 
 /** Batch size when sending upsert RPC calls to Supabase. */
@@ -33,6 +35,13 @@ export function generateHabitSignature(habit: { name?: string; type?: string }):
   const normalizedName = (habit.name || "").trim().toLowerCase().replace(/\s+/g, " ");
   const normalizedType = habit.type || "boolean";
   return `${normalizedName}::${normalizedType}`;
+}
+
+/**
+ * Computes a unique signature for a bad habit (quit tracker) based on normalized title.
+ */
+export function generateBadHabitSignature(habit: { title?: string }): string {
+  return (habit.title || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 /**
@@ -96,6 +105,64 @@ export function mergeHabitRecord(
     reminderTimes: Array.from(reminderTimesSet),
     freezesAllowedPerMonth: maxFreezesAllowed,
     freezesUsedThisMonth: maxFreezesUsed,
+    synced: true,
+    updatedAt: new Date(Math.max(localTime, remoteTime, Date.now())).toISOString(),
+  };
+}
+
+/**
+ * Merges a local bad habit (quit tracker) and a remote bad habit into a unified record.
+ * Attributes from the more recently modified record take precedence.
+ * Preserves the canonical remote ID, merges relapse history without duplicates,
+ * and unions usage logs for moderation/limit habits.
+ */
+export function mergeBadHabitRecord(
+  localHabit: BadHabit,
+  remoteHabit: BadHabit,
+  canonicalId: string,
+): BadHabit {
+  const localTime = Math.max(
+    toTimestampMs(localHabit.updatedAt),
+    localHabit.createdAt,
+  );
+  const remoteTime = Math.max(
+    toTimestampMs(remoteHabit.updatedAt),
+    remoteHabit.createdAt,
+  );
+
+  const primary = localTime >= remoteTime ? localHabit : remoteHabit;
+  const secondary = localTime >= remoteTime ? remoteHabit : localHabit;
+
+  // Merge history (RelapseRecord[]): deduplicate by ID and sort descending by relapsedAt
+  const historyMap = new Map<string, RelapseRecord>();
+  for (const record of secondary.history ?? []) {
+    if (record?.id) historyMap.set(record.id, record);
+  }
+  for (const record of primary.history ?? []) {
+    if (record?.id) historyMap.set(record.id, record);
+  }
+  const mergedHistory = Array.from(historyMap.values()).sort(
+    (a, b) => b.relapsedAt - a.relapsedAt,
+  );
+
+  // Merge usageLogs (UsageLog[]): deduplicate by ID or date and sort ascending by date
+  const usageMap = new Map<string, UsageLog>();
+  for (const log of secondary.usageLogs ?? []) {
+    if (log?.id || log?.date) usageMap.set(log.id || log.date, log);
+  }
+  for (const log of primary.usageLogs ?? []) {
+    if (log?.id || log?.date) usageMap.set(log.id || log.date, log);
+  }
+  const mergedUsageLogs = Array.from(usageMap.values()).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+
+  return {
+    ...secondary,
+    ...primary,
+    id: canonicalId,
+    history: mergedHistory,
+    usageLogs: mergedUsageLogs,
     synced: true,
     updatedAt: new Date(Math.max(localTime, remoteTime, Date.now())).toISOString(),
   };
@@ -209,14 +276,41 @@ export interface RemoteUserData {
  * Fetches all non-deleted sync records for the given user from Supabase.
  */
 export async function fetchRemoteUserData(userId: string): Promise<RemoteUserData> {
-  const { data, error } = await supabase
-    .from("cadence_sync_records")
-    .select("store_name, record_id, data, updated_at, deleted")
-    .eq("user_id", userId)
-    .eq("deleted", false);
+  const PAGE_SIZE = 1000;
+  let from = 0;
+  const allRows: Array<{
+    store_name: string;
+    record_id: string;
+    data: unknown;
+    updated_at: string;
+    deleted: boolean;
+  }> = [];
 
-  if (error) {
-    throw new Error(`Failed to fetch remote user data from Supabase: ${error.message}`);
+  // Paginate through Supabase/PostgREST records using .range(from, to) to safely bypass the 1,000-row default limit
+  while (true) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from("cadence_sync_records")
+      .select("store_name, record_id, data, updated_at, deleted")
+      .eq("user_id", userId)
+      .eq("deleted", false)
+      .order("updated_at", { ascending: true })
+      .order("record_id", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Failed to fetch remote user data from Supabase: ${error.message}`);
+    }
+
+    if (data && data.length > 0) {
+      allRows.push(...data);
+    }
+
+    if (!data || data.length < PAGE_SIZE) {
+      break;
+    }
+
+    from += PAGE_SIZE;
   }
 
   const result: RemoteUserData = {
@@ -230,7 +324,7 @@ export async function fetchRemoteUserData(userId: string): Promise<RemoteUserDat
     newestTimestamp: new Date(0).toISOString(),
   };
 
-  for (const row of data ?? []) {
+  for (const row of allRows) {
     if (row.updated_at > result.newestTimestamp) {
       result.newestTimestamp = row.updated_at;
     }
@@ -366,6 +460,9 @@ export async function mergeLocalDataToCloud(
       logsChecked: 0,
       logsUpserted: 0,
       logsResolved: 0,
+      badHabitsChecked: 0,
+      badHabitsUpserted: 0,
+      badHabitsResolved: 0,
       durationMs: 0,
     };
 
@@ -376,14 +473,31 @@ export async function mergeLocalDataToCloud(
       const localData = await readAllLocalData();
       stats.habitsChecked = localData.habits.length;
       stats.logsChecked = localData.habitLogs.length;
+      stats.badHabitsChecked = localData.badHabits.length;
 
       // 2. Fetch remote user data from Supabase
       const remoteData = await fetchRemoteUserData(userId);
 
-      // Fast-path: if local data has no habits and remote has data, simply pull down remote
-      if (localData.habits.length === 0 && remoteData.habits.length > 0) {
-        await repo.saveSyncedMany("habits", remoteData.habits);
-        await repo.saveSyncedMany("habitLogs", remoteData.habitLogs);
+      const hasLocalEntities =
+        localData.habits.length > 0 ||
+        localData.badHabits.length > 0 ||
+        localData.goals.length > 0 ||
+        localData.routines.length > 0;
+
+      const hasRemoteEntities =
+        remoteData.habits.length > 0 ||
+        remoteData.badHabits.length > 0 ||
+        remoteData.goals.length > 0 ||
+        remoteData.routines.length > 0;
+
+      // Fast-path: if local data has no entities and remote has data, simply pull down remote
+      if (!hasLocalEntities && hasRemoteEntities) {
+        if (remoteData.habits.length > 0) {
+          await repo.saveSyncedMany("habits", remoteData.habits);
+        }
+        if (remoteData.habitLogs.length > 0) {
+          await repo.saveSyncedMany("habitLogs", remoteData.habitLogs);
+        }
         if (remoteData.groups.length > 0) {
           await repo.saveSyncedMany("groups", remoteData.groups);
         }
@@ -409,8 +523,8 @@ export async function mergeLocalDataToCloud(
         return { success: true, stats };
       }
 
-      // Fast-path: if both local and remote have no habits, record completion
-      if (localData.habits.length === 0 && remoteData.habits.length === 0) {
+      // Fast-path: if neither local nor remote has entities, record completion
+      if (!hasLocalEntities && !hasRemoteEntities) {
         localStorage.setItem(`${MIGRATION_STORAGE_KEY_PREFIX}${userId}`, new Date().toISOString());
         stats.durationMs = Date.now() - startTime;
         return { success: true, stats };
@@ -625,16 +739,124 @@ export async function mergeLocalDataToCloud(
         });
       }
 
-      // 6. Push all upload records to Supabase
+      // 6. Conflict Resolution for Bad Habits (Quit Trackers)
+      const remoteBadHabitsById = new Map<string, BadHabit>();
+      const remoteBadHabitsBySignature = new Map<string, BadHabit>();
+      for (const rbh of remoteData.badHabits) {
+        remoteBadHabitsById.set(rbh.id, rbh);
+        remoteBadHabitsBySignature.set(generateBadHabitSignature(rbh), rbh);
+      }
+
+      const localBadHabitsToDelete: string[] = [];
+      const badHabitsToSaveLocally: BadHabit[] = [];
+      const processedRemoteBadHabitIds = new Set<string>();
+
+      for (const localBadHabit of localData.badHabits) {
+        // Match 1: Exact ID match
+        const exactMatch = remoteBadHabitsById.get(localBadHabit.id);
+        if (exactMatch) {
+          processedRemoteBadHabitIds.add(exactMatch.id);
+          const merged = mergeBadHabitRecord(localBadHabit, exactMatch, exactMatch.id);
+          badHabitsToSaveLocally.push(merged);
+          recordsToUpload.push({
+            store: "badHabits",
+            id: merged.id,
+            data: merged as unknown as Record<string, unknown>,
+            updatedAt: merged.updatedAt ?? new Date().toISOString(),
+            deleted: false,
+          });
+          stats.badHabitsResolved = (stats.badHabitsResolved ?? 0) + 1;
+          continue;
+        }
+
+        // Match 2: Signature match (same normalized title, differing IDs)
+        const sig = generateBadHabitSignature(localBadHabit);
+        const sigMatch = sig ? remoteBadHabitsBySignature.get(sig) : undefined;
+        if (sigMatch) {
+          const canonicalId = sigMatch.id;
+          processedRemoteBadHabitIds.add(canonicalId);
+          localBadHabitsToDelete.push(localBadHabit.id);
+
+          const merged = mergeBadHabitRecord(localBadHabit, sigMatch, canonicalId);
+          badHabitsToSaveLocally.push(merged);
+          recordsToUpload.push({
+            store: "badHabits",
+            id: canonicalId,
+            data: merged as unknown as Record<string, unknown>,
+            updatedAt: merged.updatedAt ?? new Date().toISOString(),
+            deleted: false,
+          });
+          stats.badHabitsResolved = (stats.badHabitsResolved ?? 0) + 1;
+          continue;
+        }
+
+        // No match: local-only quit tracker created offline
+        const localOnlyBadHabit: BadHabit = {
+          ...localBadHabit,
+          synced: true,
+          updatedAt: localBadHabit.updatedAt ?? new Date().toISOString(),
+        };
+        badHabitsToSaveLocally.push(localOnlyBadHabit);
+        recordsToUpload.push({
+          store: "badHabits",
+          id: localOnlyBadHabit.id,
+          data: localOnlyBadHabit as unknown as Record<string, unknown>,
+          updatedAt: localOnlyBadHabit.updatedAt ?? new Date().toISOString(),
+          deleted: false,
+        });
+        stats.badHabitsUpserted = (stats.badHabitsUpserted ?? 0) + 1;
+      }
+
+      // Add remote bad habits that had no local counterpart
+      for (const remoteBadHabit of remoteData.badHabits) {
+        if (!processedRemoteBadHabitIds.has(remoteBadHabit.id)) {
+          badHabitsToSaveLocally.push({ ...remoteBadHabit, synced: true });
+        }
+      }
+
+      // 7. Groups reconciliation
+      const groupsToSave: Group[] = [];
+      const remoteGroupsById = new Map<string, Group>();
+      for (const rg of remoteData.groups) {
+        remoteGroupsById.set(rg.id, rg);
+      }
+      const processedRemoteGroupIds = new Set<string>();
+
+      for (const group of localData.groups) {
+        const remoteGroup = remoteGroupsById.get(group.id);
+        const mergedGroup: Group = remoteGroup
+          ? { ...remoteGroup, ...group, synced: true }
+          : { ...group, synced: true };
+        if (remoteGroup) processedRemoteGroupIds.add(group.id);
+        groupsToSave.push(mergedGroup);
+        recordsToUpload.push({
+          store: "groups",
+          id: mergedGroup.id,
+          data: mergedGroup as unknown as Record<string, unknown>,
+          updatedAt: mergedGroup.updatedAt ?? new Date().toISOString(),
+          deleted: false,
+        });
+      }
+
+      for (const rg of remoteData.groups) {
+        if (!processedRemoteGroupIds.has(rg.id)) {
+          groupsToSave.push({ ...rg, synced: true });
+        }
+      }
+
+      // 8. Push all upload records to Supabase
       await pushRecordsToSupabase(recordsToUpload, userId);
 
-      // 7. Apply local storage updates atomically
+      // 9. Apply local storage updates atomically
       // Remove old remapped local records
       for (const oldHabitId of localHabitsToDelete) {
         await repo.removeLocalOnly("habits", oldHabitId);
       }
       for (const oldLogId of localLogsToDelete) {
         await repo.removeLocalOnly("habitLogs", oldLogId);
+      }
+      for (const oldBadHabitId of localBadHabitsToDelete) {
+        await repo.removeLocalOnly("badHabits", oldBadHabitId);
       }
 
       // Save unified merged datasets marked with synced: true
@@ -645,6 +867,12 @@ export async function mergeLocalDataToCloud(
       }
       if (routinesToSave.length > 0) {
         await repo.saveSyncedMany("routines", routinesToSave);
+      }
+      if (badHabitsToSaveLocally.length > 0) {
+        await repo.saveSyncedMany("badHabits", badHabitsToSaveLocally);
+      }
+      if (groupsToSave.length > 0) {
+        await repo.saveSyncedMany("groups", groupsToSave);
       }
 
       // Update sync timestamps

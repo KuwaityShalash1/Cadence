@@ -147,15 +147,39 @@ export async function pullRemoteRecords(): Promise<boolean> {
   const lastSyncTimestamp = await getLastSyncTimestamp();
 
   try {
-    const { data, error } = await supabase
-      .from(SYNC_TABLE)
-      .select("store_name, record_id, data, updated_at, deleted")
-      .eq("user_id", userId)
-      .gt("updated_at", lastSyncTimestamp)
-      .order("updated_at", { ascending: true });
+    const PAGE_SIZE = 1000;
+    let from = 0;
+    const allRows: RemoteSyncRow[] = [];
 
-    if (error) {
-      console.error("Unable to pull remote changes from Supabase.", error);
+    // Paginate using .range(from, to) to safely bypass PostgREST's 1,000-row default limit
+    while (true) {
+      const to = from + PAGE_SIZE - 1;
+      const { data, error } = await supabase
+        .from(SYNC_TABLE)
+        .select("store_name, record_id, data, updated_at, deleted")
+        .eq("user_id", userId)
+        .gt("updated_at", lastSyncTimestamp)
+        .order("updated_at", { ascending: true })
+        .order("record_id", { ascending: true })
+        .range(from, to);
+
+      if (error) {
+        console.error("Unable to pull remote changes from Supabase.", error);
+        return false;
+      }
+
+      if (data && data.length > 0) {
+        allRows.push(...(data as RemoteSyncRow[]));
+      }
+
+      if (!data || data.length < PAGE_SIZE) {
+        break;
+      }
+
+      from += PAGE_SIZE;
+    }
+
+    if (allRows.length === 0) {
       return false;
     }
 
@@ -166,7 +190,7 @@ export async function pullRemoteRecords(): Promise<boolean> {
       localMap.set(`${item.store}-${item.id}`, item);
     }
 
-    for (const row of (data ?? []) as RemoteSyncRow[]) {
+    for (const row of allRows) {
       const syncData =
         row.data && typeof row.data["id"] === "string" ? (row.data as SyncRecord["data"]) : null;
       const record: SyncRecord = {
@@ -190,7 +214,7 @@ export async function pullRemoteRecords(): Promise<boolean> {
     if (newestTimestamp !== lastSyncTimestamp) {
       await setLastSyncTimestamp(newestTimestamp);
     }
-    return (data?.length ?? 0) > 0;
+    return allRows.length > 0;
   } catch (pullError) {
     console.error("Network error while pulling remote records:", pullError);
     return false;

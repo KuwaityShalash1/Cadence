@@ -86,15 +86,21 @@ export function useLocalCloudMigration(
           setStatus("success");
           setStats(result.stats);
 
-          // Only notify if local habits or logs were actively merged/uploaded
+          // Only notify if local habits, quit trackers, or logs were actively merged/uploaded
           const hasUploadedData =
             result.stats.habitsUpserted > 0 ||
             result.stats.habitsResolved > 0 ||
             result.stats.logsUpserted > 0 ||
-            result.stats.logsResolved > 0;
+            result.stats.logsResolved > 0 ||
+            (result.stats.badHabitsUpserted ?? 0) > 0 ||
+            (result.stats.badHabitsResolved ?? 0) > 0;
 
           if (notifyOnSuccess && hasUploadedData) {
-            const count = result.stats.habitsUpserted + result.stats.habitsResolved;
+            const count =
+              result.stats.habitsUpserted +
+              result.stats.habitsResolved +
+              (result.stats.badHabitsUpserted ?? 0) +
+              (result.stats.badHabitsResolved ?? 0);
             const habitText =
               count === 1 ? t("habit.singular", "habit") : t("habit.plural", "habits");
             toast.success(
@@ -133,6 +139,9 @@ export function useLocalCloudMigration(
             logsChecked: 0,
             logsUpserted: 0,
             logsResolved: 0,
+            badHabitsChecked: 0,
+            badHabitsUpserted: 0,
+            badHabitsResolved: 0,
             durationMs: 0,
           },
           error: errMsg,
@@ -141,7 +150,7 @@ export function useLocalCloudMigration(
         isMigratingRef.current = false;
       }
     },
-    [notifyOnSuccess, onError, onSuccess, session?.user?.id, user?.id],
+    [notifyOnSuccess, onError, onSuccess, session?.user?.id, user?.id, t],
   );
 
   useEffect(() => {

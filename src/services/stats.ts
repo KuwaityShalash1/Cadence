@@ -1,5 +1,5 @@
 import type { Habit, HabitLog, LogStatus } from "@/types";
-import { addDays, rangeKeys, startOfWeekKey, todayKey } from "./dates";
+import { addDays, fromDateKey, rangeKeys, startOfWeekKey, todayKey } from "./dates";
 import { isFlexible, isScheduledOn, weeklyQuota } from "./schedule";
 
 export type LogMap = Record<string, HabitLog>; // key `${habitId}:${date}`
@@ -281,7 +281,7 @@ export function trend(habits: Habit[], logs: LogMap, days: number): TrendPoint[]
     }
     points.push({
       date,
-      label: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      label: fromDateKey(date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
       value: Math.round(value * 100),
     });
   }
