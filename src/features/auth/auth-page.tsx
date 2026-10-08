@@ -163,129 +163,131 @@ export function AuthPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-5 text-center">
-          <Link
-            to="/"
-            className="mx-auto inline-flex"
-            aria-label={t("auth.returnToCadence", "Return to Cadence")}
-          >
-            <CadenceLogo showText />
-          </Link>
-          <div>
-            <CardTitle className="text-2xl">
-              {mode === "login"
-                ? t("auth.welcomeBack", "Welcome back")
-                : t("auth.createYourAccount", "Create your account")}
-            </CardTitle>
-            <CardDescription className="mt-2">
-              {mode === "login"
-                ? t("auth.signInDescription", "Sign in to prepare Cadence for cloud sync.")
-                : t(
-                    "auth.signUpDescription",
-                    "Create an account to enable cloud sync when it arrives.",
-                  )}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!isConfigured && (
-            <div className="mb-5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
-              {t(
-                "auth.notConfigured",
-                "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.",
-              )}
-            </div>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full bg-background"
-            disabled={isGoogleSubmitting || isSubmitting || !isConfigured}
-            onClick={() => {
-              void handleGoogleSignIn();
-            }}
-          >
-            {isGoogleSubmitting ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
-            {t("auth.continueWithGoogle", "Continue with Google")}
-          </Button>
-          <div className="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            <span>{t("auth.or", "Or")}</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="auth-email">{t("auth.email", "Email")}</Label>
-              <Input
-                id="auth-email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="auth-password">{t("auth.password", "Password")}</Label>
-              <Input
-                id="auth-password"
-                type="password"
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                minLength={6}
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {message && <p className="text-sm text-success">{message}</p>}
-            <Button type="submit" className="w-full" disabled={isSubmitting || !isConfigured}>
-              {isSubmitting && <Loader2 className="animate-spin" />}
-              {mode === "login"
-                ? t("auth.signIn", "Sign in")
-                : t("auth.createAccount", "Create account")}
-            </Button>
-          </form>
-          <div className="mt-5 flex items-center justify-between text-sm">
-            <button
-              type="button"
-              className="text-primary underline-offset-4 hover:underline"
-              onClick={() => {
-                setMode(mode === "login" ? "signup" : "login");
-                setError(null);
-                setMessage(null);
-              }}
-            >
-              {mode === "login"
-                ? t("auth.needAccount", "Need an account?")
-                : t("auth.alreadyHaveAccount", "Already have an account?")}
-            </button>
+      <div className="flex w-full max-w-md flex-col items-center">
+        <Card className="w-full">
+          <CardHeader className="space-y-5 text-center">
             <Link
               to="/"
-              className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              className="mx-auto inline-flex"
+              aria-label={t("auth.returnToCadence", "Return to Cadence")}
             >
-              <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-              {t("auth.offlineApp", "Offline app")}
+              <CadenceLogo showText />
             </Link>
-          </div>
-        </CardContent>
-      </Card>
+            <div>
+              <CardTitle className="text-2xl">
+                {mode === "login"
+                  ? t("auth.welcomeBack", "Welcome back")
+                  : t("auth.createYourAccount", "Create your account")}
+              </CardTitle>
+              <CardDescription className="mt-2">
+                {mode === "login"
+                  ? t("auth.signInDescription", "Sign in to prepare Cadence for cloud sync.")
+                  : t(
+                      "auth.signUpDescription",
+                      "Create an account to enable cloud sync when it arrives.",
+                    )}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!isConfigured && (
+              <div className="mb-5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
+                {t(
+                  "auth.notConfigured",
+                  "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.",
+                )}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full bg-background"
+              disabled={isGoogleSubmitting || isSubmitting || !isConfigured}
+              onClick={() => {
+                void handleGoogleSignIn();
+              }}
+            >
+              {isGoogleSubmitting ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
+              {t("auth.continueWithGoogle", "Continue with Google")}
+            </Button>
+            <div className="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <div className="h-px flex-1 bg-border" />
+              <span>{t("auth.or", "Or")}</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="auth-email">{t("auth.email", "Email")}</Label>
+                <Input
+                  id="auth-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="auth-password">{t("auth.password", "Password")}</Label>
+                <Input
+                  id="auth-password"
+                  type="password"
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  minLength={6}
+                  required
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {message && <p className="text-sm text-success">{message}</p>}
+              <Button type="submit" className="w-full" disabled={isSubmitting || !isConfigured}>
+                {isSubmitting && <Loader2 className="animate-spin" />}
+                {mode === "login"
+                  ? t("auth.signIn", "Sign in")
+                  : t("auth.createAccount", "Create account")}
+              </Button>
+            </form>
+            <div className="mt-5 flex items-center justify-between text-sm">
+              <button
+                type="button"
+                className="text-primary underline-offset-4 hover:underline"
+                onClick={() => {
+                  setMode(mode === "login" ? "signup" : "login");
+                  setError(null);
+                  setMessage(null);
+                }}
+              >
+                {mode === "login"
+                  ? t("auth.needAccount", "Need an account?")
+                  : t("auth.alreadyHaveAccount", "Already have an account?")}
+              </button>
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                {t("auth.offlineApp", "Offline app")}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
-      <div className="mt-6 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-        <Link
-          to="/privacy"
-          className="transition-colors hover:text-foreground underline-offset-4 hover:underline"
-        >
-          {t("legal.privacyPolicy", "Privacy Policy")}
-        </Link>
-        <span>•</span>
-        <Link
-          to="/terms"
-          className="transition-colors hover:text-foreground underline-offset-4 hover:underline"
-        >
-          {t("legal.termsOfService", "Terms of Service")}
-        </Link>
+        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-muted-foreground hover:text-foreground">
+          <Link
+            to="/privacy"
+            className="transition-colors hover:text-foreground underline-offset-4 hover:underline"
+          >
+            {t("legal.privacyPolicy", "Privacy Policy")}
+          </Link>
+          <span>•</span>
+          <Link
+            to="/terms"
+            className="transition-colors hover:text-foreground underline-offset-4 hover:underline"
+          >
+            {t("legal.termsOfService", "Terms of Service")}
+          </Link>
+        </div>
       </div>
     </main>
   );
