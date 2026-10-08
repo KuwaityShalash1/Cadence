@@ -160,6 +160,12 @@ export async function pullRemoteRecords(): Promise<boolean> {
     }
 
     let newestTimestamp = lastSyncTimestamp;
+    const localRecords = await getSyncRecords();
+    const localMap = new Map<string, SyncRecord>();
+    for (const item of localRecords) {
+      localMap.set(`${item.store}-${item.id}`, item);
+    }
+
     for (const row of (data ?? []) as RemoteSyncRow[]) {
       const syncData =
         row.data && typeof row.data["id"] === "string" ? (row.data as SyncRecord["data"]) : null;
@@ -170,11 +176,13 @@ export async function pullRemoteRecords(): Promise<boolean> {
         updatedAt: row.updated_at,
         deleted: row.deleted,
       };
-      const local = (await getSyncRecords()).find(
-        (candidate) => candidate.store === record.store && candidate.id === record.id,
-      );
-      if (!local || local.updatedAt < record.updatedAt) {
+      const local = localMap.get(`${record.store}-${record.id}`);
+      const localTime = local ? new Date(local.updatedAt).getTime() || 0 : 0;
+      const remoteTime = new Date(record.updatedAt).getTime() || 0;
+
+      if (!local || localTime < remoteTime) {
         await mergeSyncRecord(record);
+        localMap.set(`${record.store}-${record.id}`, record);
       }
       if (record.updatedAt > newestTimestamp) newestTimestamp = record.updatedAt;
     }

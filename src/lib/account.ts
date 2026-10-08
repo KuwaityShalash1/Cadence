@@ -80,11 +80,14 @@ export async function deleteUserAccount(user: User): Promise<DeleteAccountResult
     const { error: rpcError } = await supabase.rpc("delete_user_account");
 
     if (rpcError) {
-      // If the RPC has not been created yet in the Supabase dashboard, log the guidance
-      console.warn(
+      console.error(
         "Supabase RPC 'delete_user_account' returned an error. Ensure the SQL function has been deployed in the Supabase Dashboard:",
         rpcError,
       );
+      return {
+        success: false,
+        error: rpcError.message || "Failed to delete account on the server.",
+      };
     }
 
     // 3. Complete client-side sign out to clear session tokens and storage

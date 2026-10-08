@@ -236,12 +236,15 @@ export async function processPostgresChange(
     const local = localRecords.find((r) => r.store === store && r.id === id);
 
     if (local) {
+      const localTime = new Date(local.updatedAt).getTime() || 0;
+      const remoteTime = new Date(updatedAt).getTime() || 0;
+
       // If local record has pending unsaved changes and local timestamp is >= remote, preserve local
-      if (local.data?.pending_sync === true && local.updatedAt >= updatedAt) {
+      if (local.data?.pending_sync === true && localTime >= remoteTime) {
         return;
       }
       // If local data is already up-to-date with identical or newer timestamp, skip
-      if (local.updatedAt >= updatedAt && !isDeleted) {
+      if (localTime >= remoteTime && !isDeleted) {
         return;
       }
     }

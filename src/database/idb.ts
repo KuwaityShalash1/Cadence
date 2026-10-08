@@ -26,7 +26,7 @@ function openDb(): Promise<IDBDatabase> {
     return Promise.reject(new Error("IndexedDB unavailable"));
   }
   if (!dbPromise) {
-    dbPromise = new Promise((resolve, reject) => {
+    dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onupgradeneeded = () => {
         const db = request.result;
@@ -36,8 +36,17 @@ function openDb(): Promise<IDBDatabase> {
           }
         }
       };
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () => {
+        const db = request.result;
+        db.onclose = () => {
+          dbPromise = null;
+        };
+        resolve(db);
+      };
       request.onerror = () => reject(request.error);
+    }).catch((err) => {
+      dbPromise = null;
+      throw err;
     });
   }
   return dbPromise;
