@@ -163,7 +163,7 @@ function Shell({ children }: { children: ReactNode }) {
             /* EXPANDED HEADER CONTAINER */
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <CadenceLogo iconClassName="h-6 w-6 text-primary shrink-0" showText={false} />
+                <CadenceLogo iconClassName="h-8 w-8 text-primary shrink-0" showText={false} />
                 <span className="font-semibold text-base tracking-tight truncate">Cadence</span>
               </div>
               <button
