@@ -347,8 +347,20 @@
   0% {
     transform: translateX(-150%) skewX(-20deg);
   }
-  30%, 100% {
-    transform: translateX(250%) skewX(-20deg);
+  35%, 100% {
+    transform: translateX(280%) skewX(-20deg);
+  }
+}
+
+@keyframes holographic-prism {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    filter: hue-rotate(60deg);
+  }
+  100% {
+    filter: hue-rotate(0deg);
   }
 }
 
@@ -361,18 +373,49 @@
   animation: holographic-shimmer 6s ease infinite;
 }
 
+.animate-holographic-prism {
+  animation: holographic-prism 8s ease-in-out infinite;
+}
+
 @keyframes badge-pulse-glow {
   0%, 100% {
-    opacity: 0.4;
+    opacity: 0.45;
     transform: scale(0.98);
   }
   50% {
-    opacity: 0.8;
+    opacity: 0.9;
     transform: scale(1.02);
   }
 }
 
 .animate-badge-pulse-glow {
   animation: badge-pulse-glow 3s ease-in-out infinite;
+}
+
+/* Distinct visual tier card unlocked styles */
+.badge-tier-bronze-unlocked {
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.12) 0%, rgba(180, 83, 9, 0.06) 50%, rgba(120, 53, 15, 0.14) 100%);
+  border-color: rgba(217, 119, 6, 0.4);
+  box-shadow: 0 0 14px rgba(180, 83, 9, 0.2), inset 0 1px 0 rgba(251, 191, 36, 0.15);
+}
+
+.badge-tier-silver-unlocked {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.14) 0%, rgba(203, 213, 225, 0.08) 50%, rgba(100, 116, 139, 0.16) 100%);
+  border-color: rgba(148, 163, 184, 0.45);
+  box-shadow: 0 0 16px rgba(148, 163, 184, 0.22), inset 0 1px 0 rgba(248, 250, 252, 0.2);
+}
+
+.badge-tier-gold-unlocked {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(234, 179, 8, 0.1) 50%, rgba(217, 119, 6, 0.22) 100%);
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.32), inset 0 1px 0 rgba(254, 240, 138, 0.3);
+}
+
+.badge-tier-legendary-unlocked {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(168, 85, 247, 0.18) 40%, rgba(236, 72, 153, 0.15) 75%, rgba(245, 158, 11, 0.12) 100%);
+  background-size: 200% 200%;
+  animation: holographic-shimmer 7s ease infinite;
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.35), 0 0 12px rgba(6, 182, 212, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 

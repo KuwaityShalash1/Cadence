@@ -22,8 +22,11 @@ import {
   Radio,
   Clock,
   LogIn,
+  PartyPopper,
+  Share2,
 } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 import { useAuth } from "@/auth/auth-context";
 import { useTranslation } from "@/i18n";
@@ -40,8 +43,11 @@ import { UserAvatar } from "@/components/user-avatar";
 import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { todayKey, startOfWeekKey } from "@/services/dates";
+import { triggerLevelUpCelebration, triggerBadgeUnlockCelebration } from "@/lib/celebration";
 import { AchievementsSection } from "./achievements-section";
-
+import { ShareStreakModal } from "./share-streak-modal";
+import { WeeklyRecapModal } from "./weekly-recap-modal";
 
 export function UserDashboard() {
   const { t, language } = useTranslation();
@@ -90,6 +96,75 @@ export function UserDashboard() {
 
   // Compute optimized gamification and streak statistics
   const stats = useMemo(() => calculateGamificationStats(habits, logMap), [habits, logMap]);
+
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [recapModalOpen, setRecapModalOpen] = useState(false);
+
+  // Track level changes and trigger celebratory animation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const currentLevel = stats.level.level;
+    const savedLevelStr = localStorage.getItem("cadence_gamification_level");
+
+    if (savedLevelStr !== null) {
+      const savedLevel = parseInt(savedLevelStr, 10);
+      if (!isNaN(savedLevel) && currentLevel > savedLevel) {
+        triggerLevelUpCelebration(currentLevel);
+        toast.success(
+          t("dashboard.levelUpDesc", {
+            level: currentLevel,
+            title: t(`dashboard.level.${stats.level.title}`, stats.level.title),
+          }),
+        );
+      }
+    }
+    localStorage.setItem("cadence_gamification_level", String(currentLevel));
+  }, [stats.level.level, stats.level.title, t]);
+
+  // Track newly unlocked badges and trigger celebratory animation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const unlockedBadges = stats.badges.filter((b) => b.unlocked);
+    const unlockedIds = unlockedBadges.map((b) => b.id);
+    const savedBadgesStr = localStorage.getItem("cadence_unlocked_badge_ids");
+
+    if (savedBadgesStr !== null) {
+      try {
+        const savedIds: string[] = JSON.parse(savedBadgesStr);
+        const newlyUnlocked = unlockedBadges.filter((b) => !savedIds.includes(b.id));
+        if (newlyUnlocked.length > 0) {
+          triggerBadgeUnlockCelebration(newlyUnlocked[0]!.rarity);
+          toast.success(
+            t("dashboard.badgeCelebrationDesc", {
+              title: t(`dashboard.badge.${newlyUnlocked[0]!.id}.title`, newlyUnlocked[0]!.title),
+            }),
+          );
+        }
+      } catch {
+        // Ignore JSON parse errors
+      }
+    }
+    localStorage.setItem("cadence_unlocked_badge_ids", JSON.stringify(unlockedIds));
+  }, [stats.badges, t]);
+
+  // Auto-prompt weekly recap at the start of each week (Sunday or Monday)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const autoRecapEnabled = localStorage.getItem("cadence_auto_weekly_recap_enabled") !== "false";
+    if (!autoRecapEnabled) return;
+
+    const currentWeekKey = startOfWeekKey(todayKey());
+    const lastViewedWeek = localStorage.getItem("cadence_last_seen_weekly_recap_week");
+
+    if (lastViewedWeek !== currentWeekKey && habits.length > 0) {
+      const todayDate = new Date();
+      const dayOfWeek = todayDate.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 1) {
+        setRecapModalOpen(true);
+        localStorage.setItem("cadence_last_seen_weekly_recap_week", currentWeekKey);
+      }
+    }
+  }, [habits.length]);
 
   return (
     <div className="space-y-6">
@@ -267,6 +342,19 @@ export function UserDashboard() {
                 </span>
               )}
             </div>
+
+            <div className="mt-3 pt-2 border-t border-amber-500/20">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShareModalOpen(true)}
+                className="w-full gap-1.5 h-7 text-xs border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-300 hover:bg-amber-500/20 font-semibold shadow-xs cursor-pointer"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                <span>{t("dashboard.shareStreak", "Share Streak")}</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -384,12 +472,25 @@ export function UserDashboard() {
                   )}
                 </CardDescription>
               </div>
-              <Badge
-                variant="outline"
-                className="font-mono text-xs px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-              >
-                {t("dashboard.xp", { count: stats.xpPoints })}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => triggerLevelUpCelebration(stats.level.level)}
+                  title={t("dashboard.celebrate", "Celebrate")}
+                  className="h-7 px-2 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 gap-1 cursor-pointer"
+                >
+                  <PartyPopper className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t("dashboard.celebrate", "Celebrate")}</span>
+                </Button>
+                <Badge
+                  variant="outline"
+                  className="font-mono text-xs px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                >
+                  {t("dashboard.xp", { count: stats.xpPoints })}
+                </Badge>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-5 pt-2 space-y-4">
@@ -408,9 +509,21 @@ export function UserDashboard() {
             {/* Weekly Rhythm Mini Timeline */}
             <div className="pt-2 border-t border-border/50">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t("dashboard.sevenDayRhythm", "7-Day Rhythm")}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("dashboard.sevenDayRhythm", "7-Day Rhythm")}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRecapModalOpen(true)}
+                    className="gap-1 h-6 px-2 text-[11px] font-semibold text-primary border-primary/30 bg-primary/5 hover:bg-primary/10 shadow-xs cursor-pointer"
+                  >
+                    <Sparkles className="h-3 w-3 text-amber-500" />
+                    <span>{t("dashboard.viewWeeklyRecap", "Weekly Recap")}</span>
+                  </Button>
+                </div>
                 <span className="text-xs text-muted-foreground">
                   {t("dashboard.daysActiveRatio", {
                     count: stats.weeklyBreakdown.filter((d) => d.completed > 0).length,
@@ -544,6 +657,28 @@ export function UserDashboard() {
           <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </Link>
       </div>
+
+      {/* ── 7. Share Streak & Milestone Card Generator Modal ─────────────── */}
+      <ShareStreakModal
+        open={shareModalOpen}
+        onOpenChange={setShareModalOpen}
+        streak={stats.currentStreak}
+        longestStreak={stats.longestStreak}
+        weeklyRate={stats.weeklyRate}
+        totalCompletions={stats.totalCompletions}
+        level={stats.level}
+        userName={fullName}
+        bestHabitName={stats.streakLeader?.name}
+      />
+
+      {/* ── 8. Weekly Recap Summary Modal ─────────────────────────────────── */}
+      <WeeklyRecapModal
+        open={recapModalOpen}
+        onOpenChange={setRecapModalOpen}
+        habits={habits}
+        logMap={logMap}
+        onOpenShareCard={() => setShareModalOpen(true)}
+      />
     </div>
   );
 }

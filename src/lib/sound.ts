@@ -301,3 +301,51 @@ export const playFreezeSound = () => {
     console.debug("Web Audio playFreezeSound error:", err);
   }
 };
+
+// 6. LEVEL UP SOUND (Harmonic uplifting celebratory fanfare)
+export const playLevelUpSound = () => {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 (major arpeggio)
+    const now = ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      gain.gain.setValueAtTime(0.08, now + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.28);
+    });
+  } catch (err) {
+    console.debug("Web Audio playLevelUpSound error:", err);
+  }
+};
+
+// 7. BADGE UNLOCK SOUND (Bright crystal triumph sparkle chime)
+export const playBadgeUnlockSound = () => {
+  const ctx = getContext();
+  if (!ctx) return;
+  try {
+    const notes = [587.33, 739.99, 880.0, 1174.66]; // D5, F#5, A5, D6
+    const now = ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+      gain.gain.setValueAtTime(0.07, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.22);
+    });
+  } catch (err) {
+    console.debug("Web Audio playBadgeUnlockSound error:", err);
+  }
+};

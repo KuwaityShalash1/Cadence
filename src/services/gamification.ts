@@ -281,7 +281,12 @@ export function calculateGamificationStats(habits: Habit[], logMap: LogMap): Gam
 
   for (const log of Object.values(logMap)) {
     const isCompleted = log.status === "complete" || (log.target > 0 && log.value >= log.target);
-    if (isCompleted && typeof log.updatedAt === "number" && !isNaN(log.updatedAt) && log.updatedAt > 0) {
+    if (
+      isCompleted &&
+      typeof log.updatedAt === "number" &&
+      !isNaN(log.updatedAt) &&
+      log.updatedAt > 0
+    ) {
       const logHour = new Date(log.updatedAt).getHours();
       if (logHour < 8) {
         hasEarlyBird = true;
@@ -534,5 +539,125 @@ export function calculateGamificationStats(habits: Habit[], logMap: LogMap): Gam
     streakLeader,
     weeklyBreakdown,
     badges,
+  };
+}
+
+export interface WeeklyRecapData {
+  last7Days: string[];
+  totalCompletions: number;
+  totalScheduled: number;
+  successRate: number;
+  perfectDaysCount: number;
+  bestHabit: {
+    habit: Habit;
+    completed: number;
+    scheduled: number;
+    rate: number;
+    streak: number;
+  } | null;
+  dayStats: Array<{
+    date: string;
+    dayLabel: string;
+    completed: number;
+    scheduled: number;
+    isComplete: boolean;
+    isToday: boolean;
+  }>;
+}
+
+/**
+ * Calculates past 7 days recap statistics from habits and logs.
+ */
+export function calculateWeeklyRecap(habits: Habit[], logMap: LogMap): WeeklyRecapData {
+  const today = todayKey();
+  const last7Days = rangeKeys(addDays(today, -6), today);
+  const activeHabits = habits.filter((h) => !h.archived);
+
+  let totalScheduled = 0;
+  let totalCompletions = 0;
+  let perfectDaysCount = 0;
+
+  const dayStats: WeeklyRecapData["dayStats"] = [];
+
+  for (const day of last7Days) {
+    let dayScheduled = 0;
+    let dayCompleted = 0;
+
+    for (const habit of activeHabits) {
+      if (isScheduledOn(habit, day)) {
+        dayScheduled += 1;
+        if (isCompleteOn(habit, logMap, day)) {
+          dayCompleted += 1;
+        }
+      }
+    }
+
+    totalScheduled += dayScheduled;
+    totalCompletions += dayCompleted;
+
+    const isComplete = dayScheduled > 0 && dayCompleted >= dayScheduled;
+    if (isComplete) {
+      perfectDaysCount += 1;
+    }
+
+    const dateObj = new Date(day + "T00:00:00");
+    const dayLabel = dateObj.toLocaleDateString("en-US", { weekday: "narrow" });
+
+    dayStats.push({
+      date: day,
+      dayLabel,
+      completed: dayCompleted,
+      scheduled: dayScheduled,
+      isComplete,
+      isToday: day === today,
+    });
+  }
+
+  const successRate =
+    totalScheduled > 0 ? Math.round((totalCompletions / totalScheduled) * 100) : 0;
+
+  // Find best habit over these 7 days
+  let bestHabit: WeeklyRecapData["bestHabit"] = null;
+  let bestHabitScore = -1;
+
+  for (const habit of activeHabits) {
+    let habitScheduled = 0;
+    let habitCompleted = 0;
+
+    for (const day of last7Days) {
+      if (isScheduledOn(habit, day)) {
+        habitScheduled += 1;
+        if (isCompleteOn(habit, logMap, day)) {
+          habitCompleted += 1;
+        }
+      }
+    }
+
+    if (habitCompleted > 0) {
+      const habitStreak = streaks(habit, logMap).current;
+      // Score prioritizes completions and streak
+      const score = habitCompleted * 10 + habitStreak;
+      if (score > bestHabitScore) {
+        bestHabitScore = score;
+        const rate = habitScheduled > 0 ? Math.round((habitCompleted / habitScheduled) * 100) : 100;
+        bestHabit = {
+          habit,
+          completed: habitCompleted,
+          scheduled: habitScheduled,
+          rate,
+          streak: habitStreak,
+        };
+      }
+    }
+  }
+
+  return {
+    last7Days,
+    totalCompletions,
+    totalScheduled,
+    successRate,
+    perfectDaysCount,
+    bestHabit,
+    dayStats,
   };
 }

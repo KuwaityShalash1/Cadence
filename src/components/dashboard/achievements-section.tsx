@@ -13,25 +13,32 @@ import {
   Sunrise,
   Target,
   Trophy,
+  PartyPopper,
 } from "lucide-react";
 
 import type { GamificationBadge, BadgeRarity } from "@/services/gamification";
 import { useTranslation } from "@/i18n";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { triggerBadgeUnlockCelebration } from "@/lib/celebration";
 
 type FilterTab = "all" | "unlocked" | "in_progress";
 
 interface AchievementsSectionProps {
   badges: GamificationBadge[];
   className?: string;
+  onBadgeUnlocked?: (badge: GamificationBadge) => void;
 }
 
 /** Render appropriate Lucide icon by name */
@@ -61,7 +68,7 @@ function BadgeIcon({ name, className }: { name: string; className?: string }) {
   }
 }
 
-/** Rarity styling visual maps */
+/** Visual tier configuration for Bronze, Silver, Gold, and Legendary/Holographic */
 const RARITY_CONFIG: Record<
   BadgeRarity,
   {
@@ -73,69 +80,70 @@ const RARITY_CONFIG: Record<
     lockedRarityBadge: string;
     unlockedGlowClass: string;
     progressClass: string;
+    gradientRing: string;
   }
 > = {
   bronze: {
     nameKey: "dashboard.badgeRarityBronze",
     defaultName: "Bronze",
     unlockedCard:
-      "border-amber-700/35 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-amber-900/15 shadow-sm hover:shadow-md hover:shadow-amber-900/15 dark:from-amber-950/40 dark:via-orange-950/20 dark:to-amber-900/30 dark:border-amber-700/50",
+      "badge-tier-bronze-unlocked hover:shadow-lg hover:shadow-amber-900/20 dark:hover:shadow-amber-900/30",
     unlockedIconBox:
-      "bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 text-amber-50 shadow-md shadow-amber-900/25 ring-1 ring-amber-400/40",
-    unlockedRarityBadge:
-      "bg-amber-600/15 text-amber-800 dark:text-amber-300 border-amber-600/30",
+      "bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 text-amber-50 shadow-md shadow-amber-900/30 ring-1 ring-amber-400/50",
+    unlockedRarityBadge: "bg-amber-600/15 text-amber-800 dark:text-amber-300 border-amber-600/30",
     lockedRarityBadge:
       "bg-amber-950/10 text-amber-800/80 dark:text-amber-400/70 border-amber-800/20",
-    unlockedGlowClass: "shadow-[0_0_12px_rgba(217,119,6,0.25)]",
+    unlockedGlowClass: "shadow-[0_0_14px_rgba(217,119,6,0.3)]",
     progressClass: "bg-amber-600",
+    gradientRing: "from-amber-600 to-amber-800",
   },
   silver: {
     nameKey: "dashboard.badgeRaritySilver",
     defaultName: "Silver",
     unlockedCard:
-      "border-slate-300 bg-gradient-to-br from-slate-200/50 via-zinc-100/30 to-slate-200/40 shadow-sm hover:shadow-md hover:shadow-slate-500/15 dark:from-slate-800/40 dark:via-zinc-800/20 dark:to-slate-900/40 dark:border-slate-600/60",
+      "badge-tier-silver-unlocked hover:shadow-lg hover:shadow-slate-500/20 dark:hover:shadow-slate-500/25",
     unlockedIconBox:
-      "bg-gradient-to-br from-slate-400 via-slate-500 to-slate-600 text-slate-50 shadow-md shadow-slate-700/25 ring-1 ring-slate-300/50",
-    unlockedRarityBadge:
-      "bg-slate-500/15 text-slate-700 dark:text-slate-200 border-slate-400/30",
-    lockedRarityBadge:
-      "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-400/20",
-    unlockedGlowClass: "shadow-[0_0_12px_rgba(148,163,184,0.3)]",
+      "bg-gradient-to-br from-slate-400 via-slate-500 to-slate-700 text-slate-50 shadow-md shadow-slate-700/30 ring-1 ring-slate-300/60",
+    unlockedRarityBadge: "bg-slate-500/15 text-slate-700 dark:text-slate-200 border-slate-400/30",
+    lockedRarityBadge: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-400/20",
+    unlockedGlowClass: "shadow-[0_0_16px_rgba(148,163,184,0.35)]",
     progressClass: "bg-slate-500",
+    gradientRing: "from-slate-300 to-slate-500",
   },
   gold: {
     nameKey: "dashboard.badgeRarityGold",
     defaultName: "Gold",
     unlockedCard:
-      "border-amber-400/60 bg-gradient-to-br from-amber-400/15 via-yellow-400/10 to-amber-500/20 shadow-md shadow-amber-500/10 hover:shadow-lg hover:shadow-amber-500/25 dark:from-amber-950/50 dark:via-yellow-950/30 dark:to-amber-900/40 dark:border-amber-400/50",
+      "badge-tier-gold-unlocked hover:shadow-xl hover:shadow-amber-500/30 dark:hover:shadow-amber-500/35",
     unlockedIconBox:
-      "bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-600 text-amber-950 shadow-md shadow-amber-500/30 ring-1 ring-amber-200/60",
+      "bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 text-amber-950 shadow-md shadow-amber-500/40 ring-1 ring-amber-200/80",
     unlockedRarityBadge:
-      "bg-amber-400/20 text-amber-900 dark:text-amber-200 border-amber-400/40 font-semibold",
-    lockedRarityBadge:
-      "bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-400/20",
-    unlockedGlowClass: "shadow-[0_0_16px_rgba(245,158,11,0.35)]",
+      "bg-amber-400/20 text-amber-900 dark:text-amber-200 border-amber-400/50 font-bold",
+    lockedRarityBadge: "bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-400/20",
+    unlockedGlowClass: "shadow-[0_0_22px_rgba(245,158,11,0.4)]",
     progressClass: "bg-amber-500",
+    gradientRing: "from-amber-400 to-yellow-500",
   },
   diamond: {
-    nameKey: "dashboard.badgeRarityDiamond",
-    defaultName: "Diamond",
+    nameKey: "dashboard.badgeRarityLegendary",
+    defaultName: "Legendary",
     unlockedCard:
-      "relative border-cyan-400/60 bg-gradient-to-br from-cyan-500/15 via-indigo-500/15 to-purple-500/20 shadow-md shadow-cyan-500/15 hover:shadow-xl hover:shadow-cyan-500/30 dark:from-cyan-950/50 dark:via-indigo-950/40 dark:to-purple-950/50 dark:border-cyan-400/50 overflow-hidden",
+      "badge-tier-legendary-unlocked hover:shadow-2xl hover:shadow-purple-500/35 dark:hover:shadow-purple-500/40 overflow-hidden",
     unlockedIconBox:
-      "bg-gradient-to-br from-cyan-400 via-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/30 ring-1 ring-cyan-200/60",
+      "bg-gradient-to-br from-cyan-400 via-purple-500 to-pink-500 text-white shadow-xl shadow-purple-500/40 ring-1 ring-cyan-200/80 animate-holographic-prism",
     unlockedRarityBadge:
-      "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-900 dark:text-cyan-200 border-cyan-400/50 font-semibold",
-    lockedRarityBadge:
-      "bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 border-cyan-400/20",
-    unlockedGlowClass: "shadow-[0_0_20px_rgba(6,182,212,0.4)]",
-    progressClass: "bg-gradient-to-r from-cyan-500 to-purple-500",
+      "bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 text-purple-900 dark:text-purple-200 border-purple-400/60 font-bold shadow-xs",
+    lockedRarityBadge: "bg-purple-500/10 text-purple-800 dark:text-purple-300 border-purple-400/20",
+    unlockedGlowClass: "shadow-[0_0_26px_rgba(168,85,247,0.45),0_0_12px_rgba(6,182,212,0.35)]",
+    progressClass: "bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500",
+    gradientRing: "from-cyan-400 via-purple-500 to-pink-500",
   },
 };
 
 export function AchievementsSection({ badges, className }: AchievementsSectionProps) {
   const { t, isRtl } = useTranslation();
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [selectedBadge, setSelectedBadge] = useState<GamificationBadge | null>(null);
 
   const unlockedCount = useMemo(() => badges.filter((b) => b.unlocked).length, [badges]);
   const inProgressCount = badges.length - unlockedCount;
@@ -195,6 +203,13 @@ export function AchievementsSection({ badges, className }: AchievementsSectionPr
       return `${badge.currentValue}% / ${badge.targetValue}%`;
     }
     return `${badge.currentValue} / ${badge.targetValue}`;
+  };
+
+  const handleBadgeClick = (badge: GamificationBadge) => {
+    setSelectedBadge(badge);
+    if (badge.unlocked) {
+      triggerBadgeUnlockCelebration(badge.rarity);
+    }
   };
 
   return (
@@ -322,23 +337,32 @@ export function AchievementsSection({ badges, className }: AchievementsSectionPr
                   <Tooltip key={badge.id}>
                     <TooltipTrigger asChild>
                       <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleBadgeClick(badge)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleBadgeClick(badge);
+                          }
+                        }}
                         className={cn(
-                          "group relative flex flex-col justify-between p-3.5 rounded-xl border text-start transition-all duration-300",
+                          "group relative flex flex-col justify-between p-3.5 rounded-xl border text-start transition-all duration-300 select-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                           badge.unlocked
                             ? cn(
                                 config.unlockedCard,
-                                "scale-100 hover:scale-105 transition-transform cursor-pointer",
+                                "scale-100 hover:scale-[1.03] transition-transform",
                               )
-                            : "border-border/60 bg-muted/20 opacity-80 hover:opacity-100 hover:border-border cursor-pointer",
+                            : "border-border/60 bg-muted/20 opacity-80 hover:opacity-100 hover:border-border",
                         )}
                       >
-                        {/* Shimmer effect for Diamond/Legendary badges */}
+                        {/* Shimmer effect for Legendary/Diamond badges */}
                         {badge.unlocked && badge.rarity === "diamond" && (
                           <div
                             aria-hidden="true"
                             className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl"
                           >
-                            <div className="animate-badge-sheen absolute -inset-full bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent" />
+                            <div className="animate-badge-sheen absolute -inset-full bg-gradient-to-r from-transparent via-cyan-300/15 to-transparent" />
                           </div>
                         )}
 
@@ -463,6 +487,107 @@ export function AchievementsSection({ badges, className }: AchievementsSectionPr
           )}
         </CardContent>
       </Card>
+
+      {/* ── Badge Detail & Celebration Dialog ─────────────────────────────── */}
+      {selectedBadge && (
+        <Dialog open={!!selectedBadge} onOpenChange={(open) => !open && setSelectedBadge(null)}>
+          <DialogContent className="max-w-sm sm:max-w-md p-0 overflow-hidden bg-card border-border shadow-2xl">
+            {(() => {
+              const config = RARITY_CONFIG[selectedBadge.rarity] ?? RARITY_CONFIG.bronze;
+              const title = t(`dashboard.badge.${selectedBadge.id}.title`, selectedBadge.title);
+              const desc = t(`dashboard.badge.${selectedBadge.id}.desc`, selectedBadge.description);
+
+              return (
+                <div>
+                  <DialogHeader className="p-6 pb-4 text-center items-center border-b border-border/50 bg-muted/20">
+                    {/* Enlarged Badge Icon with Tier Halo */}
+                    <div
+                      className={cn(
+                        "grid h-20 w-20 place-items-center rounded-2xl mb-3 transition-transform hover:scale-105",
+                        selectedBadge.unlocked
+                          ? config.unlockedIconBox
+                          : "bg-muted text-muted-foreground border border-border/60",
+                        selectedBadge.unlocked && config.unlockedGlowClass,
+                      )}
+                    >
+                      <BadgeIcon name={selectedBadge.icon} className="h-10 w-10" />
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "uppercase text-[10px] tracking-wider font-bold px-2 py-0.5",
+                          selectedBadge.unlocked
+                            ? config.unlockedRarityBadge
+                            : config.lockedRarityBadge,
+                        )}
+                      >
+                        {t(config.nameKey, config.defaultName)}
+                      </Badge>
+                      {selectedBadge.unlocked && (
+                        <Badge
+                          variant="default"
+                          className="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                        >
+                          <Check className="h-3 w-3 me-1" />
+                          {t("dashboard.badgeUnlocked", "Unlocked")}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <DialogTitle className="text-lg font-bold text-foreground">{title}</DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground max-w-xs mt-1">
+                      {desc}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="p-5 space-y-4 text-center">
+                    {selectedBadge.unlocked ? (
+                      <div className="space-y-3">
+                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+                          {t("dashboard.badgeUnlockedTooltip", "Unlocked! Milestone achieved.")}
+                        </div>
+
+                        <Button
+                          type="button"
+                          onClick={() => triggerBadgeUnlockCelebration(selectedBadge.rarity)}
+                          className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs h-9 shadow-md shadow-amber-500/20"
+                        >
+                          <PartyPopper className="h-4 w-4" />
+                          <span>{t("dashboard.badgeCelebrateAgain", "Celebrate Again!")}</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="space-y-1.5 text-start">
+                          <div className="flex justify-between text-xs font-semibold text-muted-foreground">
+                            <span>{t("dashboard.progress", "Progress")}</span>
+                            <span>{selectedBadge.progress}%</span>
+                          </div>
+                          <Progress value={selectedBadge.progress} className="h-2" />
+                          <p className="text-[11px] text-muted-foreground text-center pt-1">
+                            {getRemainingMessage(selectedBadge)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setSelectedBadge(null)}
+                      className="w-full text-xs h-8"
+                    >
+                      {t("dashboard.close", "Close")}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
+      )}
     </TooltipProvider>
   );
 }
