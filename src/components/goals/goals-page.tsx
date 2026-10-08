@@ -58,7 +58,6 @@ export function GoalsPage() {
     reorderGoals,
     updateHabit,
     customIcons,
-    activeTimer,
   } = useApp();
   const [editing, setEditing] = useState<Goal | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -395,23 +394,6 @@ export function GoalsPage() {
           )}
         </>
       )}
-
-      {/* Mobile FAB — floats above the bottom nav and the timer bar */}
-      <button
-        type="button"
-        aria-label={t("goal.new")}
-        onClick={openNew}
-        style={{
-          bottom: `calc(env(safe-area-inset-bottom, 0px) + ${activeTimer ? "9.5rem" : "5.5rem"})`,
-        }}
-        className={cn(
-          "fixed end-5 z-40 flex items-center justify-center rounded-full p-4 md:hidden",
-          "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
-          "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
-        )}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
 
       <ResponsiveSheet
         open={isOpen}

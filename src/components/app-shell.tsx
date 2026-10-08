@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   ChartBar as BarChart3,
   CalendarDays,
@@ -35,6 +35,7 @@ import { playToggleSound } from "@/lib/sound";
 import { useBackupReminderStatus } from "@/hooks/use-weekly-backup";
 import { useAppBadge } from "@/hooks/use-app-badge";
 import { useAuth } from "@/auth/auth-context";
+import { dispatchOpenAddModal } from "@/hooks/use-shortcuts";
 
 /**
  * Nav item definitions use translation key references rather than hardcoded
@@ -69,6 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   useAppBadge();
   const editor = useHabitEditor();
+  const location = useLocation();
   const { settings, ready, isCollapsed, toggleSidebar } = useAppStore();
   const { isDue: isBackupDue } = useBackupReminderStatus();
   const { t, isRtl } = useTranslation();
@@ -115,6 +117,39 @@ function Shell({ children }: { children: ReactNode }) {
   // Tooltip side for collapsed sidebar nav items: opposite of the reading direction
   // so the tooltip appears next to the icon in both LTR and RTL layouts.
   const tooltipSide = isRtl ? "left" : "right";
+
+  const pathname = location.pathname;
+
+  // Determine dynamic FAB action based on current route/URL
+  const getFabConfig = () => {
+    if (pathname.startsWith("/routines")) {
+      return {
+        label: t("routine.new", "New routine"),
+        action: () => dispatchOpenAddModal("routine"),
+      };
+    }
+    if (pathname.startsWith("/goals")) {
+      return {
+        label: t("goal.new", "New goal"),
+        action: () => dispatchOpenAddModal("goal"),
+      };
+    }
+    if (pathname.startsWith("/quit-tracker")) {
+      return {
+        label: t("quitTracker.new", "New quit tracker"),
+        action: () => dispatchOpenAddModal("quit-tracker"),
+      };
+    }
+    if (pathname === "/" || pathname === "/today") {
+      return {
+        label: t("habit.createHabit", "Create habit"),
+        action: () => editor.open(),
+      };
+    }
+    return null;
+  };
+
+  const fabConfig = getFabConfig();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
@@ -374,6 +409,22 @@ function Shell({ children }: { children: ReactNode }) {
           {children}
         </div>
       </main>
+
+      {/* Global Mobile FAB — floats safely outside animated page wrappers and transitions */}
+      {fabConfig && (
+        <button
+          type="button"
+          aria-label={fabConfig.label}
+          onClick={fabConfig.action}
+          className={cn(
+            "fixed bottom-24 right-6 z-50 flex items-center justify-center rounded-full p-4 md:hidden",
+            "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all active:scale-95",
+            "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
+          )}
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
 
       <TimerDock />
 
