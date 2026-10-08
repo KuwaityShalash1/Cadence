@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/auth/auth-context";
+import { useTranslation } from "@/i18n";
 import { CadenceLogo } from "@/components/ui/CadenceLogo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { supabase } from "@/lib/supabase";
 type AuthMode = "login" | "signup";
 
 export function AuthPage() {
+  const { t } = useTranslation();
   const { isConfigured, isLoading, session, signIn, signUp } = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
@@ -118,9 +120,11 @@ export function AuthPage() {
       return;
     }
     if (mode === "signup") {
-      setMessage("Account created. Check your email if confirmation is required.");
+      setMessage(
+        t("auth.accountCreated", "Account created. Check your email if confirmation is required.")
+      );
     } else {
-      setMessage("You are signed in. Redirecting...");
+      setMessage(t("auth.signedInRedirecting", "You are signed in. Redirecting..."));
       window.location.replace("/");
     }
   };
@@ -145,8 +149,11 @@ export function AuthPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading" />
-          <p className="text-sm text-muted-foreground">Authenticating...</p>
+          <Loader2
+            className="h-8 w-8 animate-spin text-primary"
+            aria-label={t("common.loading", "Loading")}
+          />
+          <p className="text-sm text-muted-foreground">{t("auth.authenticating", "Authenticating...")}</p>
         </div>
       </main>
     );
@@ -156,25 +163,33 @@ export function AuthPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-5 text-center">
-          <Link to="/" className="mx-auto inline-flex" aria-label="Return to Cadence">
+          <Link
+            to="/"
+            className="mx-auto inline-flex"
+            aria-label={t("auth.returnToCadence", "Return to Cadence")}
+          >
             <CadenceLogo showText />
           </Link>
           <div>
             <CardTitle className="text-2xl">
-              {mode === "login" ? "Welcome back" : "Create your account"}
+              {mode === "login"
+                ? t("auth.welcomeBack", "Welcome back")
+                : t("auth.createYourAccount", "Create your account")}
             </CardTitle>
             <CardDescription className="mt-2">
               {mode === "login"
-                ? "Sign in to prepare Cadence for cloud sync."
-                : "Create an account to enable cloud sync when it arrives."}
+                ? t("auth.signInDescription", "Sign in to prepare Cadence for cloud sync.")
+                : t("auth.signUpDescription", "Create an account to enable cloud sync when it arrives.")}
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
           {!isConfigured && (
             <div className="mb-5 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
-              Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and
-              VITE_SUPABASE_ANON_KEY to your environment.
+              {t(
+                "auth.notConfigured",
+                "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment."
+              )}
             </div>
           )}
           <Button
@@ -187,16 +202,16 @@ export function AuthPage() {
             }}
           >
             {isGoogleSubmitting ? <Loader2 className="animate-spin" /> : <GoogleIcon />}
-            Continue with Google
+            {t("auth.continueWithGoogle", "Continue with Google")}
           </Button>
           <div className="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             <div className="h-px flex-1 bg-border" />
-            <span>Or</span>
+            <span>{t("auth.or", "Or")}</span>
             <div className="h-px flex-1 bg-border" />
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="auth-email">Email</Label>
+              <Label htmlFor="auth-email">{t("auth.email", "Email")}</Label>
               <Input
                 id="auth-email"
                 type="email"
@@ -207,7 +222,7 @@ export function AuthPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="auth-password">Password</Label>
+              <Label htmlFor="auth-password">{t("auth.password", "Password")}</Label>
               <Input
                 id="auth-password"
                 type="password"
@@ -222,7 +237,7 @@ export function AuthPage() {
             {message && <p className="text-sm text-success">{message}</p>}
             <Button type="submit" className="w-full" disabled={isSubmitting || !isConfigured}>
               {isSubmitting && <Loader2 className="animate-spin" />}
-              {mode === "login" ? "Sign in" : "Create account"}
+              {mode === "login" ? t("auth.signIn", "Sign in") : t("auth.createAccount", "Create account")}
             </Button>
           </form>
           <div className="mt-5 flex items-center justify-between text-sm">
@@ -235,14 +250,16 @@ export function AuthPage() {
                 setMessage(null);
               }}
             >
-              {mode === "login" ? "Need an account?" : "Already have an account?"}
+              {mode === "login"
+                ? t("auth.needAccount", "Need an account?")
+                : t("auth.alreadyHaveAccount", "Already have an account?")}
             </button>
             <Link
               to="/"
               className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Offline app
+              <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+              {t("auth.offlineApp", "Offline app")}
             </Link>
           </div>
         </CardContent>

@@ -54,6 +54,12 @@ export function HeadMetadataSync() {
     } else if (path.startsWith("/about-us") || path.startsWith("/about")) {
       titleKey = "seo.aboutTitle";
       descKey = "seo.aboutDesc";
+    } else if (path.startsWith("/dashboard")) {
+      titleKey = "seo.dashboardTitle";
+      descKey = "seo.dashboardDesc";
+    } else if (path.startsWith("/auth")) {
+      titleKey = "seo.authTitle";
+      descKey = "seo.authDesc";
     }
 
     const title = t(titleKey, t("seo.defaultTitle"));

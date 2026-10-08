@@ -26,6 +26,7 @@ import {
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 import { useAuth } from "@/auth/auth-context";
+import { useTranslation } from "@/i18n";
 import { useSync } from "@/context/sync-context";
 import { useApp } from "@/stores/app-store";
 import { supabase } from "@/lib/supabase";
@@ -60,6 +61,7 @@ function BadgeIcon({ name, className }: { name: string; className?: string }) {
 }
 
 export function UserDashboard() {
+  const { t, language } = useTranslation();
   const { user: authUser, session, isConfigured } = useAuth();
   const { habits, logMap, settings } = useApp();
   const { isOnline, isSyncing, isRealtimeConnected, pendingCount, lastSyncedAt } = useSync();
@@ -88,7 +90,7 @@ export function UserDashboard() {
   const fullName = extractUserDisplayName(activeUser, settings.displayName);
   const avatarUrl = extractUserAvatarUrl(activeUser, settings.avatar);
 
-  const email = activeUser?.email ?? "Offline Guest Mode";
+  const email = activeUser?.email ?? t("dashboard.guestMode", "Offline Guest Mode");
   const authProvider = activeUser?.app_metadata?.["provider"]
     ? String(activeUser.app_metadata["provider"]).toUpperCase()
     : session
@@ -96,12 +98,12 @@ export function UserDashboard() {
       : "LOCAL";
 
   const memberSince = activeUser?.created_at
-    ? new Date(activeUser.created_at).toLocaleDateString("en-US", {
+    ? new Date(activeUser.created_at).toLocaleDateString(language === "ar" ? "ar-SA" : "en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       })
-    : "Local Device";
+    : null;
 
   // Compute optimized gamification and streak statistics
   const stats = useMemo(() => calculateGamificationStats(habits, logMap), [habits, logMap]);
@@ -126,7 +128,11 @@ export function UserDashboard() {
                 />
                 {/* Realtime Live Indicator Dot */}
                 <span
-                  title={isRealtimeConnected ? "Realtime sync connected" : "Offline"}
+                  title={
+                    isRealtimeConnected
+                      ? t("dashboard.realtimeConnected", "Realtime sync connected")
+                      : t("dashboard.offline", "Offline")
+                  }
                   className={cn(
                     "absolute -bottom-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-card ring-1",
                     isRealtimeConnected
@@ -155,7 +161,7 @@ export function UserDashboard() {
                       className="text-[9px] gap-1 font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0 h-4"
                     >
                       <Radio className="h-2.5 w-2.5 animate-pulse" />
-                      Live Sync
+                      {t("dashboard.liveSync", "Live Sync")}
                     </Badge>
                   )}
                 </div>
@@ -163,20 +169,24 @@ export function UserDashboard() {
                 <div className="flex flex-wrap items-center gap-x-2.5 text-xs text-muted-foreground">
                   <span className="truncate">{email}</span>
                   <span className="hidden md:inline-flex items-center gap-1">
-                    • Member since {memberSince}
+                    • {memberSince ? t("dashboard.memberSince", { date: memberSince }) : t("dashboard.localDevice", "Local Device")}
                   </span>
                   {lastSyncedAt && (
                     <span className="hidden sm:inline-flex items-center gap-1">
-                      • Synced{" "}
-                      {new Date(lastSyncedAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      • {t("dashboard.syncedAt", {
+                          time: new Date(lastSyncedAt).toLocaleTimeString(
+                            language === "ar" ? "ar-SA" : "en-US",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          ),
+                        })}
                     </span>
                   )}
                   {pendingCount > 0 && (
                     <span className="text-amber-500 font-medium">
-                      • {pendingCount} pending upload
+                      • {t("dashboard.pendingUpload", { count: pendingCount })}
                     </span>
                   )}
                 </div>
@@ -192,17 +202,17 @@ export function UserDashboard() {
                 {isSyncing ? (
                   <>
                     <RefreshCw className="h-3 w-3 animate-spin text-primary" />
-                    <span className="text-foreground">Syncing…</span>
+                    <span className="text-foreground">{t("dashboard.syncing", "Syncing…")}</span>
                   </>
                 ) : !isOnline ? (
                   <>
                     <CloudOff className="h-3 w-3 text-muted-foreground" />
-                    <span>Offline</span>
+                    <span>{t("dashboard.offline", "Offline")}</span>
                   </>
                 ) : (
                   <>
                     <Cloud className="h-3 w-3 text-emerald-500" />
-                    <span className="text-foreground/90">Synced</span>
+                    <span className="text-foreground/90">{t("dashboard.synced", "Synced")}</span>
                   </>
                 )}
               </div>
@@ -211,7 +221,7 @@ export function UserDashboard() {
                 <Link to="/auth">
                   <Button size="sm" variant="outline" className="gap-1.5 h-7 px-2.5 text-xs font-medium">
                     <LogIn className="h-3 w-3" />
-                    <span>Sign In</span>
+                    <span>{t("dashboard.signIn", "Sign In")}</span>
                   </Button>
                 </Link>
               )}
@@ -229,10 +239,10 @@ export function UserDashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  Current Streak
+                  {t("dashboard.currentStreak", "Current Streak")}
                 </span>
                 <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                  Hero
+                  {t("dashboard.hero", "Hero")}
                 </span>
               </div>
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm shadow-amber-500/30">
@@ -246,7 +256,7 @@ export function UserDashboard() {
                 {stats.currentStreak}
               </span>
               <span className="text-sm font-semibold text-amber-600/90 dark:text-amber-400/90">
-                days
+                {t("dashboard.days", "days")}
               </span>
             </div>
             <div className="mt-1.5 flex items-center gap-1.5 text-xs">
@@ -256,10 +266,14 @@ export function UserDashboard() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
                   </span>
-                  <span className="font-medium text-foreground/90">Active streak in progress</span>
+                  <span className="font-medium text-foreground/90">
+                    {t("dashboard.activeStreakInProgress", "Active streak in progress")}
+                  </span>
                 </>
               ) : (
-                <span className="text-muted-foreground">Complete a habit today to start</span>
+                <span className="text-muted-foreground">
+                  {t("dashboard.completeHabitTodayToStart", "Complete a habit today to start")}
+                </span>
               )}
             </div>
           </CardContent>
@@ -270,7 +284,7 @@ export function UserDashboard() {
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Longest Streak
+                {t("dashboard.longestStreak", "Longest Streak")}
               </span>
               <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-primary">
                 <Trophy className="h-4 w-4" />
@@ -282,9 +296,13 @@ export function UserDashboard() {
               <span className="text-3xl font-extrabold tracking-tight text-foreground">
                 {stats.longestStreak}
               </span>
-              <span className="text-xs font-medium text-muted-foreground">days</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("dashboard.days", "days")}
+              </span>
             </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">Personal all-time record</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {t("dashboard.personalRecord", "Personal all-time record")}
+            </p>
           </CardContent>
         </Card>
 
@@ -293,7 +311,7 @@ export function UserDashboard() {
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Weekly Rate
+                {t("dashboard.weeklyRate", "Weekly Rate")}
               </span>
               <div className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <Target className="h-4 w-4" />
@@ -323,7 +341,9 @@ export function UserDashboard() {
                 </span>
               )}
             </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">Last 7 days completion</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {t("dashboard.last7DaysCompletion", "Last 7 days completion")}
+            </p>
           </CardContent>
         </Card>
 
@@ -332,7 +352,7 @@ export function UserDashboard() {
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Monthly Rate
+                {t("dashboard.monthlyRate", "Monthly Rate")}
               </span>
               <div className="grid h-8 w-8 place-items-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
                 <CalendarCheck className="h-4 w-4" />
@@ -346,7 +366,7 @@ export function UserDashboard() {
               </span>
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              {stats.perfectDaysCount} perfect days in last 30d
+              {t("dashboard.perfectDaysIn30d", { count: stats.perfectDaysCount })}
             </p>
           </CardContent>
         </Card>
@@ -361,30 +381,36 @@ export function UserDashboard() {
               <div>
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Zap className="h-4 w-4 text-amber-500" />
-                  Level {stats.level.level} — {stats.level.title}
+                  {t("dashboard.levelDisplay", {
+                    level: stats.level.level,
+                    title: t(`dashboard.level.${stats.level.title}`, stats.level.title),
+                  })}
                 </CardTitle>
                 <CardDescription className="text-xs mt-0.5">
-                  Keep completing habits daily to unlock higher ranks and milestone badges.
+                  {t(
+                    "dashboard.levelDesc",
+                    "Keep completing habits daily to unlock higher ranks and milestone badges."
+                  )}
                 </CardDescription>
               </div>
               <Badge
                 variant="outline"
                 className="font-mono text-xs px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
               >
-                {stats.xpPoints} XP
+                {t("dashboard.xp", { count: stats.xpPoints })}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-5 pt-2 space-y-4">
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs font-medium text-muted-foreground">
-                <span>Rank Progress</span>
+                <span>{t("dashboard.rankProgress", "Rank Progress")}</span>
                 <span>{stats.level.progressPercentage}%</span>
               </div>
               <Progress value={stats.level.progressPercentage} className="h-2.5 rounded-full" />
               <div className="flex justify-between text-[11px] text-muted-foreground pt-0.5">
-                <span>{stats.level.currentXp} XP</span>
-                <span>Next tier at {stats.level.nextLevelXp} XP</span>
+                <span>{t("dashboard.xp", { count: stats.level.currentXp })}</span>
+                <span>{t("dashboard.nextTierAt", { xp: stats.level.nextLevelXp })}</span>
               </div>
             </div>
 
@@ -392,38 +418,46 @@ export function UserDashboard() {
             <div className="pt-2 border-t border-border/50">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  7-Day Rhythm
+                  {t("dashboard.sevenDayRhythm", "7-Day Rhythm")}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {stats.weeklyBreakdown.filter((d) => d.completed > 0).length} of 7 days active
+                  {t("dashboard.daysActiveRatio", {
+                    count: stats.weeklyBreakdown.filter((d) => d.completed > 0).length,
+                  })}
                 </span>
               </div>
 
               <div className="grid grid-cols-7 gap-2 text-center">
-                {stats.weeklyBreakdown.map((day) => (
-                  <div
-                    key={day.date}
-                    className={cn(
-                      "flex flex-col items-center justify-center p-2 rounded-xl border transition-all",
-                      day.isComplete
-                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : day.completed > 0
-                          ? "border-primary/40 bg-primary/10 text-primary"
-                          : "border-border/60 bg-muted/40 text-muted-foreground",
-                      day.isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background",
-                    )}
-                  >
-                    <span className="text-[11px] font-semibold">{day.dayLabel}</span>
-                    <span className="text-xs font-bold mt-1">
-                      {day.completed}/{day.scheduled}
-                    </span>
-                    <span className="text-[9px] opacity-75 mt-0.5">
-                      {day.scheduled > 0
-                        ? `${Math.round((day.completed / day.scheduled) * 100)}%`
-                        : "Rest"}
-                    </span>
-                  </div>
-                ))}
+                {stats.weeklyBreakdown.map((day) => {
+                  const formattedDayLabel = new Date(day.date + "T00:00:00").toLocaleDateString(
+                    language === "ar" ? "ar-SA" : "en-US",
+                    { weekday: "narrow" }
+                  );
+                  return (
+                    <div
+                      key={day.date}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-2 rounded-xl border transition-all",
+                        day.isComplete
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : day.completed > 0
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-border/60 bg-muted/40 text-muted-foreground",
+                        day.isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+                      )}
+                    >
+                      <span className="text-[11px] font-semibold">{formattedDayLabel}</span>
+                      <span className="text-xs font-bold mt-1">
+                        {day.completed}/{day.scheduled}
+                      </span>
+                      <span className="text-[9px] opacity-75 mt-0.5">
+                        {day.scheduled > 0
+                          ? `${Math.round((day.completed / day.scheduled) * 100)}%`
+                          : t("dashboard.rest", "Rest")}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -434,10 +468,10 @@ export function UserDashboard() {
           <CardHeader className="p-5 pb-3">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Crown className="h-4 w-4 text-amber-500" />
-              Streak Leader
+              {t("dashboard.streakLeader", "Streak Leader")}
             </CardTitle>
             <CardDescription className="text-xs">
-              Your most consistent habit right now.
+              {t("dashboard.streakLeaderDesc", "Your most consistent habit right now.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-5 pt-0 flex-1 flex flex-col justify-center">
@@ -465,20 +499,22 @@ export function UserDashboard() {
                     </p>
                     <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
                       <Flame className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
-                      <span>{stats.streakLeader.streak} days running streak</span>
+                      <span>
+                        {t("dashboard.daysRunningStreak", { count: stats.streakLeader.streak })}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Keep it going today to maintain your momentum!
+                  {t("dashboard.keepItGoing", "Keep it going today to maintain your momentum!")}
                 </p>
               </div>
             ) : (
               <div className="text-center py-6 text-muted-foreground">
                 <ShieldCheck className="h-8 w-8 mx-auto opacity-50 mb-2" />
-                <p className="text-xs">No active habit streaks yet.</p>
+                <p className="text-xs">{t("dashboard.noActiveStreaks", "No active habit streaks yet.")}</p>
                 <p className="text-[11px] mt-0.5">
-                  Complete habits consecutively to unlock leaders.
+                  {t("dashboard.unlockLeadersDesc", "Complete habits consecutively to unlock leaders.")}
                 </p>
               </div>
             )}
@@ -493,14 +529,20 @@ export function UserDashboard() {
             <div>
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Award className="h-4 w-4 text-primary" />
-                Achievements & Badges
+                {t("dashboard.achievementsBadges", "Achievements & Badges")}
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Earn milestone badges as your consistency compounds over time.
+                {t(
+                  "dashboard.achievementsDesc",
+                  "Earn milestone badges as your consistency compounds over time."
+                )}
               </CardDescription>
             </div>
             <span className="text-xs font-medium text-muted-foreground">
-              {stats.badges.filter((b) => b.unlocked).length} of {stats.badges.length} Unlocked
+              {t("dashboard.badgesUnlockedRatio", {
+                unlocked: stats.badges.filter((b) => b.unlocked).length,
+                total: stats.badges.length,
+              })}
             </span>
           </div>
         </CardHeader>
@@ -528,16 +570,20 @@ export function UserDashboard() {
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-sm font-semibold truncate">{badge.title}</p>
+                    <p className="text-sm font-semibold truncate">
+                      {t(`dashboard.badge.${badge.id}.title`, badge.title)}
+                    </p>
                     {badge.unlocked ? (
                       <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                        Unlocked
+                        {t("dashboard.badgeUnlocked", "Unlocked")}
                       </span>
                     ) : (
                       <span className="text-[10px] text-muted-foreground">{badge.progress}%</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{badge.description}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {t(`dashboard.badge.${badge.id}.desc`, badge.description)}
+                  </p>
                   {!badge.unlocked && <Progress value={badge.progress} className="h-1.5 mt-2" />}
                 </div>
               </div>
@@ -549,22 +595,24 @@ export function UserDashboard() {
       {/* ── 6. Analytics Link & Data Overview Footer ─────────────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-border bg-card/60 text-xs text-muted-foreground">
         <div>
-          <span>Total Habits: </span>
+          <span>{t("dashboard.totalHabits", "Total Habits:")} </span>
           <strong className="text-foreground">{stats.activeHabitsCount}</strong>
           <span className="mx-2">•</span>
-          <span>Total Completions: </span>
+          <span>{t("dashboard.totalCompletions", "Total Completions:")} </span>
           <strong className="text-foreground">{stats.totalCompletions}</strong>
           <span className="mx-2">•</span>
-          <span>Storage: </span>
-          <strong className="text-foreground">IndexedDB (Offline-First) + Supabase Realtime</strong>
+          <span>{t("dashboard.storage", "Storage:")} </span>
+          <strong className="text-foreground">
+            {t("dashboard.storageDesc", "IndexedDB (Offline-First) + Supabase Realtime")}
+          </strong>
         </div>
 
         <Link
           to="/stats"
           className="inline-flex items-center gap-1.5 text-primary hover:underline font-medium"
         >
-          <span>Explore deep analytics & charts</span>
-          <ArrowRight className="h-3.5 w-3.5" />
+          <span>{t("dashboard.exploreAnalytics", "Explore deep analytics & charts")}</span>
+          <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </Link>
       </div>
     </div>
