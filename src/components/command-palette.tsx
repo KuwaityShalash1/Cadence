@@ -9,6 +9,7 @@ import {
   Download,
   Globe,
   Keyboard,
+  LayoutDashboard,
   ListChecks,
   Monitor,
   Moon,
@@ -80,7 +81,14 @@ const FEEDBACK_URL = "https://tally.so/r/VLgMGy";
 
 /** Route literals are typed so TanStack Router validates every target at build time. */
 type NavigationTarget =
-  "/" | "/calendar" | "/stats" | "/goals" | "/routines" | "/quit-tracker" | "/settings";
+  | "/"
+  | "/calendar"
+  | "/dashboard"
+  | "/stats"
+  | "/goals"
+  | "/routines"
+  | "/quit-tracker"
+  | "/settings";
 
 interface NavigationCommand {
   to: NavigationTarget;
@@ -99,7 +107,7 @@ const NAVIGATION_COMMANDS: NavigationCommand[] = [
     to: "/",
     labelKey: "command.goToday",
     label: "Go to Today",
-    keywords: "home today dashboard habits",
+    keywords: "home today habits main",
     icon: Sun,
     shortcut: "T",
   },
@@ -110,6 +118,14 @@ const NAVIGATION_COMMANDS: NavigationCommand[] = [
     keywords: "calendar month history heatmap",
     icon: CalendarDays,
     shortcut: "C",
+  },
+  {
+    to: "/dashboard",
+    labelKey: "command.goDashboard",
+    label: "Go to Dashboard",
+    keywords: "dashboard user profile overview habits streaks badges gamification level recap",
+    icon: LayoutDashboard,
+    shortcut: "D",
   },
   {
     to: "/stats",
@@ -249,6 +265,7 @@ function ShortcutsHelpDialog({ open, onOpenChange, shortcutHint }: ShortcutsHelp
             <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
               <ShortcutRow label={t("command.goToday", "Today")} shortcut="T" />
               <ShortcutRow label={t("command.goCalendar", "Calendar")} shortcut="C" />
+              <ShortcutRow label={t("nav.dashboard", "Dashboard")} shortcut="D" />
               <ShortcutRow label={t("command.goAnalytics", "Analytics")} shortcut="A" />
               <ShortcutRow label={t("command.goGoals", "Goals")} shortcut="G" />
               <ShortcutRow label={t("command.goRoutines", "Routines")} shortcut="R" />
@@ -404,7 +421,6 @@ export function CommandPalette({
   useEffect(() => {
     if (open) feedbackOpenedByPointerRef.current = false;
   }, [open]);
-
 
   const feedbackLabel = t("command.feedback", "Report a Bug / Feedback");
 
@@ -622,9 +638,7 @@ export function CommandPalette({
                         runCommand(() => {
                           setLanguage("ar");
                           updateSettings({ language: "ar" });
-                          toast.success(
-                            t("command.languageUpdatedArabic", "Switched to Arabic"),
-                          );
+                          toast.success(t("command.languageUpdatedArabic", "Switched to Arabic"));
                         })
                       }
                       className={COMMAND_ITEM_CLASSES}
@@ -644,9 +658,7 @@ export function CommandPalette({
                         runCommand(() => {
                           setLanguage("en");
                           updateSettings({ language: "en" });
-                          toast.success(
-                            t("command.languageUpdatedEnglish", "Switched to English"),
-                          );
+                          toast.success(t("command.languageUpdatedEnglish", "Switched to English"));
                         })
                       }
                       className={COMMAND_ITEM_CLASSES}

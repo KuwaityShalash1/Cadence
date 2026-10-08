@@ -383,6 +383,8 @@ export const ar = {
   "command.groupLinks": "الروابط",
   "command.goToday": "الذهاب إلى اليوم",
   "command.goCalendar": "الذهاب إلى التقويم",
+  "command.goDashboard": "الذهاب إلى لوحة التحكم",
+  "command.goToDashboard": "الذهاب إلى لوحة التحكم",
   "command.goAnalytics": "الذهاب إلى التحليلات",
   "command.goGoals": "الذهاب إلى الأهداف",
   "command.goRoutines": "الذهاب إلى الروتينات",

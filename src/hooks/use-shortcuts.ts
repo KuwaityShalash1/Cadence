@@ -82,6 +82,7 @@ export function useAddModalListener(entity: AddModalEntity, onOpen: () => void):
  * Single-key Navigation Shortcuts (when NOT typing inside inputs):
  * - T: Today (/)
  * - C: Calendar (/calendar)
+ * - D: Dashboard (/dashboard)
  * - A: Analytics (/stats)
  * - G: Goals (/goals)
  * - R: Routines (/routines)
@@ -176,6 +177,10 @@ export function useShortcuts(): void {
         case "c":
           e.preventDefault();
           void navigateRef.current({ to: "/calendar" });
+          break;
+        case "d":
+          e.preventDefault();
+          void navigateRef.current({ to: "/dashboard" });
           break;
         case "a":
           e.preventDefault();

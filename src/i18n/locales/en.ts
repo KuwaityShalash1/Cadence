@@ -387,6 +387,8 @@ export const en = {
   "command.groupLinks": "Links",
   "command.goToday": "Go to Today",
   "command.goCalendar": "Go to Calendar",
+  "command.goDashboard": "Go to Dashboard",
+  "command.goToDashboard": "Go to Dashboard",
   "command.goAnalytics": "Go to Analytics",
   "command.goGoals": "Go to Goals",
   "command.goRoutines": "Go to Routines",
