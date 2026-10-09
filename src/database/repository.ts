@@ -218,6 +218,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
     freezesUsedThisMonth: h.freezesUsedThisMonth ?? 0,
     frozenDates: h.frozenDates ?? [],
     lastFreezeResetDate: h.lastFreezeResetDate ?? todayKey().slice(0, 7),
+    isPillar: Boolean(h.isPillar),
   }));
 
   const goals = goalsRaw.map((goal) => ({

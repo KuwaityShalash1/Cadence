@@ -38,7 +38,7 @@ interface ShareStreakModalProps {
     title: string;
   };
   userName: string;
-  bestHabitName?: string;
+  bestHabitName?: string | undefined;
 }
 
 export function ShareStreakModal({

@@ -37,6 +37,8 @@ export interface Habit {
   freezesUsedThisMonth: number;
   frozenDates: string[]; // YYYY-MM-DD
   lastFreezeResetDate: string; // YYYY-MM
+  /** True when marked as a non-negotiable core Daily Pillar. */
+  isPillar?: boolean | undefined;
   /** True when successfully synced to Supabase cloud. */
   synced?: boolean | undefined;
   /** True when local modifications are pending push to Supabase cloud. */

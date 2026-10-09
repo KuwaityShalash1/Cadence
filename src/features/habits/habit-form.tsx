@@ -135,6 +135,7 @@ export interface HabitFormValues {
   reminderTimes: string[];
   quickIncrements: number[];
   quickDecrements: number[];
+  isPillar: boolean;
 }
 
 interface Props {
@@ -172,6 +173,7 @@ export function HabitForm({ habit, onDone }: Props) {
           : [],
       quickIncrements: habit?.quickIncrements ?? [],
       quickDecrements: normalizeQuickDecrements(habit?.quickDecrement),
+      isPillar: habit?.isPillar ?? false,
     },
   });
 
@@ -203,6 +205,7 @@ export function HabitForm({ habit, onDone }: Props) {
             : [],
         quickIncrements: habit.quickIncrements ?? [],
         quickDecrements: normalizeQuickDecrements(habit.quickDecrement),
+        isPillar: habit.isPillar ?? false,
       });
     }
   }, [habit, reset]);
@@ -220,6 +223,7 @@ export function HabitForm({ habit, onDone }: Props) {
   const reminderTimes = watch("reminderTimes");
   const quickIncrements = watch("quickIncrements");
   const quickDecrements = watch("quickDecrements");
+  const isPillar = watch("isPillar");
 
   // Local states only for the ephemeral "add item" text inputs
   const [newReminderTime, setNewReminderTime] = useState("");
@@ -328,6 +332,7 @@ export function HabitForm({ habit, onDone }: Props) {
       reminder: values.reminderEnabled ? values.reminderTimes[0] : undefined,
       quickIncrements: values.quickIncrements,
       quickDecrement: values.quickDecrements,
+      isPillar: values.isPillar,
       freezesAllowedPerMonth: 3,
       freezesUsedThisMonth: 0,
       frozenDates: [],
@@ -819,6 +824,41 @@ export function HabitForm({ habit, onDone }: Props) {
           <Label htmlFor="habit-end">{t("habit.endDate")}</Label>
           <Input id="habit-end" type="date" {...register("endDate")} />
         </div>
+      </div>
+
+      {/* Daily Pillar (Core Non-Negotiable) Toggle */}
+      <div
+        className={cn(
+          "flex items-center justify-between gap-4 rounded-xl border p-4 transition-all duration-200",
+          isPillar
+            ? "border-amber-500/50 bg-amber-500/5 shadow-xs dark:border-amber-400/30 dark:bg-amber-400/5"
+            : "border-border bg-muted/30",
+        )}
+      >
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-base select-none" aria-hidden="true">
+              🏛️
+            </span>
+            <Label htmlFor="habit-is-pillar" className="text-sm font-semibold cursor-pointer text-foreground">
+              {t("habit.isPillarTitle", "Set as Daily Pillar 🏛️")}
+            </Label>
+            {isPillar && (
+              <span className="inline-flex items-center rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                {t("habit.pillarBadge", "Core")}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground leading-normal">
+            {t("habit.isPillarDesc", "Mark this as a non-negotiable core habit for your day.")}
+          </p>
+        </div>
+        <Switch
+          id="habit-is-pillar"
+          checked={isPillar}
+          onCheckedChange={(checked) => setValue("isPillar", checked, { shouldDirty: true })}
+          aria-label={t("habit.isPillarAria", "Set as Daily Pillar")}
+        />
       </div>
 
       <fieldset className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">

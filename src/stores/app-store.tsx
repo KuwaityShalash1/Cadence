@@ -902,6 +902,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           updatedAt: new Date().toISOString(),
           pending_sync: true,
           synced: false,
+          isPillar: Boolean(input.isPillar),
           freezesAllowedPerMonth: input.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT,
           freezesUsedThisMonth: input.freezesUsedThisMonth ?? 0,
           frozenDates: input.frozenDates ?? [],
@@ -939,6 +940,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateHabit(habit) {
         const updatedHabit: Habit = {
           ...habit,
+          isPillar: Boolean(habit.isPillar),
           updatedAt: new Date().toISOString(),
           pending_sync: true,
           synced: false,

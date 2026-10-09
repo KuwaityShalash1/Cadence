@@ -105,6 +105,7 @@ export function mergeHabitRecord(
     reminderTimes: Array.from(reminderTimesSet),
     freezesAllowedPerMonth: maxFreezesAllowed,
     freezesUsedThisMonth: maxFreezesUsed,
+    isPillar: primary.isPillar ?? secondary.isPillar ?? false,
     synced: true,
     updatedAt: new Date(Math.max(localTime, remoteTime, Date.now())).toISOString(),
   };

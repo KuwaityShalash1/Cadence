@@ -8,12 +8,15 @@ import {
   X,
   Globe,
   LogIn,
+  Zap,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/auth/auth-context";
 import { FOCUS_HABIT_SEARCH_EVENT, OPEN_ARCHIVED_HABITS_EVENT } from "@/hooks/use-shortcuts";
+import { triggerConfetti } from "@/lib/celebration";
+import { playBadgeUnlockSound } from "@/lib/sound";
 
 import {
   DndContext,
@@ -105,6 +108,24 @@ export function TodayPage() {
   const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Focus Mode / Core Only toggle (emergency mode for low-energy days)
+  const [coreOnlyMode, setCoreOnlyMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("cadence_core_only_mode") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("cadence_core_only_mode", String(coreOnlyMode));
+    } catch {
+      // Storage restricted
+    }
+  }, [coreOnlyMode]);
+
   useEffect(() => {
     const handleOpenArchived = () => setArchivedOpen(true);
     const handleFocusSearch = () => {
@@ -131,6 +152,53 @@ export function TodayPage() {
     [habits, date],
   );
 
+  // Pillars (non-negotiables) vs other habits
+  const duePillars = useMemo(() => due.filter((h) => Boolean(h.isPillar)), [due]);
+  const dueOthers = useMemo(() => due.filter((h) => !h.isPillar), [due]);
+
+  const completedPillarsCount = useMemo(
+    () => duePillars.filter((h) => isCompleteOn(h, logMap, date)).length,
+    [duePillars, logMap, date],
+  );
+  const allPillarsCompleted = duePillars.length > 0 && completedPillarsCount === duePillars.length;
+
+  // Mini-celebration effect: triggers when all daily pillars are secured for today
+  const hasMountedRef = useRef(false);
+  const prevPillarsCompletedRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      prevPillarsCompletedRef.current = allPillarsCompleted;
+      return;
+    }
+
+    // Trigger celebration when the final due pillar transitions to complete
+    if (prevPillarsCompletedRef.current === false && allPillarsCompleted) {
+      triggerConfetti({
+        colors: ["#f59e0b", "#fbbf24", "#eab308", "#fcd34d", "#10b981"],
+        particleCount: 75,
+        spread: 80,
+        origin: { y: 0.65 },
+      });
+      playBadgeUnlockSound();
+      toast.success(
+        t("today.pillarsCompletedCelebration", "🏛️ Core Day Secured! All Daily Pillars are complete."),
+        {
+          description: t(
+            "today.pillarsCompletedDesc",
+            "Even if other habits are unchecked, your foundation is solid today.",
+          ),
+          duration: 5000,
+        },
+      );
+    }
+
+    prevPillarsCompletedRef.current = allPillarsCompleted;
+  }, [ready, allPillarsCompleted, t]);
+
   const doneCount = due.filter((h) => isCompleteOn(h, logMap, date)).length;
   const completion = Math.round(dayCompletion(habits, logMap, date) * 100);
 
@@ -148,8 +216,14 @@ export function TodayPage() {
     return list;
   }, [due, filter, query, logMap, date]);
 
-  const pending = filtered.filter((h) => !isCompleteOn(h, logMap, date));
-  const completed = filtered.filter((h) => isCompleteOn(h, logMap, date));
+  const filteredPillars = useMemo(
+    () => filtered.filter((h) => Boolean(h.isPillar)),
+    [filtered],
+  );
+  const filteredOthers = useMemo(
+    () => filtered.filter((h) => !h.isPillar),
+    [filtered],
+  );
 
   const hasAnyHabits = habits.some((h) => !h.archived);
 
@@ -251,6 +325,36 @@ export function TodayPage() {
                 </Link>
               </Button>
             )}
+            {/* Core Only / Focus Mode emergency toggle */}
+            <Button
+              variant={coreOnlyMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCoreOnlyMode((prev) => !prev)}
+              aria-pressed={coreOnlyMode}
+              title={t("today.coreOnlyTooltip", "Focus on your non-negotiables for low-energy days")}
+              className={cn(
+                "gap-1.5 transition-all duration-200",
+                coreOnlyMode
+                  ? "border-amber-500 bg-amber-500 text-slate-950 font-semibold shadow-xs hover:bg-amber-400 dark:bg-amber-400 dark:hover:bg-amber-300 dark:text-slate-950"
+                  : "border-border hover:border-amber-500/50 hover:text-amber-600 dark:hover:text-amber-400",
+              )}
+            >
+              <Zap className={cn("h-4 w-4", coreOnlyMode ? "fill-slate-950" : "text-amber-500")} />
+              <span>{t("today.coreOnlyMode", "Core Only")}</span>
+              {duePillars.length > 0 && (
+                <Badge
+                  variant={coreOnlyMode ? "secondary" : "outline"}
+                  className={cn(
+                    "ms-0.5 px-1.5 py-0 text-[10px] font-bold",
+                    coreOnlyMode
+                      ? "bg-amber-600/20 text-slate-950 dark:text-slate-950"
+                      : "border-amber-500/30 text-amber-600 dark:text-amber-400",
+                  )}
+                >
+                  {completedPillarsCount}/{duePillars.length}
+                </Badge>
+              )}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -276,7 +380,23 @@ export function TodayPage() {
             <span className="font-medium">
               {doneCount} {t("today.of")} {due.length} {t("today.done")}
             </span>
-            <span className="text-muted-foreground">{completion}%</span>
+            <div className="flex items-center gap-2">
+              {duePillars.length > 0 && (
+                <span
+                  className={cn(
+                    "text-xs px-2.5 py-0.5 rounded-full font-medium inline-flex items-center gap-1 transition-colors",
+                    allPillarsCompleted
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-semibold"
+                      : "bg-muted text-muted-foreground border border-border",
+                  )}
+                  title={t("today.dailyPillarsDesc", "Non-negotiable core habits for your day")}
+                >
+                  🏛️ {completedPillarsCount}/{duePillars.length}{" "}
+                  {allPillarsCompleted ? `✓ ${t("today.pillarsSecured", "Secured")}` : ""}
+                </span>
+              )}
+              <span className="text-muted-foreground font-semibold">{completion}%</span>
+            </div>
           </div>
           <Progress value={completion} className="mt-3 h-2" />
         </div>
@@ -357,7 +477,31 @@ export function TodayPage() {
             </div>
           </div>
 
-          {filtered.length === 0 ? (
+          {coreOnlyMode && duePillars.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-amber-500/40 bg-amber-500/[0.03] p-8 text-center space-y-3">
+              <div className="text-3xl select-none" aria-hidden="true">
+                🏛️
+              </div>
+              <h3 className="font-semibold text-foreground text-base">
+                {t("today.noPillarsSet", "No daily pillars set yet")}
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                {t(
+                  "today.noPillarsSetDesc",
+                  "Designate 1-3 core habits as Daily Pillars to anchor your day and use Core Only mode.",
+                )}
+              </p>
+              <div className="flex justify-center gap-2 pt-2">
+                <Button size="sm" variant="outline" onClick={() => setCoreOnlyMode(false)}>
+                  {t("today.showAllHabits", "Show All Habits")}
+                </Button>
+                <Button size="sm" onClick={() => editor.open()}>
+                  <Plus className="me-1 h-3.5 w-3.5" />
+                  {t("today.newHabit", "New Habit")}
+                </Button>
+              </div>
+            </div>
+          ) : filtered.length === 0 || (coreOnlyMode && filteredPillars.length === 0) ? (
             <p className="py-10 text-center text-sm text-muted-foreground">{t("today.noMatch")}</p>
           ) : (
             <DndContext
@@ -367,49 +511,145 @@ export function TodayPage() {
               onDragEnd={handleDragEnd}
             >
               <div className="space-y-6">
-                {filter !== "completed" && pending.length > 0 ? (
+                {/* 1. Daily Pillars Section (Pinned at the top with gold/amber styling) */}
+                {duePillars.length > 0 && (
                   <section className="space-y-3">
-                    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t("today.sectionTodo")}
-                    </h2>
-                    <SortableContext
-                      items={pending.map((h) => h.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      <ul className="cadence-stagger space-y-3">
-                        {pending.map((habit) => (
-                          <SortableHabitRow
-                            key={habit.id}
-                            habit={habit}
-                            date={date}
-                            logMap={logMap}
-                            customIcons={customIcons}
-                            draggable={filter === "all" && !query}
-                          />
-                        ))}
-                      </ul>
-                    </SortableContext>
-                  </section>
-                ) : null}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base select-none" aria-hidden="true">
+                          🏛️
+                        </span>
+                        <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                          {t("today.dailyPillars", "Daily Pillars")}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] font-semibold px-2 py-0.5 transition-colors",
+                              allPillarsCompleted
+                                ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                                : "border-border text-muted-foreground",
+                            )}
+                          >
+                            {allPillarsCompleted
+                              ? `✓ ${t("today.pillarsSecured", "Secured")}`
+                              : `${completedPillarsCount}/${duePillars.length}`}
+                          </Badge>
+                        </h2>
+                      </div>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
+                        {t("today.dailyPillarsDesc", "Non-negotiable core habits for your day")}
+                      </span>
+                    </div>
 
-                {filter !== "pending" && completed.length > 0 ? (
-                  <section className="space-y-3">
-                    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {t("today.sectionCompleted")}
-                    </h2>
-                    <ul className="cadence-stagger space-y-3">
-                      {completed.map((habit) => (
-                        <HabitRow
-                          key={habit.id}
-                          habit={habit}
-                          date={date}
-                          logMap={logMap}
-                          customIcons={customIcons}
-                        />
-                      ))}
-                    </ul>
+                    <div
+                      className={cn(
+                        "rounded-2xl border p-3 sm:p-4 transition-all duration-300",
+                        "border-amber-500/35 bg-amber-500/[0.03] dark:border-amber-400/25 dark:bg-amber-400/[0.02]",
+                        allPillarsCompleted
+                          ? "ring-1 ring-amber-500/25 shadow-[0_0_24px_-4px_rgba(245,158,11,0.14)]"
+                          : "shadow-[0_0_16px_-4px_rgba(245,158,11,0.06)]",
+                      )}
+                    >
+                      {filteredPillars.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-muted-foreground">
+                          {allPillarsCompleted ? (
+                            <p className="text-amber-700 dark:text-amber-400 font-medium">
+                              🎉 {t("today.allPillarsCompleted", "All Daily Pillars completed for today!")}
+                            </p>
+                          ) : (
+                            <p>{t("today.noPillarsMatch", "No pillars match the current filter.")}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <SortableContext
+                          items={filteredPillars.map((h) => h.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <ul className="cadence-stagger space-y-3">
+                            {filteredPillars.map((habit) => (
+                              <SortableHabitRow
+                                key={habit.id}
+                                habit={habit}
+                                date={date}
+                                logMap={logMap}
+                                customIcons={customIcons}
+                                draggable={filter === "all" && !query}
+                              />
+                            ))}
+                          </ul>
+                        </SortableContext>
+                      )}
+                    </div>
                   </section>
-                ) : null}
+                )}
+
+                {/* Focus / Core Only Mode Banner when active */}
+                {coreOnlyMode ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
+                    <div className="flex items-center gap-2.5">
+                      <Zap className="h-4 w-4 shrink-0 text-amber-500" />
+                      <span className="font-medium">
+                        {t(
+                          "today.coreOnlyBanner",
+                          "Core Only Mode Active — Showing non-negotiables only. Protect your energy today.",
+                        )}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs font-semibold shrink-0 border-amber-500/40 text-amber-800 hover:bg-amber-500/10 dark:text-amber-300 self-start sm:self-auto"
+                      onClick={() => setCoreOnlyMode(false)}
+                    >
+                      {t("today.showAllHabits", "Show All Habits")}
+                    </Button>
+                  </div>
+                ) : (
+                  /* 2. Other Habits Section (Standard styling) */
+                  <section className="space-y-3">
+                    {duePillars.length > 0 ? (
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t("today.otherHabits", "Other Habits")}
+                        </h2>
+                        <span className="text-xs text-muted-foreground">{filteredOthers.length}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {t("today.allHabits", "Habits")}
+                        </h2>
+                        <span className="text-xs text-muted-foreground">{filteredOthers.length}</span>
+                      </div>
+                    )}
+
+                    {filteredOthers.length === 0 ? (
+                      dueOthers.length > 0 ? (
+                        <p className="py-6 text-center text-xs text-muted-foreground">
+                          {t("today.noOtherMatch", "No other habits match the current filter.")}
+                        </p>
+                      ) : null
+                    ) : (
+                      <SortableContext
+                        items={filteredOthers.map((h) => h.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <ul className="cadence-stagger space-y-3">
+                          {filteredOthers.map((habit) => (
+                            <SortableHabitRow
+                              key={habit.id}
+                              habit={habit}
+                              date={date}
+                              logMap={logMap}
+                              customIcons={customIcons}
+                              draggable={filter === "all" && !query}
+                            />
+                          ))}
+                        </ul>
+                      </SortableContext>
+                    )}
+                  </section>
+                )}
               </div>
               <DragOverlay>
                 {activeHabit ? (

@@ -914,6 +914,9 @@ export const HabitRow = memo(
           isFrozen && "bg-sky-50/60 border-sky-200 dark:bg-sky-900/10 dark:border-sky-800/50",
           isFrozen && frozenDimClass,
           cardChrome,
+          habit.isPillar &&
+            !isFrozen &&
+            "ring-1 ring-amber-500/35 dark:ring-amber-400/35 shadow-[0_0_16px_-4px_rgba(245,158,11,0.15)]",
           /** Long-press suppression on the drag surface — no native selection UI. */
           dragSurfaceClass,
           draggable && !isOverlay && "cursor-grab active:cursor-grabbing",
@@ -1000,6 +1003,14 @@ export const HabitRow = memo(
                 >
                   🔥 {currentStreak} {currentStreak === 1 ? t("habitRow.day") : t("habitRow.days")}
                 </span>
+                {habit.isPillar ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-400 dark:border-amber-400/30 shrink-0"
+                    title={t("today.pillarBadgeTitle", "Daily Pillar (Non-negotiable)")}
+                  >
+                    🏛️ {t("today.pillarBadge", "Core Pillar")}
+                  </span>
+                ) : null}
                 {habit.description?.trim() ? (
                   <span className={recurrenceBadgeClass}>
                     {describeSchedule(habit.schedule, t)}
@@ -1248,6 +1259,9 @@ export const HabitRow = memo(
             isFrozen && "bg-sky-50/60 border-sky-200 dark:bg-sky-900/10 dark:border-sky-800/50",
             isFrozen && frozenDimClass,
             cardChrome,
+            habit.isPillar &&
+              !isFrozen &&
+              "ring-1 ring-amber-500/35 dark:ring-amber-400/35 shadow-[0_0_16px_-4px_rgba(245,158,11,0.15)]",
             /** Long-press suppression on the drag surface — no native selection UI. */
             dragSurfaceClass,
           )}
@@ -1336,6 +1350,14 @@ export const HabitRow = memo(
                 >
                   🔥 {currentStreak}
                 </span>
+                {habit.isPillar ? (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 dark:border-amber-400/30 shrink-0"
+                    title={t("today.pillarBadgeTitle", "Daily Pillar (Non-negotiable)")}
+                  >
+                    🏛️ {t("today.pillarBadge", "Core Pillar")}
+                  </span>
+                ) : null}
                 <span
                   aria-live="polite"
                   className="cursor-pointer truncate text-[11px] font-medium text-slate-500 dark:text-slate-400"
@@ -1494,6 +1516,7 @@ export function areHabitRowPropsEqual(prevProps: Props, nextProps: Props): boole
       p.archived !== n.archived ||
       p.order !== n.order ||
       p.goalId !== n.goalId ||
+      p.isPillar !== n.isPillar ||
       p.freezesAllowedPerMonth !== n.freezesAllowedPerMonth ||
       p.freezesUsedThisMonth !== n.freezesUsedThisMonth ||
       p.lastFreezeResetDate !== n.lastFreezeResetDate ||

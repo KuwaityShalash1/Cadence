@@ -13,7 +13,7 @@ export interface ShareCardData {
     title: string;
   };
   userName: string;
-  bestHabitName?: string;
+  bestHabitName?: string | undefined;
   format: "story" | "square";
   labels: {
     milestoneBadge: string;
