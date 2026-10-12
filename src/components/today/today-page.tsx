@@ -511,11 +511,11 @@ export function TodayPage() {
               onDragEnd={handleDragEnd}
             >
               <div className="space-y-6">
-                {/* 1. Daily Pillars Section — Premium glassmorphic container */}
+                {/* 1. Daily Pillars Section — cards carry their own amber stripe & badge */}
                 {duePillars.length > 0 && (
-                  <section className="space-y-3">
-                    {/* ── Section header ── */}
-                    <div className="flex items-center justify-between gap-3">
+                  <section className="space-y-2">
+                    {/* ── Section header — retains golden text, no outer box needed ── */}
+                    <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2.5">
                         <h2 className="flex items-center gap-2 text-sm font-extrabold tracking-wide">
                           <span
@@ -523,7 +523,7 @@ export function TodayPage() {
                           >
                             {t("today.dailyPillars", "DAILY PILLARS")} 🏛️
                           </span>
-                          {/* Glowing animated count badge */}
+                          {/* Animated count badge */}
                           <span
                             className={cn(
                               "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold shadow-inner transition-all duration-300",
@@ -543,35 +543,8 @@ export function TodayPage() {
                       </span>
                     </div>
 
-                    {/* ── Glassmorphic pillars container ── */}
-                    <div
-                      className={cn(
-                        "relative overflow-hidden rounded-2xl border p-4 sm:p-5 transition-all duration-300",
-                        "bg-[#0d1222]/80 backdrop-blur-md border-amber-500/30",
-                        "shadow-[0_0_20px_rgba(245,158,11,0.12)]",
-                        allPillarsCompleted
-                          ? "ring-1 ring-amber-500/30 shadow-[0_0_32px_-4px_rgba(245,158,11,0.22)]"
-                          : "",
-                      )}
-                    >
-                      {/* Ambient top-edge glow line */}
-                      <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent"
-                      />
-                      {/* LTR left / RTL right accent stripe */}
-                      <div
-                        aria-hidden
-                        className="pointer-events-none absolute bottom-0 top-0 start-0 w-[3px] bg-gradient-to-b from-amber-400/60 via-orange-500/40 to-transparent rounded-s-2xl rtl:start-auto rtl:end-0 rtl:rounded-s-none rtl:rounded-e-2xl"
-                      />
-                      {/* Faint watermark pillar / column icon */}
-                      <div
-                        aria-hidden
-                        className="pointer-events-none absolute bottom-3 end-4 select-none text-[5rem] leading-none opacity-[0.04]"
-                      >
-                        🏛️
-                      </div>
-
+                    {/* ── Transparent layout wrapper — individual cards own their highlights ── */}
+                    <div>
                       {filteredPillars.length === 0 ? (
                         <div className="py-6 text-center text-xs text-muted-foreground">
                           {allPillarsCompleted ? (
