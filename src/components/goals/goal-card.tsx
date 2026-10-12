@@ -102,7 +102,7 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
             aria-label={t("goal.enterValueAria", { name: goal.name })}
-            className="h-6 w-16 rounded-sm border-b-2 border-primary bg-transparent px-1 py-0 text-sm font-semibold tabular-nums text-foreground outline-none transition-colors focus:border-primary focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="h-6 w-16 rounded-sm border-b-2 border-primary bg-transparent px-1 py-0 text-[16px] md:text-sm font-semibold tabular-nums text-foreground outline-none transition-colors focus:border-primary focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             style={{ width: `${Math.max(2, inputValue.length + 1)}ch`, maxWidth: "6rem" }}
           />
         ) : (

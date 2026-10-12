@@ -35,11 +35,11 @@ const DialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto pointer-events-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto pointer-events-none max-sm:items-start max-sm:p-4">
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "relative pointer-events-auto w-full max-w-lg rounded-2xl bg-background p-6 shadow-2xl border border-border gap-4 grid duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "relative pointer-events-auto w-full max-w-lg rounded-2xl bg-background p-6 shadow-2xl border border-border gap-4 grid duration-200 max-h-[80dvh] overflow-y-auto max-sm:top-12 max-sm:-translate-y-0 max-sm:mb-4 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className,
         )}
         {...props}
@@ -56,7 +56,10 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-start", className)} {...props} />
+  <div
+    className={cn("flex flex-col space-y-1.5 text-center sm:text-start", className)}
+    {...props}
+  />
 );
 DialogHeader.displayName = "DialogHeader";
 

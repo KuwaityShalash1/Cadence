@@ -439,7 +439,7 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
 
       {/* Log Usage Dialog for Limit Strategy */}
       <Dialog open={usageDialogOpen} onOpenChange={setUsageDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[80dvh] overflow-y-auto max-sm:top-12 max-sm:-translate-y-0 max-sm:mb-4">
           <DialogHeader>
             <DialogTitle>{t("quitTracker.logUsage", "Log Usage")}</DialogTitle>
             <DialogDescription>
