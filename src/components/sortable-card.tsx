@@ -24,6 +24,7 @@ export function SortableCard({ id, children, className }: SortableCardProps) {
   return (
     <div
       ref={setNodeRef}
+      data-sortable-card="true"
       style={{
         transform: CSS.Transform.toString(transform),
         transition,

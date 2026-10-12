@@ -703,7 +703,7 @@ export const HabitRow = memo(
           .map(({ key, label, Icon, iconClassName, destructive, disabled, onSelect }) => (
             <Item
               key={key}
-              data-no-drag
+              data-no-drag="true"
               className={cn(destructive && "text-red-500 focus:text-red-500")}
               {...(disabled ? { disabled: true } : {})}
               onSelect={onSelect}
@@ -718,7 +718,7 @@ export const HabitRow = memo(
     /** Primary timer CTA — used by the desktop toolbar and the mobile tray. */
     const renderTimerButton = (extra?: string) => (
       <Button
-        data-no-drag
+        data-no-drag="true"
         size="sm"
         variant="outline"
         aria-label={
@@ -762,7 +762,7 @@ export const HabitRow = memo(
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            data-no-drag
+            data-no-drag="true"
             size="icon"
             variant="ghost"
             aria-label={t("habitRow.actionsAria", "Habit actions")}
@@ -783,7 +783,7 @@ export const HabitRow = memo(
 
     const renderCompleteButton = (withLabel: boolean, extra?: string) => (
       <Button
-        data-no-drag
+        data-no-drag="true"
         size={withLabel ? "sm" : "icon"}
         variant="outline"
         disabled={mutationsDisabled}
@@ -859,7 +859,7 @@ export const HabitRow = memo(
       return (
         <Button
           key={label}
-          data-no-drag
+          data-no-drag="true"
           size="sm"
           variant="outline"
           disabled={mutationsDisabled}
@@ -913,6 +913,7 @@ export const HabitRow = memo(
     const renderDesktopLayout = () => (
       <div
         ref={activatorRef}
+        data-sortable-card="true"
         {...(draggable && !isOverlay && dragHandleProps ? dragHandleProps : {})}
         style={accentStyle}
         className={cn(
@@ -1101,7 +1102,7 @@ export const HabitRow = memo(
      */
     const renderMobilePrimaryAction = () => (
       <Button
-        data-no-drag
+        data-no-drag="true"
         size="icon"
         variant="outline"
         disabled={mutationsDisabled}
@@ -1205,7 +1206,7 @@ export const HabitRow = memo(
       return (
         <button
           type="button"
-          data-no-drag
+          data-no-drag="true"
           disabled={mutationsDisabled}
           aria-label={
             readOnlyMode
@@ -1272,6 +1273,7 @@ export const HabitRow = memo(
 
       return (
         <div
+          data-sortable-card="true"
           style={accentStyle}
           className={cn(
             cardSurfaceClass,
@@ -1409,7 +1411,7 @@ export const HabitRow = memo(
               {/* (+) toggle — expands/collapses the stepper quick-actions row */}
               <button
                 type="button"
-                data-no-drag
+                data-no-drag="true"
                 aria-expanded={isExpanded}
                 aria-label={
                   isExpanded ? t("habitRow.hideQuickActions") : t("habitRow.showQuickActions")
@@ -1469,6 +1471,7 @@ export const HabitRow = memo(
         <ContextMenuTrigger asChild>
           <li
             ref={ref}
+            data-sortable-card="true"
             style={style}
             onDragStart={onDragStart}
             onDragEnter={onDragEnter}

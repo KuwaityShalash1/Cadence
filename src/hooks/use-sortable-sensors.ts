@@ -34,26 +34,38 @@ export const TOUCH_REORDER_TOLERANCE_PX = 8;
 export const POINTER_REORDER_DISTANCE_PX = 5;
 
 /**
- * Detects whether an event target or one of its ancestors is an interactive element
- * (buttons, inputs, select, links, role="button", or elements marked with data-no-drag / no-drag).
- * Used by custom DnD sensors to reject drag activation on interactive controls.
+ * Detects whether an event target is an interactive element (button, input, select,
+ * or marked with data-no-drag="true") while stopping traversal at the main sortable card wrapper.
+ * Used by custom DnD sensors to ignore drag activations on interactive controls.
  */
-export const isInteractiveElement = (target: EventTarget | null): boolean => {
-  let current =
-    target instanceof HTMLElement ? target : ((target as Element | null)?.parentElement ?? null);
+export const isInteractiveElement = (target: EventTarget | HTMLElement | null): boolean => {
+  let current: HTMLElement | null =
+    target instanceof HTMLElement
+      ? target
+      : target instanceof Element
+        ? (target.closest(
+            "button, input, select, [data-no-drag], [data-sortable-card]",
+          ) as HTMLElement | null)
+        : null;
+
   while (current) {
+    // Stop traversing if we hit the main sortable card wrapper
+    if (
+      current.dataset &&
+      (current.dataset["sortableCard"] === "true" || current.hasAttribute("data-sortable-card"))
+    ) {
+      return false; // Safe to drag!
+    }
+
+    // Block drag ONLY if it's explicitly an interactive element or flagged
     if (
       current.tagName === "BUTTON" ||
       current.tagName === "INPUT" ||
       current.tagName === "SELECT" ||
-      current.tagName === "TEXTAREA" ||
-      current.tagName === "A" ||
-      current.getAttribute("role") === "button" ||
-      current.classList.contains("no-drag") ||
-      current.dataset["noDrag"] === "true" ||
-      current.hasAttribute("data-no-drag")
+      (current.dataset &&
+        (current.dataset["noDrag"] === "true" || current.hasAttribute("data-no-drag")))
     ) {
-      return true;
+      return true; // Block drag!
     }
     current = current.parentElement;
   }
