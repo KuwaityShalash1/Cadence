@@ -21,22 +21,14 @@ import { playBadgeUnlockSound } from "@/lib/sound";
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   closestCenter,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  SmartPointerSensor,
-  SmartMouseSensor,
-  SmartTouchSensor,
-} from "@/hooks/use-sortable-sensors";
+import { useSortableSensors } from "@/hooks/use-sortable-sensors";
 import {
   SortableContext,
   arrayMove,
-  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
@@ -227,31 +219,7 @@ export function TodayPage() {
 
   const hasAnyHabits = habits.some((h) => !h.archived);
 
-  /**
-   * Custom sensors that ignore drag activations on interactive children (buttons, inputs, dropdowns)
-   * while allowing the rest of the card to initiate reordering smoothly.
-   */
-  const pointerSensor = useSensor(SmartPointerSensor, {
-    activationConstraint: {
-      distance: 5,
-    },
-  });
-  const mouseSensor = useSensor(SmartMouseSensor, {
-    activationConstraint: {
-      distance: 5,
-    },
-  });
-  const touchSensor = useSensor(SmartTouchSensor, {
-    activationConstraint: {
-      delay: 250,
-      tolerance: 5,
-    },
-  });
-
-  const keyboardSensor = useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates,
-  });
-  const sensors = useSensors(pointerSensor, mouseSensor, touchSensor, keyboardSensor);
+  const sensors = useSortableSensors();
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);

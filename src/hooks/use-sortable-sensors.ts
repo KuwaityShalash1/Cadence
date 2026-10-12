@@ -17,18 +17,17 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 /**
  * Touch hold time (ms) required before a reorderable card can be picked up.
  *
- * 400ms matches the native mobile long-press threshold, so entering drag mode
- * feels like an operating-system gesture instead of an accidental one.
+ * 250ms press-and-hold delay ensures quick swipes scroll the page normally.
  */
-export const TOUCH_REORDER_DELAY_MS = 400;
+export const TOUCH_REORDER_DELAY_MS = 250;
 
 /**
  * Finger drift (px) tolerated during the hold window.
  *
- * Moving further than this cancels the pending drag *before* it starts, which
+ * Moving further than this cancels the pending drag before it starts, which
  * hands the gesture straight back to the browser so the page keeps scrolling.
  */
-export const TOUCH_REORDER_TOLERANCE_PX = 8;
+export const TOUCH_REORDER_TOLERANCE_PX = 5;
 
 /** Pointer travel (px) required before a desktop mouse / pen drag starts. */
 export const POINTER_REORDER_DISTANCE_PX = 5;
@@ -76,7 +75,8 @@ export const isInteractiveElement = (target: EventTarget | HTMLElement | null): 
 
 /**
  * Custom PointerSensor that intercepts pointerdown events and ignores
- * drag activations originating from interactive children.
+ * drag activations originating from interactive children. Excludes touch
+ * pointers so SmartTouchSensor can manage mobile gestures with the delay constraint.
  */
 export class SmartPointerSensor extends PointerSensor {
   static override activators = [
@@ -84,6 +84,10 @@ export class SmartPointerSensor extends PointerSensor {
       eventName: "onPointerDown" as const,
       handler: ({ nativeEvent: event }: PointerEvent, { onActivation }: PointerSensorOptions) => {
         if (!event.isPrimary || event.button !== 0) {
+          return false;
+        }
+        // Let SmartTouchSensor handle touch interactions with long-press constraint
+        if (event.pointerType === "touch") {
           return false;
         }
         if (isInteractiveElement(event.target)) {

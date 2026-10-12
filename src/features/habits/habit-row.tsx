@@ -279,7 +279,7 @@ export const HabitRow = memo(
      * dragged keep native text selection, because their long press opens the
      * action list instead of a drag.
      */
-    const dragSurfaceClass = draggable && !isOverlay ? "select-none no-callout" : undefined;
+    const dragSurfaceClass = draggable && !isOverlay ? "select-none no-callout touch-pan-y" : undefined;
     /**
      * Elevated glass surface (Linear / Things 3 inspired) — crisp white with a
      * soft shadow in light mode; a translucent, blurred slate panel with a
