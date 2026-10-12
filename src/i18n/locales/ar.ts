@@ -558,6 +558,8 @@ export const ar = {
   "goal.complete": "مكتمل",
   "goal.decreaseGoalAria": "إنقاص {name}",
   "goal.increaseGoalAria": "زيادة {name}",
+  "goal.editProgressAria": "تعديل تقدم {name}",
+  "goal.enterValueAria": "قيمة التقدم لـ {name}",
   "goal.deleteGoalAria": "حذف الهدف",
   "goal.habitsLinked": "عادات مرتبطة",
   "goal.goalProgressFor": "التقدم في هدف {name}",

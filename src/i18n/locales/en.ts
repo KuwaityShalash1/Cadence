@@ -563,6 +563,8 @@ export const en = {
   "goal.complete": "complete",
   "goal.decreaseGoalAria": "Decrease {name}",
   "goal.increaseGoalAria": "Increase {name}",
+  "goal.editProgressAria": "Edit progress for {name}",
+  "goal.enterValueAria": "Current progress value for {name}",
   "goal.deleteGoalAria": "Delete goal",
   "goal.habitsLinked": "habits linked",
   "goal.goalProgressFor": "Goal progress for {name}",

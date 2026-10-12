@@ -183,6 +183,7 @@ export interface AppActions {
   removeGroup: (id: string) => void;
   upsertGoal: (goal: Goal) => void;
   adjustGoalValue: (goalId: string, delta: number) => void;
+  setGoalValue: (goalId: string, value: number) => void;
   removeGoal: (id: string) => void;
   reorderGoals: (orderedIds: string[]) => void;
   /** Undo-delete support: re-inserts a previously deleted goal. */
@@ -1156,6 +1157,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const currentValue = Math.min(
             goal.targetValue,
             Math.max(0, (goal.currentValue ?? 0) + delta),
+          );
+          updated = { ...goal, currentValue };
+          return {
+            ...prev,
+            goals: prev.goals.map((item) => (item.id === goalId ? updated! : item)),
+          };
+        });
+
+        if (updated) {
+          void repo.saveGoal(updated);
+        }
+      },
+      setGoalValue(goalId, value) {
+        let updated: Goal | null = null;
+        setState((prev) => {
+          const goal = prev.goals.find((item) => item.id === goalId);
+          if (!goal || goal.type !== "numeric") return prev;
+          const currentValue = Math.min(
+            goal.targetValue,
+            Math.max(0, Number.isFinite(value) ? value : 0),
           );
           updated = { ...goal, currentValue };
           return {
