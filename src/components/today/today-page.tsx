@@ -22,14 +22,17 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import {
+  SmartPointerSensor,
+  SmartMouseSensor,
+  SmartTouchSensor,
+} from "@/hooks/use-sortable-sensors";
 import {
   SortableContext,
   arrayMove,
@@ -185,7 +188,10 @@ export function TodayPage() {
       });
       playBadgeUnlockSound();
       toast.success(
-        t("today.pillarsCompletedCelebration", "🏛️ Core Day Secured! All Daily Pillars are complete."),
+        t(
+          "today.pillarsCompletedCelebration",
+          "🏛️ Core Day Secured! All Daily Pillars are complete.",
+        ),
         {
           description: t(
             "today.pillarsCompletedDesc",
@@ -216,35 +222,26 @@ export function TodayPage() {
     return list;
   }, [due, filter, query, logMap, date]);
 
-  const filteredPillars = useMemo(
-    () => filtered.filter((h) => Boolean(h.isPillar)),
-    [filtered],
-  );
-  const filteredOthers = useMemo(
-    () => filtered.filter((h) => !h.isPillar),
-    [filtered],
-  );
+  const filteredPillars = useMemo(() => filtered.filter((h) => Boolean(h.isPillar)), [filtered]);
+  const filteredOthers = useMemo(() => filtered.filter((h) => !h.isPillar), [filtered]);
 
   const hasAnyHabits = habits.some((h) => !h.archived);
 
   /**
-   * Mouse/pointer-only drag activation — no KeyboardSensor is registered, so
-   * habits can never be picked up via keyboard and no keyboard handlers are
-   * forwarded to the habit cards. `distance: 8` means a drag only starts after
-   * an 8px pointer move, which keeps plain clicks AND wheel scrolling fully
-   * free (no scroll lock).
+   * Custom sensors that ignore drag activations on interactive children (buttons, inputs, dropdowns)
+   * while allowing the rest of the card to initiate reordering smoothly.
    */
-  const pointerSensor = useSensor(PointerSensor, {
+  const pointerSensor = useSensor(SmartPointerSensor, {
     activationConstraint: {
       distance: 5,
     },
   });
-  /**
-   * Touch is pointer-class input: the 150ms hold with 5px tolerance keeps
-   * scrolling and swipe-to-complete free and only starts a reorder after a
-   * deliberate long-press.
-   */
-  const touchSensor = useSensor(TouchSensor, {
+  const mouseSensor = useSensor(SmartMouseSensor, {
+    activationConstraint: {
+      distance: 5,
+    },
+  });
+  const touchSensor = useSensor(SmartTouchSensor, {
     activationConstraint: {
       delay: 250,
       tolerance: 5,
@@ -254,7 +251,7 @@ export function TodayPage() {
   const keyboardSensor = useSensor(KeyboardSensor, {
     coordinateGetter: sortableKeyboardCoordinates,
   });
-  const sensors = useSensors(pointerSensor, touchSensor, keyboardSensor);
+  const sensors = useSensors(pointerSensor, mouseSensor, touchSensor, keyboardSensor);
 
   function handleDragStart(event: DragStartEvent) {
     setActiveId(event.active.id as string);
@@ -331,7 +328,10 @@ export function TodayPage() {
               size="sm"
               onClick={() => setCoreOnlyMode((prev) => !prev)}
               aria-pressed={coreOnlyMode}
-              title={t("today.coreOnlyTooltip", "Focus on your non-negotiables for low-energy days")}
+              title={t(
+                "today.coreOnlyTooltip",
+                "Focus on your non-negotiables for low-energy days",
+              )}
               className={cn(
                 "gap-1.5 transition-all duration-200",
                 coreOnlyMode

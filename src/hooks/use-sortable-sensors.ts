@@ -1,12 +1,17 @@
 import {
   KeyboardSensor,
+  MouseSensor,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
+  type MouseSensorOptions,
+  type PointerSensorOptions,
+  type TouchSensorOptions,
   type SensorDescriptor,
   type SensorOptions,
 } from "@dnd-kit/core";
+import type { MouseEvent, PointerEvent, TouchEvent } from "react";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 /**
@@ -29,22 +34,116 @@ export const TOUCH_REORDER_TOLERANCE_PX = 8;
 export const POINTER_REORDER_DISTANCE_PX = 5;
 
 /**
- * Sensors shared by every reorderable card list (Routines, Goals, Quit Tracker).
+ * Detects whether an event target or one of its ancestors is an interactive element
+ * (buttons, inputs, select, links, role="button", or elements marked with data-no-drag / no-drag).
+ * Used by custom DnD sensors to reject drag activation on interactive controls.
+ */
+export const isInteractiveElement = (target: EventTarget | null): boolean => {
+  let current =
+    target instanceof HTMLElement ? target : ((target as Element | null)?.parentElement ?? null);
+  while (current) {
+    if (
+      current.tagName === "BUTTON" ||
+      current.tagName === "INPUT" ||
+      current.tagName === "SELECT" ||
+      current.tagName === "TEXTAREA" ||
+      current.tagName === "A" ||
+      current.getAttribute("role") === "button" ||
+      current.classList.contains("no-drag") ||
+      current.dataset["noDrag"] === "true" ||
+      current.hasAttribute("data-no-drag")
+    ) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+};
+
+/**
+ * Custom PointerSensor that intercepts pointerdown events and ignores
+ * drag activations originating from interactive children.
+ */
+export class SmartPointerSensor extends PointerSensor {
+  static override activators = [
+    {
+      eventName: "onPointerDown" as const,
+      handler: ({ nativeEvent: event }: PointerEvent, { onActivation }: PointerSensorOptions) => {
+        if (!event.isPrimary || event.button !== 0) {
+          return false;
+        }
+        if (isInteractiveElement(event.target)) {
+          return false;
+        }
+        onActivation?.({ event });
+        return true;
+      },
+    },
+  ];
+}
+
+/**
+ * Custom MouseSensor that intercepts mousedown events and ignores
+ * drag activations originating from interactive children.
+ */
+export class SmartMouseSensor extends MouseSensor {
+  static override activators = [
+    {
+      eventName: "onMouseDown" as const,
+      handler: ({ nativeEvent: event }: MouseEvent, { onActivation }: MouseSensorOptions) => {
+        if (event.button !== 0) {
+          return false;
+        }
+        if (isInteractiveElement(event.target)) {
+          return false;
+        }
+        onActivation?.({ event });
+        return true;
+      },
+    },
+  ];
+}
+
+/**
+ * Custom TouchSensor that intercepts touchstart events and ignores
+ * drag activations originating from interactive children.
+ */
+export class SmartTouchSensor extends TouchSensor {
+  static override activators = [
+    {
+      eventName: "onTouchStart" as const,
+      handler: ({ nativeEvent: event }: TouchEvent, { onActivation }: TouchSensorOptions) => {
+        if (event.touches.length > 1) {
+          return false;
+        }
+        if (isInteractiveElement(event.target)) {
+          return false;
+        }
+        onActivation?.({ event });
+        return true;
+      },
+    },
+  ];
+}
+
+/**
+ * Sensors shared by every reorderable card list (Today, Routines, Goals, Quit Tracker).
  *
- * - `PointerSensor` keeps desktop mouse dragging exactly as it was: a drag only
- *   begins after a 5px pointer move, so clicks stay clicks.
- * - `TouchSensor` waits for a 400ms hold with at most 8px of drift, so quick
- *   vertical swipes scroll the page and only a deliberate long-press reorders.
- *   Pair it with a `touch-action: pan-y` container (`SortableCard`) so native
- *   vertical scrolling is never blocked while the finger is down.
+ * - `SmartPointerSensor` keeps desktop mouse dragging exactly as it was: a drag only
+ *   begins after a 5px pointer move, so clicks stay clicks, while rejecting activations on buttons.
+ * - `SmartMouseSensor` provides mouse fallback and ignores interactive children.
+ * - `SmartTouchSensor` waits for a 400ms hold with at most 8px of drift, while ignoring interactive children.
  * - `KeyboardSensor` keeps the accessible arrow-key reordering untouched.
  */
 export function useSortableSensors(): SensorDescriptor<SensorOptions>[] {
   return useSensors(
-    useSensor(PointerSensor, {
+    useSensor(SmartPointerSensor, {
       activationConstraint: { distance: POINTER_REORDER_DISTANCE_PX },
     }),
-    useSensor(TouchSensor, {
+    useSensor(SmartMouseSensor, {
+      activationConstraint: { distance: POINTER_REORDER_DISTANCE_PX },
+    }),
+    useSensor(SmartTouchSensor, {
       activationConstraint: {
         delay: TOUCH_REORDER_DELAY_MS,
         tolerance: TOUCH_REORDER_TOLERANCE_PX,

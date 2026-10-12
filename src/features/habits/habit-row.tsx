@@ -88,6 +88,7 @@ type MenuActionItem = React.ComponentType<{
   onSelect?: (event: Event) => void;
   disabled?: boolean;
   children?: React.ReactNode;
+  "data-no-drag"?: boolean | string;
 }>;
 
 /**
@@ -288,7 +289,7 @@ export const HabitRow = memo(
      * Pillar cards override this with a dark, prestigious glassmorphic surface.
      */
     const cardSurfaceClass = cn(
-      "relative overflow-hidden rounded-2xl border transition-all duration-300 active:scale-[0.99]",
+      "relative overflow-hidden rounded-2xl border transition-all duration-300",
       "bg-white border-slate-200/90 shadow-sm hover:shadow-md",
       "dark:bg-slate-900/80 dark:shadow-lg dark:backdrop-blur-md dark:border-slate-800/80 dark:hover:border-slate-700/80",
       "after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:h-px after:content-['']",
@@ -702,6 +703,7 @@ export const HabitRow = memo(
           .map(({ key, label, Icon, iconClassName, destructive, disabled, onSelect }) => (
             <Item
               key={key}
+              data-no-drag
               className={cn(destructive && "text-red-500 focus:text-red-500")}
               {...(disabled ? { disabled: true } : {})}
               onSelect={onSelect}
@@ -716,6 +718,7 @@ export const HabitRow = memo(
     /** Primary timer CTA — used by the desktop toolbar and the mobile tray. */
     const renderTimerButton = (extra?: string) => (
       <Button
+        data-no-drag
         size="sm"
         variant="outline"
         aria-label={
@@ -759,6 +762,7 @@ export const HabitRow = memo(
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
+            data-no-drag
             size="icon"
             variant="ghost"
             aria-label={t("habitRow.actionsAria", "Habit actions")}
@@ -779,6 +783,7 @@ export const HabitRow = memo(
 
     const renderCompleteButton = (withLabel: boolean, extra?: string) => (
       <Button
+        data-no-drag
         size={withLabel ? "sm" : "icon"}
         variant="outline"
         disabled={mutationsDisabled}
@@ -854,6 +859,7 @@ export const HabitRow = memo(
       return (
         <Button
           key={label}
+          data-no-drag
           size="sm"
           variant="outline"
           disabled={mutationsDisabled}
@@ -949,6 +955,7 @@ export const HabitRow = memo(
           <div className="flex min-w-0 flex-1 items-start gap-4">
             <span
               role="button"
+              data-no-drag
               tabIndex={0}
               aria-label={t("habitRow.editNamedHabit", { name: habit.name })}
               className={cn(
@@ -1094,6 +1101,7 @@ export const HabitRow = memo(
      */
     const renderMobilePrimaryAction = () => (
       <Button
+        data-no-drag
         size="icon"
         variant="outline"
         disabled={mutationsDisabled}
@@ -1197,6 +1205,7 @@ export const HabitRow = memo(
       return (
         <button
           type="button"
+          data-no-drag
           disabled={mutationsDisabled}
           aria-label={
             readOnlyMode
@@ -1304,6 +1313,7 @@ export const HabitRow = memo(
           <div className="relative z-10 flex min-w-0 items-start gap-2.5">
             <span
               role="button"
+              data-no-drag
               tabIndex={0}
               aria-label={t("habitRow.editNamedHabit", { name: habit.name })}
               className={cn(
@@ -1399,6 +1409,7 @@ export const HabitRow = memo(
               {/* (+) toggle — expands/collapses the stepper quick-actions row */}
               <button
                 type="button"
+                data-no-drag
                 aria-expanded={isExpanded}
                 aria-label={
                   isExpanded ? t("habitRow.hideQuickActions") : t("habitRow.showQuickActions")
