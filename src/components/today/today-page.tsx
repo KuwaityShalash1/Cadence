@@ -501,7 +501,7 @@ export function TodayPage() {
                 </Button>
               </div>
             </div>
-          ) : filtered.length === 0 || (coreOnlyMode && filteredPillars.length === 0) ? (
+          ) : (coreOnlyMode ? filteredPillars : filtered).length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">{t("today.noMatch")}</p>
           ) : (
             <DndContext
@@ -510,76 +510,9 @@ export function TodayPage() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <div className="space-y-6">
-                {/* 1. Daily Pillars Section — cards carry their own amber stripe & badge */}
-                {duePillars.length > 0 && (
-                  <section className="space-y-2">
-                    {/* ── Section header — retains golden text, no outer box needed ── */}
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <h2 className="flex items-center gap-2 text-sm font-extrabold tracking-wide">
-                          <span
-                            className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent"
-                          >
-                            {t("today.dailyPillars", "DAILY PILLARS")} 🏛️
-                          </span>
-                          {/* Animated count badge */}
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold shadow-inner transition-all duration-300",
-                              allPillarsCompleted
-                                ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400 shadow-emerald-500/10"
-                                : "border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-amber-500/10 animate-pulse",
-                            )}
-                          >
-                            {allPillarsCompleted
-                              ? `✓ ${t("today.pillarsSecured", "Secured")}`
-                              : `${completedPillarsCount}/${duePillars.length}`}
-                          </span>
-                        </h2>
-                      </div>
-                      <span className="hidden text-xs font-medium text-amber-600/70 dark:text-amber-400/60 sm:inline">
-                        {t("today.dailyPillarsDesc", "Your day's non-negotiable foundation")}
-                      </span>
-                    </div>
-
-                    {/* ── Transparent layout wrapper — individual cards own their highlights ── */}
-                    <div>
-                      {filteredPillars.length === 0 ? (
-                        <div className="py-6 text-center text-xs text-muted-foreground">
-                          {allPillarsCompleted ? (
-                            <p className="font-medium text-amber-400">
-                              🎉 {t("today.allPillarsCompleted", "All Daily Pillars completed for today!")}
-                            </p>
-                          ) : (
-                            <p>{t("today.noPillarsMatch", "No pillars match the current filter.")}</p>
-                          )}
-                        </div>
-                      ) : (
-                        <SortableContext
-                          items={filteredPillars.map((h) => h.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          <ul className="cadence-stagger space-y-3">
-                            {filteredPillars.map((habit) => (
-                              <SortableHabitRow
-                                key={habit.id}
-                                habit={habit}
-                                date={date}
-                                logMap={logMap}
-                                customIcons={customIcons}
-                                draggable={filter === "all" && !query}
-                              />
-                            ))}
-                          </ul>
-                        </SortableContext>
-                      )}
-                    </div>
-                  </section>
-                )}
-
+              <div className="space-y-4">
                 {/* Focus / Core Only Mode Banner when active */}
-                {coreOnlyMode ? (
+                {coreOnlyMode && (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
                     <div className="flex items-center gap-2.5">
                       <Zap className="h-4 w-4 shrink-0 text-amber-500" />
@@ -599,52 +532,31 @@ export function TodayPage() {
                       {t("today.showAllHabits", "Show All Habits")}
                     </Button>
                   </div>
-                ) : (
-                  /* 2. Other Habits Section (Standard styling) */
-                  <section className="space-y-3">
-                    {duePillars.length > 0 ? (
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t("today.otherHabits", "Other Habits")}
-                        </h2>
-                        <span className="text-xs text-muted-foreground">{filteredOthers.length}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {t("today.allHabits", "Habits")}
-                        </h2>
-                        <span className="text-xs text-muted-foreground">{filteredOthers.length}</span>
-                      </div>
-                    )}
-
-                    {filteredOthers.length === 0 ? (
-                      dueOthers.length > 0 ? (
-                        <p className="py-6 text-center text-xs text-muted-foreground">
-                          {t("today.noOtherMatch", "No other habits match the current filter.")}
-                        </p>
-                      ) : null
-                    ) : (
-                      <SortableContext
-                        items={filteredOthers.map((h) => h.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <ul className="cadence-stagger space-y-3">
-                          {filteredOthers.map((habit) => (
-                            <SortableHabitRow
-                              key={habit.id}
-                              habit={habit}
-                              date={date}
-                              logMap={logMap}
-                              customIcons={customIcons}
-                              draggable={filter === "all" && !query}
-                            />
-                          ))}
-                        </ul>
-                      </SortableContext>
-                    )}
-                  </section>
                 )}
+
+                {/* Single unified continuous habit list */}
+                {(() => {
+                  const visibleHabits = coreOnlyMode ? filteredPillars : filtered;
+                  return (
+                    <SortableContext
+                      items={visibleHabits.map((h) => h.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <ul className="cadence-stagger space-y-3">
+                        {visibleHabits.map((habit) => (
+                          <SortableHabitRow
+                            key={habit.id}
+                            habit={habit}
+                            date={date}
+                            logMap={logMap}
+                            customIcons={customIcons}
+                            draggable={filter === "all" && !query}
+                          />
+                        ))}
+                      </ul>
+                    </SortableContext>
+                  );
+                })()}
               </div>
               <DragOverlay>
                 {activeHabit ? (

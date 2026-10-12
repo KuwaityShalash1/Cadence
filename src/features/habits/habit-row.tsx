@@ -287,21 +287,13 @@ export const HabitRow = memo(
      *
      * Pillar cards override this with a dark, prestigious glassmorphic surface.
      */
-    const cardSurfaceClass = habit.isPillar && !isFrozen
-      ? cn(
-          "relative overflow-hidden rounded-xl border transition-all duration-300 active:scale-[0.99]",
-          "bg-[#070b16]/95 border-amber-500/20 hover:border-amber-500/50",
-          "shadow-[0_2px_16px_rgba(0,0,0,0.35)]",
-          "after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:h-px after:content-['']",
-          "after:bg-gradient-to-r after:from-transparent after:via-amber-400/15 after:to-transparent",
-        )
-      : cn(
-          "relative overflow-hidden rounded-2xl border transition-all duration-300 active:scale-[0.99]",
-          "bg-white border-slate-200/90 shadow-sm hover:shadow-md",
-          "dark:bg-slate-900/80 dark:shadow-lg dark:backdrop-blur-md dark:border-slate-800/80 dark:hover:border-slate-700/80",
-          "after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:h-px after:content-['']",
-          "after:bg-gradient-to-r after:from-transparent after:via-white/10 after:to-transparent",
-        );
+    const cardSurfaceClass = cn(
+      "relative overflow-hidden rounded-2xl border transition-all duration-300 active:scale-[0.99]",
+      "bg-white border-slate-200/90 shadow-sm hover:shadow-md",
+      "dark:bg-slate-900/80 dark:shadow-lg dark:backdrop-blur-md dark:border-slate-800/80 dark:hover:border-slate-700/80",
+      "after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:h-px after:content-['']",
+      "after:bg-gradient-to-r after:from-transparent after:via-white/10 after:to-transparent",
+    );
     /**
      * Dynamic progress fill — a full-height accent layer that grows with the
      * day's completion, kept faint (8% light / 12% dark) so text stays sharp.
@@ -320,11 +312,9 @@ export const HabitRow = memo(
     /**
      * Elegant accent tile for the habit icon — the accent at 15% with a 25%
      * hairline border, so the icon glows with its own colour in both themes.
-     * For pillar habits, override with a premium amber-accented tile.
      */
-    const accentTileClass = habit.isPillar && !isFrozen
-      ? "border border-amber-500/30 bg-amber-950/20 text-amber-400"
-      : "bg-[color-mix(in_srgb,var(--habit-color)_15%,transparent)] border border-[color-mix(in_srgb,var(--habit-color)_25%,transparent)]";
+    const accentTileClass =
+      "bg-[color-mix(in_srgb,var(--habit-color)_15%,transparent)] border border-[color-mix(in_srgb,var(--habit-color)_25%,transparent)]";
     /** Subtle accent border tint raised while the habit is complete for the day. */
     const accentBorderClass =
       "border-[color-mix(in_srgb,var(--habit-color)_20%,transparent)] dark:border-[color-mix(in_srgb,var(--habit-color)_25%,transparent)]";
@@ -353,7 +343,6 @@ export const HabitRow = memo(
      * Tactile desktop stepper — wide pills with micro-shadows, subtle border
      * contrast and active click compression (active:scale-95). Colour encodes
      * direction: subtract buttons blush rose on hover, add buttons glow emerald.
-     * Pillar cards use a dark amber-outlined variant to match the premium card surface.
      * The tone classes sit after the shared base and win over `Button`'s outline
      * variant through tailwind-merge, so every bg/border/text pair lands cleanly
      * in both themes.
@@ -362,15 +351,11 @@ export const HabitRow = memo(
       "min-w-[4.75rem] px-6 h-11 rounded-xl font-semibold text-sm transition-all duration-150 active:scale-95 flex items-center justify-center";
     const stepperDecrementClass = cn(
       stepperBaseClass,
-      habit.isPillar && !isFrozen
-        ? "border border-amber-500/30 bg-transparent hover:bg-amber-500/10 text-amber-400 font-bold shadow-sm"
-        : "bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 hover:text-rose-600 shadow-sm dark:bg-slate-800/60 dark:hover:bg-rose-500/10 dark:border-slate-700/60 dark:hover:border-rose-500/30 dark:text-slate-300 dark:hover:text-rose-300",
+      "bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 hover:text-rose-600 shadow-sm dark:bg-slate-800/60 dark:hover:bg-rose-500/10 dark:border-slate-700/60 dark:hover:border-rose-500/30 dark:text-slate-300 dark:hover:text-rose-300",
     );
     const stepperIncrementClass = cn(
       stepperBaseClass,
-      habit.isPillar && !isFrozen
-        ? "border border-amber-500/30 bg-transparent hover:bg-amber-500/10 text-amber-400 font-bold shadow-sm"
-        : "bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 shadow-sm dark:bg-slate-800/60 dark:hover:bg-emerald-500/10 dark:border-slate-700/60 dark:hover:border-emerald-500/30 dark:text-slate-300 dark:hover:text-emerald-300",
+      "bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 shadow-sm dark:bg-slate-800/60 dark:hover:bg-emerald-500/10 dark:border-slate-700/60 dark:hover:border-emerald-500/30 dark:text-slate-300 dark:hover:text-emerald-300",
     );
     /**
      * Compact mobile tray stepper — the same tactile colours and click
@@ -381,15 +366,11 @@ export const HabitRow = memo(
       "h-10 min-w-[3.75rem] shrink-0 rounded-xl px-4 text-xs font-semibold transition-all duration-150 active:scale-95 flex items-center justify-center shadow-sm disabled:opacity-50";
     const mobileStepperDecrementClass = cn(
       mobileStepperBaseClass,
-      habit.isPillar && !isFrozen
-        ? "border border-amber-500/30 bg-transparent hover:bg-amber-500/10 text-amber-400 font-bold"
-        : "bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 hover:text-rose-600 dark:bg-slate-800/60 dark:hover:bg-rose-500/10 dark:border-slate-700/60 dark:hover:border-rose-500/30 dark:text-slate-300 dark:hover:text-rose-300",
+      "bg-slate-100 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 hover:text-rose-600 dark:bg-slate-800/60 dark:hover:bg-rose-500/10 dark:border-slate-700/60 dark:hover:border-rose-500/30 dark:text-slate-300 dark:hover:text-rose-300",
     );
     const mobileStepperIncrementClass = cn(
       mobileStepperBaseClass,
-      habit.isPillar && !isFrozen
-        ? "border border-amber-500/30 bg-transparent hover:bg-amber-500/10 text-amber-400 font-bold"
-        : "bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 dark:bg-slate-800/60 dark:hover:bg-emerald-500/10 dark:border-slate-700/60 dark:hover:border-emerald-500/30 dark:text-slate-300 dark:hover:text-emerald-300",
+      "bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-600 dark:bg-slate-800/60 dark:hover:bg-emerald-500/10 dark:border-slate-700/60 dark:hover:border-emerald-500/30 dark:text-slate-300 dark:hover:text-emerald-300",
     );
     /** Tray three-dots button — matches the collapsed header icon buttons. */
     const mobileMenuButtonClass =
@@ -400,9 +381,7 @@ export const HabitRow = memo(
      * animates smoothly as the value changes; width is pre-clamped by `pct`.
      */
     const progressBarTrackClass =
-      habit.isPillar && !isFrozen
-        ? "w-full h-2 bg-amber-950/30 rounded-full overflow-hidden my-3 flex"
-        : "w-full h-2 bg-slate-200 dark:bg-slate-800/90 rounded-full overflow-hidden my-3 flex";
+      "w-full h-2 bg-slate-200 dark:bg-slate-800/90 rounded-full overflow-hidden my-3 flex";
     const progressBarFillClass = "h-full rounded-full transition-all duration-500 ease-out";
 
     function complete() {
@@ -817,14 +796,9 @@ export const HabitRow = memo(
           "shrink-0 items-center gap-2 rounded-xl border-transparent font-semibold shadow-sm transition-all",
           isFrozen
             ? "bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400"
-            : habit.isPillar
-              ? cn(
-                  "bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-400 hover:to-green-400 border-transparent",
-                  done && "ring-2 ring-amber-400/40 shadow-[0_0_12px_rgba(16,185,129,0.35)]",
-                )
-              : "bg-emerald-600 text-white hover:bg-emerald-500 hover:text-white dark:border-transparent dark:bg-emerald-600 dark:hover:bg-emerald-500",
+            : "bg-emerald-600 text-white hover:bg-emerald-500 hover:text-white dark:border-transparent dark:bg-emerald-600 dark:hover:bg-emerald-500",
           withLabel ? "h-11 px-8 text-sm font-bold" : "h-10 w-10",
-          done && !isFrozen && !habit.isPillar && "ring-1 ring-emerald-400/40",
+          done && !isFrozen && "ring-1 ring-emerald-400/40",
           // Disabled (future date preview) styling so the read-only state is obvious.
           readOnlyMode && "opacity-50 cursor-not-allowed",
           extra,
@@ -836,8 +810,6 @@ export const HabitRow = memo(
       >
         {isFrozen ? (
           <Snowflake className="h-4 w-4 text-sky-500 dark:text-sky-400" />
-        ) : done && habit.isPillar ? (
-          <span className="text-sm">✓</span>
         ) : (
           <Check className="h-4 w-4" />
         )}
@@ -940,9 +912,6 @@ export const HabitRow = memo(
           isFrozen && "bg-sky-50/60 border-sky-200 dark:bg-sky-900/10 dark:border-sky-800/50",
           isFrozen && frozenDimClass,
           cardChrome,
-          habit.isPillar &&
-            !isFrozen &&
-            "ring-1 ring-amber-500/35 dark:ring-amber-400/35 shadow-[0_0_16px_-4px_rgba(245,158,11,0.15)]",
           /** Long-press suppression on the drag surface — no native selection UI. */
           dragSurfaceClass,
           draggable && !isOverlay && "cursor-grab active:cursor-grabbing",
@@ -976,7 +945,7 @@ export const HabitRow = memo(
                 "flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-transform hover:scale-105",
                 accentTileClass,
               )}
-              style={{ color: habit.isPillar && !isFrozen ? "#fbbf24" : rawColor }}
+              style={{ color: rawColor }}
               onClick={() => editor.open(habit)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") editor.open(habit);
@@ -987,12 +956,7 @@ export const HabitRow = memo(
             </span>
 
             <div className="min-w-0 flex-1 cursor-pointer" onClick={() => editor.open(habit)}>
-              <h3 className={cn(
-                "truncate text-base md:text-lg font-semibold tracking-tight",
-                habit.isPillar && !isFrozen
-                  ? "text-slate-100"
-                  : "text-slate-900 dark:text-slate-50",
-              )}>
+              <h3 className="truncate text-base md:text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-50">
                 {habit.name}
               </h3>
               {hasDescription ? (
@@ -1243,17 +1207,11 @@ export const HabitRow = memo(
             "relative z-10 mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.98]",
             isFrozen
               ? "border border-sky-200 bg-sky-50 text-sky-600 dark:border-sky-800/60 dark:bg-sky-900/30 dark:text-sky-400"
-              : habit.isPillar
-                ? isUndo
-                  ? // Pillar undo — dark amber-outlined, sophisticated
-                    "border border-amber-500/30 bg-transparent text-amber-400 hover:bg-amber-500/10"
-                  : // Pillar complete — triumphant gradient CTA
-                    "border-transparent bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow-sm hover:from-emerald-400 hover:to-green-400"
-                : isUndo
-                  ? // Regular undo state — muted/secondary appearance
-                    "border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:border-slate-700/60 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700/80 dark:hover:text-slate-300"
-                  : // Regular complete state — vibrant primary CTA
-                    "border border-emerald-500/20 bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-600 dark:hover:bg-emerald-500",
+              : isUndo
+                ? // Regular undo state — muted/secondary appearance
+                  "border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 dark:border-slate-700/60 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:bg-slate-700/80 dark:hover:text-slate-300"
+                : // Regular complete state — vibrant primary CTA
+                  "border border-emerald-500/20 bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-600 dark:hover:bg-emerald-500",
             readOnlyMode && "cursor-not-allowed opacity-50",
             skipped &&
               "border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-500",
@@ -1303,9 +1261,6 @@ export const HabitRow = memo(
             isFrozen && "bg-sky-50/60 border-sky-200 dark:bg-sky-900/10 dark:border-sky-800/50",
             isFrozen && frozenDimClass,
             cardChrome,
-            habit.isPillar &&
-              !isFrozen &&
-              "ring-1 ring-amber-500/35 dark:ring-amber-400/35 shadow-[0_0_16px_-4px_rgba(245,158,11,0.15)]",
             /** Long-press suppression on the drag surface — no native selection UI. */
             dragSurfaceClass,
           )}
@@ -1339,7 +1294,7 @@ export const HabitRow = memo(
                 "flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-transform hover:scale-105",
                 accentTileClass,
               )}
-              style={{ color: habit.isPillar && !isFrozen ? "#fbbf24" : rawColor }}
+              style={{ color: rawColor }}
               onClick={() => editor.open(habit)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") editor.open(habit);
@@ -1352,12 +1307,7 @@ export const HabitRow = memo(
             {/* Left info column — never squeezed by the trailing action buttons */}
             <div className="min-w-0 flex-1 pe-2">
               <h3
-                className={cn(
-                  "cursor-pointer truncate text-base md:text-lg font-semibold leading-snug tracking-tight",
-                  habit.isPillar && !isFrozen
-                    ? "text-slate-100"
-                    : "text-slate-900 dark:text-slate-50",
-                )}
+                className="cursor-pointer truncate text-base md:text-lg font-semibold leading-snug tracking-tight text-slate-900 dark:text-slate-50"
                 onClick={() => editor.open(habit)}
               >
                 {habit.name}
