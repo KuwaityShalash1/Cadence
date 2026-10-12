@@ -26,6 +26,7 @@ import type {
   Group,
   Habit,
   HabitLog,
+  RelapseRecord,
   Routine,
   RoutineLog,
   TimerState,
@@ -202,6 +203,8 @@ export interface AppActions {
   recordRelapse: (habitId: string, triggerCategory: string, detailedReason?: string) => void;
   /** Log daily usage for a "limit" strategy habit. Triggers relapse if limit exceeded. */
   logUsage: (habitId: string, value: number) => void;
+  /** Set exact daily usage for a "limit" strategy habit (overrides today's total). */
+  setTodayUsage: (habitId: string, value: number) => void;
   /** Undo-relapse support: completely overwrites the tracker with the snapshot
    * captured before the relapse was logged — restoring the quit date, the
    * relapse history and the trigger statistics in one shot. */
@@ -1154,10 +1157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setState((prev) => {
           const goal = prev.goals.find((item) => item.id === goalId);
           if (!goal || goal.type !== "numeric") return prev;
-          const currentValue = Math.min(
-            goal.targetValue,
-            Math.max(0, (goal.currentValue ?? 0) + delta),
-          );
+          const currentValue = Math.max(0, (goal.currentValue ?? 0) + delta);
           updated = { ...goal, currentValue };
           return {
             ...prev,
@@ -1174,10 +1174,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setState((prev) => {
           const goal = prev.goals.find((item) => item.id === goalId);
           if (!goal || goal.type !== "numeric") return prev;
-          const currentValue = Math.min(
-            goal.targetValue,
-            Math.max(0, Number.isFinite(value) ? value : 0),
-          );
+          const currentValue = Math.max(0, Number.isFinite(value) ? value : 0);
           updated = { ...goal, currentValue };
           return {
             ...prev,
@@ -1626,9 +1623,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
 
       /**
-       * Log daily usage for a "limit" strategy bad habit.
-       * If the logged value exceeds the limitValue, a relapse is triggered
-       * (quit date resets and a relapse record is added).
+       * Log daily usage for a "limit" strategy bad habit by adding to today's total.
+       * Allows honest over-logging beyond the limit; triggers or updates the relapse record.
        */
       logUsage(habitId, value) {
         let updated: BadHabit | null = null;
@@ -1639,30 +1635,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const today = todayKey();
           const existingLogs = habit.usageLogs ?? [];
           const todayLog = existingLogs.find((log) => log.date === today);
-          const todayTotal = todayLog ? todayLog.value + value : value;
+          const prevTotal = todayLog ? todayLog.value : 0;
+          const todayTotal = prevTotal + value;
 
           // Check if this usage exceeds the limit
           const limitValue = habit.limitValue ?? 0;
+          const wasExceeded = prevTotal > limitValue;
           const exceedsLimit = todayTotal > limitValue;
 
-          const newLog: UsageLog = {
-            id: uid(),
-            date: today,
-            value,
-            updatedAt: Date.now(),
-          };
-
           const updatedLogs = todayLog
-            ? existingLogs.map((log) => (log.date === today ? { ...log, value: todayTotal } : log))
-            : [...existingLogs, newLog];
+            ? existingLogs.map((log) =>
+                log.date === today ? { ...log, value: todayTotal, updatedAt: Date.now() } : log,
+              )
+            : [
+                ...existingLogs,
+                {
+                  id: uid(),
+                  date: today,
+                  value: todayTotal,
+                  updatedAt: Date.now(),
+                },
+              ];
 
           const nextHabit: BadHabit = {
             ...habit,
             usageLogs: updatedLogs,
           };
 
-          // If limit exceeded, trigger a relapse
-          if (exceedsLimit) {
+          // If limit transitioned to exceeded, trigger a relapse
+          if (exceedsLimit && !wasExceeded) {
             const now = Date.now();
             const streakDurationHours = Math.max(
               0,
@@ -1678,6 +1679,129 @@ export function AppProvider({ children }: { children: ReactNode }) {
             };
             nextHabit.quitDate = now;
             nextHabit.history = [relapseRecord, ...nextHabit.history];
+          } else if (exceedsLimit && wasExceeded) {
+            // Already exceeded today: update today's relapse reason to reflect the honest new total
+            const todayStart = new Date().setHours(0, 0, 0, 0);
+            const firstRecord = nextHabit.history[0];
+            if (
+              firstRecord &&
+              firstRecord.triggerCategory === "limit-exceeded" &&
+              firstRecord.relapsedAt >= todayStart
+            ) {
+              const updatedRecord: RelapseRecord = {
+                ...firstRecord,
+                detailedReason: `${habit.limitType === "time" ? "minutes" : "units"} exceeded daily limit (${todayTotal}/${limitValue})`,
+                updatedAt: new Date().toISOString(),
+              };
+              nextHabit.history = [updatedRecord, ...nextHabit.history.slice(1)];
+            }
+          }
+
+          updated = nextHabit;
+          return {
+            ...prev,
+            badHabits: prev.badHabits.map((h) => (h.id === habitId ? nextHabit : h)),
+          };
+        });
+
+        if (updated) {
+          void repo.saveBadHabit(updated);
+        }
+      },
+
+      /**
+       * Set exact daily usage for a "limit" strategy bad habit (overriding today's total).
+       * Handles mistake correction, or triggers a relapse if the new total exceeds the limit.
+       */
+      setTodayUsage(habitId, exactValue) {
+        let updated: BadHabit | null = null;
+        setState((prev) => {
+          const habit = prev.badHabits.find((h) => h.id === habitId);
+          if (!habit || habit.strategy !== "limit") return prev;
+
+          const today = todayKey();
+          const existingLogs = habit.usageLogs ?? [];
+          const todayLog = existingLogs.find((log) => log.date === today);
+          const prevTotal = todayLog ? todayLog.value : 0;
+          const todayTotal = Math.max(0, exactValue);
+
+          const limitValue = habit.limitValue ?? 0;
+          const wasExceeded = prevTotal > limitValue;
+          const exceedsLimit = todayTotal > limitValue;
+
+          const updatedLogs = todayLog
+            ? existingLogs.map((log) =>
+                log.date === today ? { ...log, value: todayTotal, updatedAt: Date.now() } : log,
+              )
+            : todayTotal > 0
+              ? [
+                  ...existingLogs,
+                  {
+                    id: uid(),
+                    date: today,
+                    value: todayTotal,
+                    updatedAt: Date.now(),
+                  },
+                ]
+              : existingLogs;
+
+          const nextHabit: BadHabit = {
+            ...habit,
+            usageLogs: updatedLogs,
+          };
+
+          if (exceedsLimit && !wasExceeded) {
+            // Newly exceeded limit: trigger relapse
+            const now = Date.now();
+            const streakDurationHours = Math.max(
+              0,
+              Math.floor((now - habit.quitDate) / (1000 * 60 * 60)),
+            );
+            const relapseRecord = {
+              id: uid(),
+              relapsedAt: now,
+              triggerCategory: "limit-exceeded",
+              detailedReason: `${habit.limitType === "time" ? "minutes" : "units"} exceeded daily limit (${todayTotal}/${limitValue})`,
+              streakDurationHours,
+              updatedAt: new Date().toISOString(),
+            };
+            nextHabit.quitDate = now;
+            nextHabit.history = [relapseRecord, ...nextHabit.history];
+          } else if (exceedsLimit && wasExceeded) {
+            // Still exceeded: update the record reason with the new total
+            const todayStart = new Date().setHours(0, 0, 0, 0);
+            const firstRecord = nextHabit.history[0];
+            if (
+              firstRecord &&
+              firstRecord.triggerCategory === "limit-exceeded" &&
+              firstRecord.relapsedAt >= todayStart
+            ) {
+              const updatedRecord: RelapseRecord = {
+                ...firstRecord,
+                detailedReason: `${habit.limitType === "time" ? "minutes" : "units"} exceeded daily limit (${todayTotal}/${limitValue})`,
+                updatedAt: new Date().toISOString(),
+              };
+              nextHabit.history = [updatedRecord, ...nextHabit.history.slice(1)];
+            }
+          } else if (!exceedsLimit && wasExceeded) {
+            // Corrected mistake from exceeded down to under limit!
+            // Remove today's auto-generated limit-exceeded record and restore quitDate.
+            const todayStart = new Date().setHours(0, 0, 0, 0);
+            const firstRecord = nextHabit.history[0];
+            if (
+              firstRecord &&
+              firstRecord.triggerCategory === "limit-exceeded" &&
+              firstRecord.relapsedAt >= todayStart
+            ) {
+              const remainingHistory = nextHabit.history.slice(1);
+              nextHabit.history = remainingHistory;
+              const prevRelapse = remainingHistory[0];
+              if (prevRelapse) {
+                nextHabit.quitDate = prevRelapse.relapsedAt;
+              } else {
+                nextHabit.quitDate = habit.createdAt;
+              }
+            }
           }
 
           updated = nextHabit;

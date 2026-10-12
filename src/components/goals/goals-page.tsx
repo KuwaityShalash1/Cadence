@@ -92,7 +92,7 @@ export function GoalsPage() {
       if (goal.type === "numeric") {
         progress.set(
           goal.id,
-          goal.targetValue > 0 ? Math.min(1, Math.max(0, currentValue / goal.targetValue)) : 0,
+          goal.targetValue > 0 ? Math.max(0, currentValue / goal.targetValue) : 0,
         );
         continue;
       }
@@ -103,13 +103,16 @@ export function GoalsPage() {
       }
       progress.set(
         goal.id,
-        goal.targetValue > 0 ? Math.min(1, currentValue / goal.targetValue) : 0,
+        goal.targetValue > 0 ? Math.max(0, currentValue / goal.targetValue) : 0,
       );
     }
     return { progress, currentValues };
   }, [goals, logMap]);
 
-  const sortedGoals = useMemo(() => [...goals].sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt)), [goals]);
+  const sortedGoals = useMemo(
+    () => [...goals].sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt)),
+    [goals],
+  );
 
   const filteredGoals = useMemo(() => {
     let list = sortedGoals;
@@ -162,7 +165,9 @@ export function GoalsPage() {
   }
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
+    return (
+      <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
+    );
   }
 
   return (
@@ -170,9 +175,7 @@ export function GoalsPage() {
       <header className="flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("nav.goals")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("goal.subtitle")}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("goal.subtitle")}</p>
         </div>
         <Button className="hidden md:inline-flex" onClick={openNew}>
           <Plus className="me-1 h-4 w-4" /> {t("goal.new")}
@@ -183,7 +186,9 @@ export function GoalsPage() {
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <Target className="mx-auto h-10 w-10 text-muted-foreground/40" />
           <h2 className="mt-3 font-display text-xl">{t("goal.emptyTitle")}</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("goal.emptyDesc")}</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            {t("goal.emptyDesc")}
+          </p>
           <Button className="mt-5" onClick={openNew}>
             <Plus className="me-1 h-4 w-4" /> {t("goal.createFirst")}
           </Button>
@@ -227,16 +232,18 @@ export function GoalsPage() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  {mode === "all" ? t("goal.filterAll") : mode === "in_progress" ? t("goal.filterInProgress") : t("goal.filterCompleted")}
+                  {mode === "all"
+                    ? t("goal.filterAll")
+                    : mode === "in_progress"
+                      ? t("goal.filterInProgress")
+                      : t("goal.filterCompleted")}
                 </button>
               ))}
             </div>
           </div>
 
           {filteredGoals.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              {t("goal.noMatch")}
-            </p>
+            <p className="py-10 text-center text-sm text-muted-foreground">{t("goal.noMatch")}</p>
           ) : (
             <DndContext
               sensors={sensors}
@@ -349,7 +356,7 @@ export function GoalsPage() {
                               <span className="numeric font-medium">{pct}%</span>
                             </div>
                             <Progress
-                              value={pct}
+                              value={Math.min(100, Math.max(0, pct))}
                               aria-label={t("goal.goalProgressFor", { name: goal.name })}
                               className="mt-2 h-2 bg-slate-100 dark:bg-slate-800"
                             />

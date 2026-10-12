@@ -58,8 +58,8 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
       return;
     }
 
-    // Validate bounds: ensure it doesn't exceed targetValue or drop below zero
-    const clamped = Math.min(goal.targetValue, Math.max(0, parsed));
+    // Validate bounds: ensure it doesn't drop below zero
+    const clamped = Math.max(0, parsed);
     if (clamped !== currentValue) {
       setGoalValue(goal.id, clamped);
     }
@@ -84,7 +84,6 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
             type="number"
             data-no-drag="true"
             min={0}
-            max={goal.targetValue}
             step="any"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -259,7 +258,7 @@ export function GoalCard({
           <span className="numeric font-medium">{Math.round(progress * 100)}%</span>
         </div>
         <Progress
-          value={Math.round(progress * 100)}
+          value={Math.min(100, Math.max(0, Math.round(progress * 100)))}
           aria-label={t("goal.goalProgressFor", { name: goal.name })}
           className="mt-2 h-2 bg-muted"
         />

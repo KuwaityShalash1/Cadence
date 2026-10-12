@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import {
   Clock,
   Flame,
@@ -110,14 +110,19 @@ interface BadHabitCardProps {
 
 export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardProps) {
   const { customIcons } = useApp();
-  const { removeBadHabit, restoreBadHabit, logUsage } = useAppActions();
+  const { removeBadHabit, restoreBadHabit, logUsage, setTodayUsage } = useAppActions();
   const { t, language } = useTranslation();
   const [relapseOpen, setRelapseOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  // Limit strategy: track usage dialog state
+  // Limit strategy: track usage dialog state & mode ("add" vs "set")
   const [usageDialogOpen, setUsageDialogOpen] = useState(false);
+  const [logMode, setLogMode] = useState<"add" | "set">("add");
   const [usageValue, setUsageValue] = useState<string>("");
+
+  // Limit strategy: inline editing state for today's usage
+  const [isEditingUsage, setIsEditingUsage] = useState(false);
+  const inlineInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate today's usage for limit strategy
   const isLimitStrategy = habit.strategy === "limit";
@@ -129,6 +134,59 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
   const limitValue = habit.limitValue ?? 0;
   const usagePercentage = limitValue > 0 ? Math.min(100, (todayUsage / limitValue) * 100) : 0;
   const isLimitExceeded = todayUsage > limitValue;
+
+  const [inlineInputValue, setInlineInputValue] = useState<string>(String(todayUsage));
+
+  // Keep inline input value in sync when todayUsage changes externally and not editing
+  useEffect(() => {
+    if (!isEditingUsage) {
+      setInlineInputValue(String(todayUsage));
+    }
+  }, [todayUsage, isEditingUsage]);
+
+  // Focus and select input upon entering edit mode
+  useEffect(() => {
+    if (isEditingUsage && inlineInputRef.current) {
+      inlineInputRef.current.focus();
+      inlineInputRef.current.select();
+    }
+  }, [isEditingUsage]);
+
+  const commitInlineUsage = () => {
+    if (!isEditingUsage) return;
+    setIsEditingUsage(false);
+
+    const trimmed = inlineInputValue.trim();
+    if (trimmed === "") {
+      setInlineInputValue(String(todayUsage));
+      return;
+    }
+
+    const parsed = parseInt(trimmed, 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      setInlineInputValue(String(todayUsage));
+      return;
+    }
+
+    if (parsed !== todayUsage) {
+      setTodayUsage(habit.id, parsed);
+      toast.success(
+        habit.limitType === "time"
+          ? t("quitTracker.todayUsageUpdatedTime", `Today's total set to ${parsed} minutes`, {
+              value: parsed,
+            })
+          : t("quitTracker.todayUsageUpdatedCount", `Today's total set to ${parsed} units`, {
+              value: parsed,
+            }),
+      );
+    }
+    setInlineInputValue(String(parsed));
+  };
+
+  const cancelInlineEditing = () => {
+    setInlineInputValue(String(todayUsage));
+    setIsEditingUsage(false);
+  };
 
   // Streak calculations do not need a 1-second interval; Date.now() on render is sufficient
   const elapsedMs = Math.max(0, Date.now() - habit.quitDate);
@@ -253,12 +311,63 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
                   {t("quitTracker.dailyProgress", "Daily Progress")}
                 </span>
               </div>
-              <span className="shrink-0 text-sm font-semibold whitespace-nowrap tabular-nums">
-                {todayUsage} / {limitValue}{" "}
-                {limitValue === 1 && habit.limitType === "count"
-                  ? t("quitTracker.unitSingular", "unit")
-                  : t("quitTracker.unitPlural", "units")}
-              </span>
+              <div className="flex shrink-0 items-center gap-1 text-sm font-semibold tabular-nums text-foreground">
+                {isEditingUsage ? (
+                  <input
+                    ref={inlineInputRef}
+                    type="number"
+                    data-no-drag="true"
+                    min={0}
+                    value={inlineInputValue}
+                    onChange={(e) => setInlineInputValue(e.target.value)}
+                    onBlur={commitInlineUsage}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitInlineUsage();
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        cancelInlineEditing();
+                      }
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    aria-label={t("quitTracker.editUsageAria", "Edit today's total")}
+                    className="h-6 w-16 rounded-sm border-b-2 border-primary bg-transparent px-1 py-0 text-[16px] md:text-sm font-semibold tabular-nums text-foreground outline-none transition-colors focus:border-primary focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                    style={{
+                      width: `${Math.max(2, inlineInputValue.length + 1)}ch`,
+                      maxWidth: "6rem",
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    data-no-drag="true"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setInlineInputValue(String(todayUsage));
+                      setIsEditingUsage(true);
+                    }}
+                    className="group/progress-val inline-flex cursor-pointer items-center rounded px-1 -mx-1 transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    title={t("quitTracker.editUsageAria", "Click to edit today's total")}
+                    aria-label={t("quitTracker.editUsageAria", "Click to edit today's total")}
+                  >
+                    <span className="border-b border-dashed border-muted-foreground/40 transition-colors group-hover/progress-val:border-foreground">
+                      {todayUsage}
+                    </span>
+                  </button>
+                )}
+                <span>
+                  / {limitValue}{" "}
+                  {limitValue === 1 && habit.limitType === "count"
+                    ? t("quitTracker.unitSingular", "unit")
+                    : t("quitTracker.unitPlural", "units")}
+                </span>
+              </div>
             </div>
             <Progress
               value={usagePercentage}
@@ -302,12 +411,8 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
             className="w-full h-10 rounded-xl border-primary/30 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 hover:border-primary transition-colors"
             onClick={(e) => {
               e.stopPropagation();
-              if (todayUsage >= limitValue) {
-                toast.warning(
-                  t("quitTracker.limitAlreadyReached", "You've already reached your daily limit."),
-                );
-                return;
-              }
+              setUsageValue("");
+              setLogMode("add");
               setUsageDialogOpen(true);
             }}
           >
@@ -443,43 +548,107 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
           <DialogHeader>
             <DialogTitle>{t("quitTracker.logUsage", "Log Usage")}</DialogTitle>
             <DialogDescription>
-              {habit.limitType === "time"
-                ? t("quitTracker.logUsageTimeDesc", "How many minutes did you use today?")
-                : t("quitTracker.logUsageCountDesc", "How many units did you use today?")}
+              {logMode === "set"
+                ? t("quitTracker.setExactUsageDesc", "Override and set the exact total for today.")
+                : habit.limitType === "time"
+                  ? t("quitTracker.logUsageTimeDesc", "How many minutes did you use today?")
+                  : t("quitTracker.logUsageCountDesc", "How many units did you use today?")}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Mode Switcher: Add to total vs Set exact total */}
+          <div className="flex rounded-lg bg-muted p-1 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => {
+                setLogMode("add");
+                setUsageValue("");
+              }}
+              className={cn(
+                "flex-1 rounded-md py-1.5 transition-all text-center",
+                logMode === "add"
+                  ? "bg-card text-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {t("quitTracker.logModeAdd", "+ Add to Total")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLogMode("set");
+                setUsageValue(String(todayUsage));
+              }}
+              className={cn(
+                "flex-1 rounded-md py-1.5 transition-all text-center",
+                logMode === "set"
+                  ? "bg-card text-foreground shadow-xs font-bold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {t("quitTracker.logModeSet", "Set Exact Total")}
+            </button>
+          </div>
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
               const value = parseInt(usageValue, 10);
-              if (isNaN(value) || value <= 0) {
+              if (isNaN(value) || value < 0 || (logMode === "add" && value <= 0)) {
                 toast.error(t("quitTracker.invalidUsageValue", "Please enter a valid number."));
                 return;
               }
-              logUsage(habit.id, value);
-              setUsageDialogOpen(false);
-              setUsageValue("");
-              toast.success(
-                habit.limitType === "time"
-                  ? t("quitTracker.usageLoggedTime", `Logged ${value} minutes`, { value })
-                  : t("quitTracker.usageLoggedCount", `Logged ${value} units`, { value }),
-              );
+              if (logMode === "set") {
+                setTodayUsage(habit.id, value);
+                setUsageDialogOpen(false);
+                setUsageValue("");
+                toast.success(
+                  habit.limitType === "time"
+                    ? t(
+                        "quitTracker.todayUsageUpdatedTime",
+                        `Today's total set to ${value} minutes`,
+                        { value },
+                      )
+                    : t(
+                        "quitTracker.todayUsageUpdatedCount",
+                        `Today's total set to ${value} units`,
+                        { value },
+                      ),
+                );
+              } else {
+                logUsage(habit.id, value);
+                setUsageDialogOpen(false);
+                setUsageValue("");
+                toast.success(
+                  habit.limitType === "time"
+                    ? t("quitTracker.usageLoggedTime", `Logged ${value} minutes`, { value })
+                    : t("quitTracker.usageLoggedCount", `Logged ${value} units`, { value }),
+                );
+              }
             }}
             className="space-y-4 py-2"
           >
             <div className="space-y-2">
               <Label htmlFor="usage-value">
-                {habit.limitType === "time"
-                  ? t("quitTracker.minutes", "Minutes")
-                  : t("quitTracker.units", "Units")}
+                {logMode === "set"
+                  ? t("quitTracker.exactTotalLabel", "Exact Total for Today")
+                  : habit.limitType === "time"
+                    ? t("quitTracker.minutes", "Minutes")
+                    : t("quitTracker.units", "Units")}
               </Label>
               <Input
                 id="usage-value"
                 type="number"
-                min={1}
+                min={logMode === "set" ? 0 : 1}
                 value={usageValue}
                 onChange={(e) => setUsageValue(e.target.value)}
-                placeholder={habit.limitType === "time" ? "e.g., 30" : "e.g., 2"}
+                placeholder={
+                  logMode === "set"
+                    ? String(todayUsage)
+                    : habit.limitType === "time"
+                      ? "e.g., 30"
+                      : "e.g., 2"
+                }
                 autoComplete="off"
                 className="h-11"
                 autoFocus
@@ -487,36 +656,53 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
             </div>
             <div className="rounded-xl bg-muted/50 p-3 text-sm">
               <p className="text-muted-foreground">
-                {habit.limitType === "time" ? (
-                  <>
-                    {t("quitTracker.todaysTotal", "Today's total")}: <strong>{todayUsage}</strong> /{" "}
-                    {limitValue} {t("quitTracker.minutes", "minutes").toLowerCase()}
-                    {todayUsage > 0 && (
-                      <span className="block mt-1">
-                        {t("quitTracker.remaining", "Remaining")}:{" "}
-                        <strong>{Math.max(0, limitValue - todayUsage)}</strong>{" "}
-                        {t("quitTracker.minutes", "minutes").toLowerCase()}
+                {(() => {
+                  const parsed = parseInt(usageValue, 10);
+                  const projectedTotal =
+                    logMode === "set"
+                      ? isNaN(parsed) || parsed < 0
+                        ? todayUsage
+                        : parsed
+                      : todayUsage + (isNaN(parsed) || parsed < 0 ? 0 : parsed);
+                  const unitText =
+                    habit.limitType === "time"
+                      ? t("quitTracker.minutes", "minutes").toLowerCase()
+                      : limitValue === 1
+                        ? t("quitTracker.unitSingular", "unit")
+                        : t("quitTracker.unitPlural", "units");
+                  const overLimit = projectedTotal > limitValue;
+
+                  return (
+                    <>
+                      <span>
+                        {t("quitTracker.todaysTotal", "Today's total")}:{" "}
+                        <strong>{todayUsage}</strong>
+                        {usageValue && !isNaN(parsed) ? (
+                          <>
+                            {" "}
+                            →{" "}
+                            <strong className={overLimit ? "text-destructive" : "text-foreground"}>
+                              {projectedTotal}
+                            </strong>
+                          </>
+                        ) : null}{" "}
+                        / {limitValue} {unitText}
                       </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {t("quitTracker.todaysTotal", "Today's total")}: <strong>{todayUsage}</strong> /{" "}
-                    {limitValue}{" "}
-                    {limitValue === 1
-                      ? t("quitTracker.unitSingular", "unit")
-                      : t("quitTracker.unitPlural", "units")}
-                    {todayUsage > 0 && (
-                      <span className="block mt-1">
-                        {t("quitTracker.remaining", "Remaining")}:{" "}
-                        <strong>{Math.max(0, limitValue - todayUsage)}</strong>{" "}
-                        {limitValue === 1
-                          ? t("quitTracker.unitSingular", "unit")
-                          : t("quitTracker.unitPlural", "units")}
-                      </span>
-                    )}
-                  </>
-                )}
+                      {overLimit ? (
+                        <span className="block mt-1 font-medium text-destructive">
+                          {t("quitTracker.limitExceeded", "Limit exceeded — streak reset!")} (
+                          {projectedTotal - limitValue} {unitText}{" "}
+                          {t("quitTracker.exceededBy", "over limit")})
+                        </span>
+                      ) : (
+                        <span className="block mt-1">
+                          {t("quitTracker.remaining", "Remaining")}:{" "}
+                          <strong>{Math.max(0, limitValue - projectedTotal)}</strong> {unitText}
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
               </p>
             </div>
             <DialogFooter>
@@ -529,7 +715,9 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
                 {t("common.cancel", "Cancel")}
               </Button>
               <Button type="submit" className="h-11 sm:min-w-32 font-semibold">
-                {t("quitTracker.logUsage", "Log Usage")}
+                {logMode === "set"
+                  ? t("quitTracker.setTotal", "Set Total")
+                  : t("quitTracker.logUsage", "Log Usage")}
               </Button>
             </DialogFooter>
           </form>
