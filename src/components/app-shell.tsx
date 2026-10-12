@@ -3,7 +3,10 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   ChartBar as BarChart3,
   CalendarDays,
+  ChevronDown,
+  Cloud,
   ListChecks,
+  LogOut,
   Plus,
   Settings,
   Sun,
@@ -15,13 +18,19 @@ import {
   PanelLeft,
   Menu,
   LayoutDashboard,
-  LogIn,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 
 import { HabitEditorProvider, useHabitEditor } from "@/features/habits/habit-editor";
 import { TimerDock } from "@/components/timer-dock";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { extractUserAvatarUrl, extractUserDisplayName } from "@/lib/user";
@@ -75,7 +84,7 @@ function Shell({ children }: { children: ReactNode }) {
   const isTimerActive = Boolean(timer?.habitId);
   const { isDue: isBackupDue } = useBackupReminderStatus();
   const { t, isRtl } = useTranslation();
-  const { session, user } = useAuth();
+  const { session, user, signOut } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [enableSidebarTransition, setEnableSidebarTransition] = useState(false);
@@ -83,9 +92,17 @@ function Shell({ children }: { children: ReactNode }) {
   // The persisted collapsed state is applied after mount via useEffect.
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const userAvatarUrl = extractUserAvatarUrl(user, settings.avatar);
-  const effectiveDisplayName = session
-    ? extractUserDisplayName(user, settings.displayName)
-    : settings.displayName?.trim() || "User";
+  const effectiveDisplayName = settings.displayName?.trim()
+    || (session ? extractUserDisplayName(user) : t("common.guest", "Guest"));
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success(t("settings.signedOut", "Signed out successfully."));
+    } catch {
+      toast.error(t("settings.signOutError", "Error signing out."));
+    }
+  };
 
   const handleToggleSidebar = () => {
     playToggleSound(!isSidebarCollapsed);
@@ -345,57 +362,94 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             {/* Connectivity hint only; every feature keeps working offline. */}
             <OfflineIndicator />
-            {session ? (
-              /* Profile pill for authenticated user with extracted Google avatar */
-              <Link
-                to="/dashboard"
-                className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1 ps-1.5 pe-3 transition-colors hover:bg-accent"
-                aria-label={
-                  isBackupDue
-                    ? `${effectiveDisplayName} - ${t("backup.badgeAria", "Backup recommended")}`
-                    : effectiveDisplayName
-                }
-              >
-                <div className="relative shrink-0">
-                  <UserAvatar
-                    avatar={userAvatarUrl}
-                    name={effectiveDisplayName}
-                    className="h-7 w-7"
-                  />
-                  {isBackupDue && (
-                    <span
-                      className="absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-card shadow-xs"
-                      aria-hidden="true"
+            {/* Unified User Avatar & Profile Dropdown for both authenticated & guest users */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-full border border-border bg-card py-1 ps-1.5 pe-2.5 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-start select-none"
+                  aria-label={
+                    isBackupDue
+                      ? `${effectiveDisplayName} - ${t("backup.badgeAria", "Backup recommended")}`
+                      : effectiveDisplayName
+                  }
+                >
+                  <div className="relative shrink-0">
+                    <UserAvatar
+                      avatar={userAvatarUrl}
+                      name={effectiveDisplayName}
+                      className="h-7 w-7"
                     />
+                    {isBackupDue && (
+                      <span
+                        className="absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full bg-yellow-400 dark:bg-yellow-300 ring-2 ring-card shadow-xs"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </div>
+                  <span className="max-w-32 truncate text-sm font-medium">
+                    {effectiveDisplayName}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/70 -ms-0.5 transition-transform duration-200" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-1.5 shadow-lg">
+                {/* Profile Identity Header */}
+                <div className="px-2.5 py-2">
+                  <p className="text-sm font-semibold leading-none truncate">
+                    {effectiveDisplayName}
+                  </p>
+                  {session && user?.email ? (
+                    <p className="text-xs text-muted-foreground mt-1.5 truncate">
+                      {user.email}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span>{t("settings.dataAlert", "Local storage mode")}</span>
+                    </p>
                   )}
                 </div>
-                <span className="max-w-32 truncate text-sm font-medium">
-                  {effectiveDisplayName}
-                </span>
-              </Link>
-            ) : (
-              /* Clear, visible Sign In / Login button for visitors */
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/dashboard"
-                  className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border bg-card py-1 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  aria-label={t("nav.dashboard", "Dashboard")}
-                >
-                  <User className="h-3.5 w-3.5" />
-                  <span>{t("nav.dashboard", "Dashboard")}</span>
-                </Link>
-                <Button
-                  asChild
-                  size="sm"
-                  className="gap-1.5 h-8 px-3 text-xs font-semibold shadow-xs"
-                >
-                  <Link to="/auth" aria-label={t("auth.signInOrLogin", "Sign In / Login")}>
-                    <LogIn className="h-3.5 w-3.5" />
-                    <span>{t("nav.signIn", "Sign In")}</span>
+                <DropdownMenuSeparator />
+
+                {/* Navigation Items */}
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="flex items-center gap-2 cursor-pointer">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <span>{t("settings.profileSettings", "Profile Settings")}</span>
                   </Link>
-                </Button>
-              </div>
-            )}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                    <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+                    <span>{t("nav.dashboard", "Dashboard")}</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* Authentication Action */}
+                {session ? (
+                  <DropdownMenuItem
+                    onClick={() => void handleSignOut()}
+                    className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>{t("account.signOut", "Sign Out")}</span>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-primary">
+                    <Link
+                      to="/auth"
+                      className="flex items-center gap-2 font-medium text-primary cursor-pointer"
+                    >
+                      <Cloud className="h-4 w-4" />
+                      <span>{t("auth.signInToSync", "Sign in to Sync Data")}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
