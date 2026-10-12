@@ -1,14 +1,49 @@
 import type { User } from "@supabase/supabase-js";
 
 /**
- * Extracts the user's profile picture URL directly from Supabase session metadata.
- * Inspects Google OAuth fields `avatar_url` and `picture`, identity data,
- * and falls back to any custom local avatar URL if provided.
+ * Resolves the user's avatar strictly following the priority order:
+ * 1. Custom selected avatar:
+ *    - Locally configured selection (e.g. settings.avatar: custom image, data URL, or emoji)
+ *    - Supabase user metadata `custom_avatar`
+ * 2. OAuth avatar (e.g. Google avatar_url / picture, identities)
+ * 3. Default placeholder (undefined)
+ *
+ * Flow: custom_avatar || oauth_avatar || default_placeholder
  */
 export function extractUserAvatarUrl(
   user: User | null | undefined,
-  fallbackAvatar?: string,
+  customAvatar?: string | null,
 ): string | undefined {
+  // 1. Priority 1: Custom Avatar (local selection or user metadata)
+  // Check locally selected avatar (settings.avatar - could be emoji, base64 data URL, or storage URL)
+  if (typeof customAvatar === "string" && customAvatar.trim().length > 0) {
+    return customAvatar.trim();
+  }
+
+  // Check custom_avatar stored in Supabase user metadata
+  if (user?.user_metadata) {
+    const meta = user.user_metadata as Record<string, unknown>;
+    const cloudCustomAvatar = meta["custom_avatar"];
+    if (typeof cloudCustomAvatar === "string" && cloudCustomAvatar.trim().length > 0) {
+      return cloudCustomAvatar.trim();
+    }
+  }
+
+  // 2. Priority 2: OAuth Avatar (Google OAuth avatar_url or picture)
+  const oauthAvatar = extractOAuthAvatarUrl(user);
+  if (oauthAvatar) {
+    return oauthAvatar;
+  }
+
+  // 3. Priority 3: Default Placeholder
+  return undefined;
+}
+
+/**
+ * Extracts the raw OAuth avatar URL (e.g. Google avatar_url or picture)
+ * from Supabase session metadata or identities.
+ */
+export function extractOAuthAvatarUrl(user: User | null | undefined): string | undefined {
   if (user?.user_metadata) {
     const meta = user.user_metadata as Record<string, unknown>;
     const googleAvatar =
@@ -42,18 +77,6 @@ export function extractUserAvatarUrl(
         }
       }
     }
-  }
-
-  // Fallback to locally configured avatar if it is a valid URL or data URL
-  if (
-    fallbackAvatar &&
-    typeof fallbackAvatar === "string" &&
-    fallbackAvatar.trim().length > 0 &&
-    (fallbackAvatar.startsWith("http://") ||
-      fallbackAvatar.startsWith("https://") ||
-      fallbackAvatar.startsWith("data:"))
-  ) {
-    return fallbackAvatar.trim();
   }
 
   return undefined;

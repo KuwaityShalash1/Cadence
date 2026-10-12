@@ -176,9 +176,7 @@ export function UserDashboard() {
             <div className="flex items-center gap-3 min-w-0">
               <div className="relative shrink-0">
                 <UserAvatar
-                  avatar={
-                    avatarUrl || (!avatarUrl && settings.avatar ? settings.avatar : undefined)
-                  }
+                  avatar={avatarUrl}
                   name={fullName}
                   className="h-10 w-10 border border-border/80 shadow-2xs"
                   fallbackClassName="text-sm font-semibold"

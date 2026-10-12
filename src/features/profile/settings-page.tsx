@@ -62,6 +62,7 @@ import { useWeeklyBackupReminder } from "@/hooks/use-weekly-backup";
 import { usePWA } from "@/hooks/use-pwa";
 import { useApp } from "@/stores/app-store";
 import { useAuth } from "@/auth/auth-context";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { extractUserAvatarUrl } from "@/lib/user";
 import { useTranslation, LANGUAGES } from "@/i18n/context";
 import { LanguageFlag } from "@/components/language-flag";
@@ -99,7 +100,13 @@ export function SettingsPage() {
   const { session, user, signOut } = useAuth();
   const { t, language, setLanguage, isRtl } = useTranslation();
   const [displayName, setDisplayName] = useState(settings.displayName ?? "");
-  const activeAvatar = session ? extractUserAvatarUrl(user, settings.avatar) : settings.avatar;
+  const activeAvatar = extractUserAvatarUrl(user, settings.avatar);
+  const hasCustomAvatar = Boolean(
+    (settings.avatar && settings.avatar.trim().length > 0) ||
+      (user?.user_metadata &&
+        typeof user.user_metadata["custom_avatar"] === "string" &&
+        user.user_metadata["custom_avatar"].trim().length > 0),
+  );
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>("unsupported");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -114,6 +121,27 @@ export function SettingsPage() {
       setDisplayName(settings.displayName);
     }
   }, [settings.displayName]);
+
+  // Hydrate custom avatar from cloud user metadata if local settings don't have it yet
+  useEffect(() => {
+    const cloudAvatar = user?.user_metadata?.["custom_avatar"];
+    if (
+      !settings.avatar &&
+      typeof cloudAvatar === "string" &&
+      cloudAvatar.trim().length > 0
+    ) {
+      updateSettings({ avatar: cloudAvatar.trim() });
+    }
+  }, [user, settings.avatar, updateSettings]);
+
+  // Clean up object URL when modal closes or image changes to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (selectedImage && selectedImage.startsWith("blob:")) {
+        URL.revokeObjectURL(selectedImage);
+      }
+    };
+  }, [selectedImage]);
 
   useEffect(() => {
     setNotificationPermission(getNotificationPermission());
@@ -167,6 +195,10 @@ export function SettingsPage() {
       return;
     }
 
+    if (selectedImage && selectedImage.startsWith("blob:")) {
+      URL.revokeObjectURL(selectedImage);
+    }
+
     // Intercept image selection: create an object URL and open cropper modal
     const objectUrl = URL.createObjectURL(file);
     setSelectedImage(objectUrl);
@@ -176,9 +208,102 @@ export function SettingsPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  function handleSaveCroppedAvatar(croppedDataUrl: string) {
+  async function handleSaveCroppedAvatar(croppedDataUrl: string) {
+    // 1. Instant optimistic UI update: immediately update local state and IndexedDB
     updateSettings({ avatar: croppedDataUrl });
     toast.success(t("settings.avatarUpdated"));
+
+    // 2. Cloud sync if authenticated
+    if (session && user && isSupabaseConfigured) {
+      let finalAvatarValue = croppedDataUrl;
+
+      // Attempt to upload image to Supabase Storage bucket 'avatars'
+      try {
+        const response = await fetch(croppedDataUrl);
+        const blob = await response.blob();
+        const fileExt = blob.type === "image/png" ? "png" : "jpg";
+        const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(fileName, blob, {
+            contentType: blob.type || "image/jpeg",
+            upsert: true,
+          });
+
+        if (!uploadError && uploadData) {
+          const { data: publicUrlData } = supabase.storage
+            .from("avatars")
+            .getPublicUrl(uploadData.path);
+
+          if (publicUrlData?.publicUrl) {
+            finalAvatarValue = publicUrlData.publicUrl;
+            // Update local settings with permanent storage URL
+            updateSettings({ avatar: finalAvatarValue });
+          }
+        } else if (uploadError) {
+          // If storage bucket is not configured or fails, smoothly fall back to base64
+          console.info(
+            "Supabase Storage bucket unavailable, storing compressed base64 in user metadata:",
+            uploadError.message,
+          );
+        }
+      } catch (storageErr) {
+        console.warn("Storage upload failed, falling back to compressed base64:", storageErr);
+      }
+
+      // Persist custom avatar selection to Supabase Auth user metadata
+      try {
+        const { error: metaError } = await supabase.auth.updateUser({
+          data: { custom_avatar: finalAvatarValue },
+        });
+        if (metaError) {
+          console.error("Failed to save custom avatar to Supabase user metadata:", metaError);
+        }
+      } catch (err) {
+        console.error("Error updating user metadata on Supabase:", err);
+      }
+    }
+  }
+
+  async function handleSelectEmoji(emoji: string) {
+    // 1. Instant optimistic UI update: immediately update local state & IndexedDB
+    updateSettings({ avatar: emoji });
+    toast.success(t("settings.avatarUpdated"));
+
+    // 2. Sync custom preference to Supabase Auth metadata if authenticated
+    if (session && isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: { custom_avatar: emoji },
+        });
+        if (error) {
+          console.error("Failed to sync custom avatar to Supabase:", error);
+        }
+      } catch (err) {
+        console.error("Error updating user metadata on Supabase:", err);
+      }
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    // 1. Instant optimistic UI update: clear custom avatar in local state & IndexedDB
+    updateSettings({ avatar: undefined });
+    toast.success(t("settings.avatarUpdated"));
+
+    // 2. Clear custom avatar from Supabase metadata if authenticated
+    if (session && isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.auth.updateUser({
+          data: { custom_avatar: null },
+        });
+        if (error) {
+          console.error("Failed to clear custom avatar in Supabase:", error);
+        }
+      } catch (err) {
+        console.error("Error clearing custom avatar in Supabase:", err);
+      }
+    }
   }
 
   async function handleReset() {
@@ -280,10 +405,10 @@ export function SettingsPage() {
 
           <div className="flex-1 text-center sm:text-start">
             <p className="text-xs text-muted-foreground">{t("settings.photoHint")}</p>
-            {settings.avatar && settings.avatar.startsWith("data:") ? (
+            {hasCustomAvatar ? (
               <button
                 type="button"
-                onClick={() => updateSettings({ avatar: undefined })}
+                onClick={() => void handleRemoveAvatar()}
                 className="mt-2 text-xs text-destructive hover:underline"
               >
                 {t("settings.removePhoto")}
@@ -303,10 +428,10 @@ export function SettingsPage() {
                 key={emoji}
                 type="button"
                 aria-label={`Use ${emoji}`}
-                onClick={() => updateSettings({ avatar: emoji })}
+                onClick={() => void handleSelectEmoji(emoji)}
                 className={cn(
                   "grid h-9 w-9 place-items-center rounded-lg border text-lg transition-colors",
-                  settings.avatar === emoji
+                  settings.avatar === emoji || activeAvatar === emoji
                     ? "border-primary bg-primary/10"
                     : "border-border hover:bg-muted",
                 )}
