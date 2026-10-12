@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
+import { OPEN_COMMAND_PALETTE_EVENT } from "@/hooks/use-command-palette";
+import { getNormalizedKey, isTypingTarget } from "@/lib/keyboard";
 
 // Canonical event names for context-aware "Add New" shortcuts.
 export const OPEN_ADD_MODAL_EVENT = "cadence:open-add-modal";
@@ -78,6 +80,7 @@ export function useAddModalListener(entity: AddModalEntity, onOpen: () => void):
 /**
  * Global, zero-dependency keyboard shortcuts for the Cadence PWA.
  * Attaches a single keydown listener; context-aware via TanStack Router.
+ * Layout-independent: respects physical key codes and Arabic/non-Latin keyboards.
  *
  * Single-key Navigation Shortcuts (when NOT typing inside inputs):
  * - T: Today (/)
@@ -89,8 +92,8 @@ export function useAddModalListener(entity: AddModalEntity, onOpen: () => void):
  * - Q: Quit Tracker (/quit-tracker)
  * - S: Settings (/settings)
  * - N: Add New (context-aware: habit, goal, routine, or quit tracker)
- * - /: Focus the search bar (skipped when already inside an input/textarea)
- * - ?: Open Keyboard Shortcuts Help
+ * - /: Open / toggle Command Palette (skipped when already inside an input/textarea)
+ * - ?: Open Keyboard Shortcuts Help (Shift+/ or ?)
  *
  * Cmd/Ctrl+K is deliberately NOT handled here: it belongs to the command
  * palette (`useCommandPalette` in src/hooks/use-command-palette.ts), which owns
@@ -119,20 +122,16 @@ export function useShortcuts(): void {
 
     const onKeyDown = (e: KeyboardEvent) => {
       // CRITICAL safety guard: never hijack keystrokes while typing.
-      const active = document.activeElement as HTMLElement | null;
-      const isInput =
-        active?.tagName === "INPUT" ||
-        active?.tagName === "TEXTAREA" ||
-        active?.tagName === "SELECT" ||
-        active?.isContentEditable;
-      if (isInput) return;
+      const active = typeof document !== "undefined" ? document.activeElement : null;
+      if (isTypingTarget(e.target, active)) return;
 
       // Ignore IME composition and auto-repeat for single-press actions.
-      if (e.isComposing) return;
+      if (e.isComposing || e.keyCode === 229) return;
+
+      const key = getNormalizedKey(e);
 
       // Explicitly prevent Chrome default search bar if Ctrl+K / Cmd+K reaches this listener
-      const isK = e.key?.toLowerCase() === "k" || e.key === "K" || e.code === "KeyK";
-      if ((e.ctrlKey || e.metaKey) && isK) {
+      if ((e.ctrlKey || e.metaKey) && key === "k") {
         e.preventDefault();
         return;
       }
@@ -142,14 +141,20 @@ export function useShortcuts(): void {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.repeat) return;
 
-      // Help modal shortcut: Shift+/ or ?
-      if (e.key === "?") {
+      // Help modal shortcut: Shift+/ or ? (or Arabic question mark '؟')
+      if (key === "?") {
         e.preventDefault();
         window.dispatchEvent(new Event(OPEN_SHORTCUTS_HELP_EVENT));
         return;
       }
 
-      const key = e.key.toLowerCase();
+      // /: Open / toggle Command Palette, or focus search
+      if (key === "/") {
+        e.preventDefault();
+        window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT));
+        return;
+      }
+
       const pathname = pathnameRef.current ?? "";
 
       // N: context-aware Add New, dispatched as an event for Vaul sheets.
@@ -158,13 +163,6 @@ export function useShortcuts(): void {
         else if (pathname.includes("/quit-tracker")) dispatchOpenAddModal("quit-tracker");
         else if (pathname.includes("/routines")) dispatchOpenAddModal("routine");
         else dispatchOpenAddModal("habit");
-        return;
-      }
-
-      // /: Focus the search bar on the active page.
-      if (e.key === "/") {
-        e.preventDefault();
-        (document.querySelector('input[type="search"]') as HTMLInputElement | null)?.focus();
         return;
       }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getNormalizedKey, isTypingTarget } from "@/lib/keyboard";
 
 /**
  * Global command palette controller (⌘K / Ctrl+K) for the Cadence PWA.
@@ -68,8 +69,10 @@ export function useCommandPalette(): CommandPaletteController {
       // Ignore Alt combinations (e.g. Alt+Ctrl chords)
       if (event.altKey) return;
 
-      const isK = event.key?.toLowerCase() === "k" || event.key === "K" || event.code === "KeyK";
+      const key = getNormalizedKey(event);
+      const isK = key === "k";
 
+      // ⌘K / Ctrl+K — Command Palette toggle chord (always active, even if an input is focused)
       if ((event.ctrlKey || event.metaKey) && isK) {
         // Explicitly prevent browser default action immediately (Chrome search/address bar)
         event.preventDefault();
@@ -79,6 +82,22 @@ export function useCommandPalette(): CommandPaletteController {
         if (event.isComposing || event.repeat) return;
 
         toggleRef.current();
+        return;
+      }
+
+      // / — Command Palette toggle (single-key, disabled when typing in inputs)
+      const isSlash = key === "/";
+      if (!event.ctrlKey && !event.metaKey && !event.shiftKey && isSlash) {
+        const active = typeof document !== "undefined" ? document.activeElement : null;
+        if (isTypingTarget(event.target, active)) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (event.isComposing || event.repeat) return;
+
+        toggleRef.current();
+        return;
       }
     };
 
