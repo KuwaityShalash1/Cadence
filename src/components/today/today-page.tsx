@@ -511,49 +511,71 @@ export function TodayPage() {
               onDragEnd={handleDragEnd}
             >
               <div className="space-y-6">
-                {/* 1. Daily Pillars Section (Pinned at the top with gold/amber styling) */}
+                {/* 1. Daily Pillars Section — Premium glassmorphic container */}
                 {duePillars.length > 0 && (
                   <section className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base select-none" aria-hidden="true">
-                          🏛️
-                        </span>
-                        <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
-                          {t("today.dailyPillars", "Daily Pillars")}
-                          <Badge
-                            variant="outline"
+                    {/* ── Section header ── */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <h2 className="flex items-center gap-2 text-sm font-extrabold tracking-wide">
+                          <span
+                            className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent"
+                          >
+                            {t("today.dailyPillars", "DAILY PILLARS")} 🏛️
+                          </span>
+                          {/* Glowing animated count badge */}
+                          <span
                             className={cn(
-                              "text-[10px] font-semibold px-2 py-0.5 transition-colors",
+                              "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-bold shadow-inner transition-all duration-300",
                               allPillarsCompleted
-                                ? "border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                                : "border-border text-muted-foreground",
+                                ? "border-emerald-500/50 bg-emerald-500/20 text-emerald-400 shadow-emerald-500/10"
+                                : "border-amber-500/50 bg-amber-500/20 text-amber-300 shadow-amber-500/10 animate-pulse",
                             )}
                           >
                             {allPillarsCompleted
                               ? `✓ ${t("today.pillarsSecured", "Secured")}`
                               : `${completedPillarsCount}/${duePillars.length}`}
-                          </Badge>
+                          </span>
                         </h2>
                       </div>
-                      <span className="text-xs text-muted-foreground hidden sm:inline">
-                        {t("today.dailyPillarsDesc", "Non-negotiable core habits for your day")}
+                      <span className="hidden text-xs font-medium text-amber-600/70 dark:text-amber-400/60 sm:inline">
+                        {t("today.dailyPillarsDesc", "Your day's non-negotiable foundation")}
                       </span>
                     </div>
 
+                    {/* ── Glassmorphic pillars container ── */}
                     <div
                       className={cn(
-                        "rounded-2xl border p-3 sm:p-4 transition-all duration-300",
-                        "border-amber-500/35 bg-amber-500/[0.03] dark:border-amber-400/25 dark:bg-amber-400/[0.02]",
+                        "relative overflow-hidden rounded-2xl border p-4 sm:p-5 transition-all duration-300",
+                        "bg-[#0d1222]/80 backdrop-blur-md border-amber-500/30",
+                        "shadow-[0_0_20px_rgba(245,158,11,0.12)]",
                         allPillarsCompleted
-                          ? "ring-1 ring-amber-500/25 shadow-[0_0_24px_-4px_rgba(245,158,11,0.14)]"
-                          : "shadow-[0_0_16px_-4px_rgba(245,158,11,0.06)]",
+                          ? "ring-1 ring-amber-500/30 shadow-[0_0_32px_-4px_rgba(245,158,11,0.22)]"
+                          : "",
                       )}
                     >
+                      {/* Ambient top-edge glow line */}
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent"
+                      />
+                      {/* LTR left / RTL right accent stripe */}
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute bottom-0 top-0 start-0 w-[3px] bg-gradient-to-b from-amber-400/60 via-orange-500/40 to-transparent rounded-s-2xl rtl:start-auto rtl:end-0 rtl:rounded-s-none rtl:rounded-e-2xl"
+                      />
+                      {/* Faint watermark pillar / column icon */}
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute bottom-3 end-4 select-none text-[5rem] leading-none opacity-[0.04]"
+                      >
+                        🏛️
+                      </div>
+
                       {filteredPillars.length === 0 ? (
                         <div className="py-6 text-center text-xs text-muted-foreground">
                           {allPillarsCompleted ? (
-                            <p className="text-amber-700 dark:text-amber-400 font-medium">
+                            <p className="font-medium text-amber-400">
                               🎉 {t("today.allPillarsCompleted", "All Daily Pillars completed for today!")}
                             </p>
                           ) : (
