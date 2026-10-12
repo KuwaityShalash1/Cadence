@@ -8,7 +8,8 @@ export const Route = createFileRoute("/auth")({
       { title: "Sign in — Cadence" },
       {
         name: "description",
-        content: "Sign in or create a Cadence account to prepare for cloud sync.",
+        content:
+          "Sign in with Google to securely sync your habits and streaks across all your devices.",
       },
     ],
   }),

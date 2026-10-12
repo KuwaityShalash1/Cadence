@@ -17,6 +17,7 @@ import {
   Volume2,
   VolumeX,
   AlertTriangle,
+  LogIn,
   LogOut,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -581,10 +582,13 @@ export function SettingsPage() {
           <Alert className="mt-4 border-amber-200/50 bg-amber-50/60 dark:bg-amber-950/30 dark:border-amber-800/40">
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertTitle className="text-amber-800 dark:text-amber-300">
-              {t("settings.dataAlert")}
+              {t("settings.dataAlert", "Local storage mode")}
             </AlertTitle>
             <AlertDescription className="text-amber-700 dark:text-amber-400">
-              {t("settings.dataAlertDesc")}
+              {t(
+                "settings.dataAlertDesc",
+                "Start immediately without signing up. Your data belongs to you and lives on your device. Choose to log in only when you're ready to sync your progress seamlessly across devices.",
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -657,7 +661,7 @@ export function SettingsPage() {
       </section>
 
       {/* ── Account & Danger Zone Actions ─────────────────────────────────── */}
-      {session && (
+      {session ? (
         <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5 space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium text-destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -666,9 +670,14 @@ export function SettingsPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
             <div>
-              <p className="text-sm font-medium text-foreground">{t("account.signOut", "Sign Out")}</p>
+              <p className="text-sm font-medium text-foreground">
+                {t("account.signOut", "Sign Out")}
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {t("account.signOutDesc", "Sign out of your active Cadence account on this device.")}
+                {t(
+                  "account.signOutDesc",
+                  "Sign out of your active Cadence account on this device.",
+                )}
               </p>
             </div>
             <Button
@@ -685,12 +694,44 @@ export function SettingsPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-1">
             <div>
-              <p className="text-sm font-medium text-destructive">{t("account.deleteAccount", "Delete Account")}</p>
+              <p className="text-sm font-medium text-destructive">
+                {t("account.deleteAccount", "Delete Account")}
+              </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {t("account.deleteAccountDesc", "Permanently delete your account, synced habits, streaks, and all cloud backups.")}
+                {t(
+                  "account.deleteAccountDesc",
+                  "Permanently delete your account, synced habits, streaks, and all cloud backups.",
+                )}
               </p>
             </div>
             <DeleteAccountDialog />
+          </div>
+        </section>
+      ) : (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium text-foreground">
+                {t("settings.cloudSyncTitle", "Cross-Device Sync")}
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">
+                {t(
+                  "settings.cloudSyncPromo",
+                  "Start immediately without signing up. Your data belongs to you and lives on your device. Choose to log in only when you're ready to sync your progress seamlessly across devices.",
+                )}
+              </p>
+            </div>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5 self-start sm:self-center"
+            >
+              <Link to="/auth">
+                <LogIn className="h-3.5 w-3.5" />
+                <span>{t("nav.signIn", "Sign In")}</span>
+              </Link>
+            </Button>
           </div>
         </section>
       )}

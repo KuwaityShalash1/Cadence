@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Track habits and build discipline with Cadence. A 100% offline-first PWA featuring unique moderation goals, daily routines, and zero tracking or ads.",
+          "Track habits and build discipline with Cadence. A hybrid local-first PWA featuring offline storage, optional Google cloud sync, and zero tracking or ads.",
       },
       {
         name: "keywords",
@@ -32,10 +32,13 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Track habits and build discipline with Cadence. A 100% offline-first PWA featuring unique moderation goals, daily routines, and zero tracking or ads.",
+          "Track habits and build discipline with Cadence. A hybrid local-first PWA featuring offline storage, optional Google cloud sync, and zero tracking or ads.",
       },
       { property: "og:image", content: "https://cadencepwa.vercel.app/og-image.png?v=2" },
-      { property: "og:image:secure_url", content: "https://cadencepwa.vercel.app/og-image.png?v=2" },
+      {
+        property: "og:image:secure_url",
+        content: "https://cadencepwa.vercel.app/og-image.png?v=2",
+      },
       { property: "og:image:type", content: "image/png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
@@ -51,7 +54,7 @@ export const Route = createFileRoute("/")({
       {
         name: "twitter:description",
         content:
-          "Track habits and build discipline with Cadence. A 100% offline-first PWA featuring unique moderation goals, daily routines, and zero tracking or ads.",
+          "Track habits and build discipline with Cadence. A hybrid local-first PWA featuring offline storage, optional Google cloud sync, and zero tracking or ads.",
       },
       { name: "twitter:image", content: "https://cadencepwa.vercel.app/og-image.png?v=2" },
       {

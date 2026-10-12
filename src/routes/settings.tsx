@@ -10,13 +10,13 @@ export const Route = createFileRoute("/settings")({
       {
         name: "description",
         content:
-          "Manage your profile, theme, notifications, and local Cadence data — everything stays on your device.",
+          "Manage your profile, theme, notifications, and local Cadence data with optional cross-device cloud sync.",
       },
       { property: "og:title", content: "Settings — Cadence Habit Tracker" },
       {
         property: "og:description",
         content:
-          "Manage your profile, theme, notifications, and local Cadence data — everything stays on your device.",
+          "Manage your profile, theme, notifications, and local Cadence data with optional cross-device cloud sync.",
       },
       { property: "og:url", content: "https://cadencepwa.vercel.app/settings" },
     ],

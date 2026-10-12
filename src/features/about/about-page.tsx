@@ -39,11 +39,19 @@ export function AboutPage() {
           </span>
           {t(
             "about.makerNoteBody",
-            ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence to be completely offline-first, ridiculously fast, and 100% private. Your data lives strictly in your browser's IndexedDB.",
+            ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence with a hybrid local-first architecture — ridiculously fast, 100% private, and fully functional offline.",
           )}{" "}
           <span className="font-semibold text-foreground">
             {t("about.makerNoteHighlight", "Zero tracking, zero cookies.")}
           </span>
+        </p>
+
+        {/* ── Empowering Privacy Message ── */}
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground/90 sm:text-base">
+          {t(
+            "about.empowerMessage",
+            "Start immediately without signing up. Your data belongs to you and lives on your device. Choose to log in only when you're ready to sync your progress seamlessly across devices.",
+          )}
         </p>
 
         {/* ── Geek links ── */}

@@ -21,7 +21,7 @@ export const en = {
   "sync.realtimeConnectedTooltip": "Realtime sync active via Supabase WebSockets",
   "backup.title": "Protect your habit history",
   "backup.desc":
-    "You haven't exported a JSON backup recently. Since Cadence is offline-first, manual backups ensure your progress is never lost.",
+    "You haven't exported a JSON backup recently. While Cadence stores your data locally in IndexedDB, manual backups ensure your progress is always protected.",
   "backup.descShort": "Export a backup copy to keep your habit history safe.",
   "backup.export": "Export Backup (JSON)",
   "backup.later": "Later",
@@ -75,9 +75,12 @@ export const en = {
   "settings.installApp": "Install App",
   "settings.iosInstallInstruction":
     "To install on iOS: tap the Share button, then 'Add to Home Screen'",
-  "settings.dataAlert": "Your data lives only on this device",
+  "settings.dataAlert": "Local storage mode",
   "settings.dataAlertDesc":
-    "Cadence is a 100% offline-first application. Your data is stored locally on this device and is not synced to the cloud. To prevent data loss if your browser cache is cleared, please export a backup of your data regularly.",
+    "Start immediately without signing up. Your data belongs to you and lives on your device. Choose to log in only when you're ready to sync your progress seamlessly across devices.",
+  "settings.cloudSyncTitle": "Cross-Device Sync",
+  "settings.cloudSyncPromo":
+    "Start immediately without signing up. Your data belongs to you and lives on your device. Choose to log in only when you're ready to sync your progress seamlessly across devices.",
   "settings.cloudSyncActive": "Cloud sync active",
   "settings.cloudSyncActiveDesc":
     "Your data is safely backed up and synced to your Cadence cloud account.",
@@ -385,17 +388,21 @@ export const en = {
   "today.allHabits": "Habits",
   "today.coreOnlyMode": "Core Only",
   "today.coreOnlyTooltip": "Focus on your non-negotiables for low-energy days",
-  "today.coreOnlyBanner": "Core Only Mode Active — Showing non-negotiables only. Protect your energy today.",
+  "today.coreOnlyBanner":
+    "Core Only Mode Active — Showing non-negotiables only. Protect your energy today.",
   "today.showAllHabits": "Show All Habits",
   "today.noPillarsSet": "No daily pillars set yet",
-  "today.noPillarsSetDesc": "Designate 1-3 core habits as Daily Pillars to anchor your day and use Core Only mode.",
+  "today.noPillarsSetDesc":
+    "Designate 1-3 core habits as Daily Pillars to anchor your day and use Core Only mode.",
   "today.setupPillarsTitle": "Establish your Daily Pillars",
-  "today.setupPillarsDesc": "Mark 1–3 non-negotiable habits to anchor your daily focus and enable Core Only mode.",
+  "today.setupPillarsDesc":
+    "Mark 1–3 non-negotiable habits to anchor your daily focus and enable Core Only mode.",
   "today.allPillarsCompleted": "All Daily Pillars completed for today!",
   "today.noPillarsMatch": "No pillars match the current filter.",
   "today.noOtherMatch": "No other habits match the current filter.",
   "today.pillarsCompletedCelebration": "🏛️ Core Day Secured! All Daily Pillars are complete.",
-  "today.pillarsCompletedDesc": "Even if other habits are unchecked, your foundation is solid today.",
+  "today.pillarsCompletedDesc":
+    "Even if other habits are unchecked, your foundation is solid today.",
   "today.pillarsSecured": "Secured",
   "today.pillarBadge": "Core Pillar",
   "today.pillarBadgeTitle": "Daily Pillar (Non-negotiable)",
@@ -882,7 +889,7 @@ export const en = {
   "quitSuggestion.avoidingDifficultTasks.badge": "Growth",
   "seo.defaultTitle": "Cadence | Minimalist Habit Tracker",
   "seo.defaultDesc":
-    "Cadence is an offline-first habit tracker for building daily routines, tracking goals, and staying consistent without ads or account requirements.",
+    "Cadence is a hybrid local-first habit tracker for building daily routines, tracking goals, and staying consistent without mandatory accounts or ads.",
   "seo.todayTitle": "Today — Cadence Habit Tracker",
   "seo.todayDesc": "Track your daily habits, log progress, and build streaks with Cadence.",
   "seo.calendarTitle": "Calendar — Cadence Habit Tracker",
@@ -908,8 +915,10 @@ export const en = {
   // Auth Page
   "auth.welcomeBack": "Welcome back",
   "auth.createYourAccount": "Create your account",
-  "auth.signInDescription": "Sign in to prepare Cadence for cloud sync.",
-  "auth.signUpDescription": "Create an account to enable cloud sync when it arrives.",
+  "auth.signInDescription":
+    "Sign in to securely sync your habits, streaks, and routines across all your devices.",
+  "auth.signUpDescription":
+    "Create an account to securely sync your habits, streaks, and routines across all your devices.",
   "auth.notConfigured":
     "Cloud authentication is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.",
   "auth.continueWithGoogle": "Continue with Google",
@@ -1078,7 +1087,8 @@ export const en = {
 
   // SEO
   "seo.authTitle": "Sign in — Cadence",
-  "seo.authDesc": "Sign in or create a Cadence account to prepare for cloud sync.",
+  "seo.authDesc":
+    "Sign in with Google to securely sync your habits and streaks across all your devices.",
   "seo.dashboardTitle": "User Dashboard — Cadence Habit Tracker",
   "seo.dashboardDesc": "View your habit streaks, monthly completion rates, and account profile.",
 
@@ -1107,8 +1117,10 @@ export const en = {
   "about.makerNotePrefix": "I'm",
   "about.makerName": "Mohamed Shalash",
   "about.makerNoteBody":
-    ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence to be completely offline-first, ridiculously fast, and 100% private. Your data lives strictly in your browser's IndexedDB.",
+    ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence with a hybrid local-first architecture — ridiculously fast, 100% private, and fully functional offline.",
   "about.makerNoteHighlight": "Zero tracking, zero cookies.",
+  "about.empowerMessage":
+    "Start immediately without signing up. Your data belongs to you and lives on your device. Choose to log in only when you're ready to sync your progress seamlessly across devices.",
   "about.viewSourceGithub": "View source on GitHub",
   "about.viewOnProductHunt": "View on Product Hunt",
 

@@ -120,7 +120,7 @@ const SITE_ORIGIN = "https://cadencepwa.vercel.app";
 /** Homepage copy: keyword-rich but still an accurate description of the app. */
 const HOME_TITLE = "Cadence | Minimalist Habit Tracker";
 const HOME_DESCRIPTION =
-  "Cadence is an offline-first habit tracker for building daily routines, tracking goals, and staying consistent without ads or account requirements.";
+  "Cadence is a hybrid local-first habit tracker for building daily routines, tracking goals, and staying consistent without mandatory accounts or ads.";
 const HOME_KEYWORDS =
   "habit tracker, offline habit tracker, moderation habits, daily routine planner, privacy-first pwa, habit tracker no ads";
 
@@ -130,7 +130,7 @@ const SOCIAL_IMAGE_ALT = "Cadence — free offline habit tracker and daily routi
 
 /** Features advertised to search engines and AI answer engines. */
 const APP_FEATURE_LIST = [
-  "100% Offline Storage via IndexedDB",
+  "Hybrid Local-First Architecture via IndexedDB & Supabase",
   "Moderation Strategy for Screen Time & Habits",
   "Custom Routines and Goal Tracking",
   "Installable PWA",
