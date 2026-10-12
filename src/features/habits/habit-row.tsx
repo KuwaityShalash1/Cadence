@@ -429,9 +429,7 @@ export const HabitRow = memo(
         return;
       }
       startTimer(habit.id);
-      toast.success(
-        t("habitRow.timerStarted", "Timer started for {name}", { name: habit.name }),
-      );
+      toast.success(t("habitRow.timerStarted", "Timer started for {name}", { name: habit.name }));
     }
 
     function cancelLongPress() {
@@ -739,6 +737,9 @@ export const HabitRow = memo(
             "opacity-50 cursor-not-allowed hover:bg-emerald-50 dark:hover:bg-emerald-500/10",
           extra,
         )}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           handleStartTimer();
@@ -762,6 +763,9 @@ export const HabitRow = memo(
             variant="ghost"
             aria-label={t("habitRow.actionsAria", "Habit actions")}
             className={buttonClassName}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
             }}
@@ -803,6 +807,9 @@ export const HabitRow = memo(
           readOnlyMode && "opacity-50 cursor-not-allowed",
           extra,
         )}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           complete();
@@ -861,6 +868,9 @@ export const HabitRow = memo(
               : undefined
           }
           className={cn(tone, readOnlyMode && "opacity-50 cursor-not-allowed")}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             handleIncrement(amount);
@@ -1117,6 +1127,9 @@ export const HabitRow = memo(
           // Disabled (future date preview) styling so the read-only state is obvious.
           readOnlyMode && "opacity-50 cursor-not-allowed",
         )}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           complete();
@@ -1216,6 +1229,9 @@ export const HabitRow = memo(
             skipped &&
               "border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-500",
           )}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             complete();
@@ -1393,6 +1409,9 @@ export const HabitRow = memo(
                   isExpanded &&
                     "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20",
                 )}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleExpanded();
