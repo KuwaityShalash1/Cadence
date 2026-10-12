@@ -2,9 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useTranslation } from "@/i18n/context";
 
 /**
- * Easter egg "About Us" page — completely hidden from the UI.
- * Only reachable by manually navigating to /about-us.
- * No links to this page exist anywhere in the navbar, sidebar, or app shell.
+ * About page — /about
+ * Describes the project background, the developer, and the local-first privacy model.
  */
 export function AboutPage() {
   const { t } = useTranslation();

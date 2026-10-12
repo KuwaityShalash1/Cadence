@@ -654,8 +654,8 @@ export const en = {
   "appShell.expandSidebar": "Expand Sidebar",
   "appShell.collapseSidebar": "Collapse Sidebar",
   "nav.moreOptionsAria": "Open more navigation options",
-  "about.title": "🕵️‍♂️ You found the secret page!",
-  "about.subtitle": "Ah, a fellow developer. Welcome to the backstage of Cadence.",
+  "about.title": "About Cadence",
+  "about.subtitle": "Welcome behind the scenes of Cadence.",
   "about.return": "⬅️ Return to Dashboard",
   "about.footer": "Built with React, Vite, Tailwind, and a lot of ☕",
   "colorPicker.legend": "Color",
@@ -1117,10 +1117,10 @@ export const en = {
   "about.makerNotePrefix": "I'm",
   "about.makerName": "Mohamed Shalash",
   "about.makerNoteBody":
-    ", a solo developer who got tired of bloated, subscription-based habit trackers. I built Cadence with a hybrid local-first architecture — ridiculously fast, 100% private, and fully functional offline.",
-  "about.makerNoteHighlight": "Zero tracking, zero cookies.",
+    ", an independent developer who grew tired of complex habit-tracking apps and monthly subscriptions. I built Cadence on a hybrid local-first architecture — blazing fast, 100% privacy-respecting, and fully functional offline.",
+  "about.makerNoteHighlight": "We do not track you, and we do not use cookies.",
   "about.empowerMessage":
-    "Start immediately without signing up. Your data belongs to you and lives on your device. Choose to log in only when you're ready to sync your progress seamlessly across devices.",
+    "Start using the app immediately — no account required. Your data is stored locally on your device. Sign in whenever you're ready to sync your habits seamlessly across all your devices.",
   "about.viewSourceGithub": "View source on GitHub",
   "about.viewOnProductHunt": "View on Product Hunt",
 
