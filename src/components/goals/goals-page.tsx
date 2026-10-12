@@ -259,7 +259,7 @@ export function GoalsPage() {
                       .filter((h): h is Habit => !!h && !h.archived);
                     return (
                       <SortableCard key={goal.id} id={goal.id}>
-                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 flex-1 items-center gap-3">
                               <span
@@ -287,8 +287,15 @@ export function GoalsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                data-no-drag="true"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
                                 className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                                onClick={() => openEdit(goal)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(goal);
+                                }}
                                 aria-label={t("goal.edit")}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -296,8 +303,13 @@ export function GoalsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                data-no-drag="true"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
                                 className="h-8 w-8 rounded-full text-slate-500 hover:bg-rose-50 hover:text-destructive dark:text-slate-400 dark:hover:bg-rose-950/30"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   // Snapshot the goal BEFORE deleting so the toast's
                                   // Undo action can put it back exactly as it was.
                                   const goalToRestore = structuredClone(goal);

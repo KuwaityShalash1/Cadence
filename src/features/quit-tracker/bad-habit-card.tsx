@@ -170,7 +170,7 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
   // Single-column card: full row width with extra vertical breathing room on
   // desktop. min-w-0 + overflow-x-clip guarantee badges never bleed past borders.
   return (
-    <div className="w-full min-w-0 space-y-4 sm:space-y-5 overflow-x-clip rounded-2xl border border-border bg-card p-4 sm:py-6 sm:px-6 shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.99]">
+    <div className="w-full min-w-0 space-y-4 sm:space-y-5 overflow-x-clip rounded-2xl border border-border bg-card p-4 sm:py-6 sm:px-6 shadow-sm transition-all duration-200 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span
@@ -207,8 +207,15 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
           <Button
             variant="ghost"
             size="icon"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            onClick={() => setEditOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditOpen(true);
+            }}
             aria-label={t("quitTracker.editTrackerAria", "Edit tracker")}
           >
             <Pencil className="h-4 w-4" />
@@ -216,8 +223,15 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
           <Button
             variant="ghost"
             size="icon"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="h-8 w-8 text-muted-foreground hover:text-destructive"
-            onClick={handleDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
             aria-label={t("quitTracker.deleteTrackerAria", "Delete tracker")}
           >
             <Trash2 className="h-4 w-4" />
@@ -281,8 +295,13 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
           </div>
           <Button
             variant="outline"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="w-full h-10 rounded-xl border-primary/30 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 hover:border-primary transition-colors"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (todayUsage >= limitValue) {
                 toast.warning(
                   t("quitTracker.limitAlreadyReached", "You've already reached your daily limit."),
@@ -330,8 +349,15 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
           )}
           <Button
             variant="outline"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="w-full h-10 rounded-xl border-destructive/30 bg-destructive/5 text-destructive text-sm font-semibold hover:bg-destructive/10 hover:border-destructive transition-colors"
-            onClick={() => setRelapseOpen(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setRelapseOpen(true);
+            }}
           >
             <AlertCircle className="me-2 h-4 w-4" />
             {t("quitTracker.iRelapsed", "I Relapsed")}
@@ -343,7 +369,14 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
         <div className="border-t border-border pt-4">
           <button
             type="button"
-            onClick={() => setShowHistory((prev) => !prev)}
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowHistory((prev) => !prev);
+            }}
             className="flex w-full items-center justify-between text-sm font-medium text-muted-foreground hover:text-foreground"
           >
             <span className="flex items-center gap-2">

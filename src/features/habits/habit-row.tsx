@@ -956,7 +956,7 @@ export const HabitRow = memo(
           <div className="flex min-w-0 flex-1 items-start gap-4">
             <span
               role="button"
-              data-no-drag
+              data-no-drag="true"
               tabIndex={0}
               aria-label={t("habitRow.editNamedHabit", { name: habit.name })}
               className={cn(
@@ -964,7 +964,13 @@ export const HabitRow = memo(
                 accentTileClass,
               )}
               style={{ color: rawColor }}
-              onClick={() => editor.open(habit)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                editor.open(habit);
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") editor.open(habit);
               }}
@@ -1315,7 +1321,7 @@ export const HabitRow = memo(
           <div className="relative z-10 flex min-w-0 items-start gap-2.5">
             <span
               role="button"
-              data-no-drag
+              data-no-drag="true"
               tabIndex={0}
               aria-label={t("habitRow.editNamedHabit", { name: habit.name })}
               className={cn(
@@ -1323,7 +1329,13 @@ export const HabitRow = memo(
                 accentTileClass,
               )}
               style={{ color: rawColor }}
-              onClick={() => editor.open(habit)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                editor.open(habit);
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") editor.open(habit);
               }}

@@ -229,7 +229,7 @@ export function RoutinesPage() {
                         : 0;
                     return (
                       <SortableCard key={routine.id} id={routine.id}>
-                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99] dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:bg-slate-50 hover:shadow-md dark:border-slate-800/80 dark:bg-slate-900/50 dark:hover:bg-slate-800/50">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 flex-1 items-center gap-3">
                               <span
@@ -256,8 +256,15 @@ export function RoutinesPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                data-no-drag="true"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
                                 className="h-8 w-8 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                                onClick={() => openEdit(routine)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEdit(routine);
+                                }}
                                 aria-label={t("routine.edit")}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -265,8 +272,13 @@ export function RoutinesPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                data-no-drag="true"
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
                                 className="h-8 w-8 rounded-full text-slate-500 hover:bg-rose-50 hover:text-destructive dark:text-slate-400 dark:hover:bg-rose-950/30"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   // Snapshot the routine BEFORE deleting so the toast's
                                   // Undo action can put it (steps included) back.
                                   const routineToRestore = structuredClone(routine);
@@ -302,7 +314,14 @@ export function RoutinesPage() {
                                   <li key={step.id}>
                                     <button
                                       type="button"
-                                      onClick={() => toggleRoutineStep(routine.id, step.id, today)}
+                                      data-no-drag="true"
+                                      onPointerDown={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onTouchStart={(e) => e.stopPropagation()}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleRoutineStep(routine.id, step.id, today);
+                                      }}
                                       className={cn(
                                         "flex w-full items-center gap-3 rounded-xl border p-3 text-start transition-all duration-200 active:scale-[0.99]",
                                         isDone

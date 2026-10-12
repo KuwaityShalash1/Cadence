@@ -35,7 +35,7 @@ export function RoutineCard({
       : 0;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:bg-muted/30 hover:shadow-md active:scale-[0.99]">
+    <div className="rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:bg-muted/30 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span
@@ -57,8 +57,15 @@ export function RoutineCard({
           <Button
             variant="ghost"
             size="icon"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => onEdit(routine)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(routine);
+            }}
             aria-label={t("routine.edit")}
           >
             <Pencil className="h-4 w-4" />
@@ -66,8 +73,13 @@ export function RoutineCard({
           <Button
             variant="ghost"
             size="icon"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="h-8 w-8 rounded-full text-muted-foreground hover:bg-rose-50 hover:text-destructive dark:hover:bg-rose-950/30"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               const routineToRestore = structuredClone(routine);
               removeRoutine(routine.id);
               toast.success(t("routine.deleted"), {
@@ -96,7 +108,14 @@ export function RoutineCard({
               <li key={step.id}>
                 <button
                   type="button"
-                  onClick={() => toggleRoutineStep(routine.id, step.id, date)}
+                  data-no-drag="true"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleRoutineStep(routine.id, step.id, date);
+                  }}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl border p-3 text-start transition-all duration-200 active:scale-[0.99]",
                     isDone ? "border-primary/40 bg-primary/5" : "border-border hover:bg-accent",

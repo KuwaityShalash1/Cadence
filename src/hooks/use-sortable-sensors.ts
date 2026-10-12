@@ -44,7 +44,7 @@ export const isInteractiveElement = (target: EventTarget | HTMLElement | null): 
       ? target
       : target instanceof Element
         ? (target.closest(
-            "button, input, select, [data-no-drag], [data-sortable-card]",
+            "button, input, select, a, [role='button'], [data-no-drag], [data-sortable-card]",
           ) as HTMLElement | null)
         : null;
 
@@ -62,6 +62,8 @@ export const isInteractiveElement = (target: EventTarget | HTMLElement | null): 
       current.tagName === "BUTTON" ||
       current.tagName === "INPUT" ||
       current.tagName === "SELECT" ||
+      current.tagName === "A" ||
+      current.getAttribute("role") === "button" ||
       (current.dataset &&
         (current.dataset["noDrag"] === "true" || current.hasAttribute("data-no-drag")))
     ) {

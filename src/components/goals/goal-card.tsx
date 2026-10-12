@@ -36,8 +36,15 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
           type="button"
           variant="outline"
           size="icon"
+          data-no-drag="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           className="h-8 w-8 rounded-full border-border bg-card shadow-sm hover:bg-muted"
-          onClick={() => adjustGoalValue(goal.id, -1)}
+          onClick={(e) => {
+            e.stopPropagation();
+            adjustGoalValue(goal.id, -1);
+          }}
           aria-label={t("goal.decreaseGoalAria", { name: goal.name })}
         >
           <Minus className="h-3.5 w-3.5" />
@@ -45,8 +52,15 @@ export function GoalValueControls({ goal, currentValue }: { goal: Goal; currentV
         <Button
           type="button"
           size="icon"
+          data-no-drag="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           className="h-8 w-8 rounded-full shadow-sm"
-          onClick={() => adjustGoalValue(goal.id, 1)}
+          onClick={(e) => {
+            e.stopPropagation();
+            adjustGoalValue(goal.id, 1);
+          }}
           aria-label={t("goal.increaseGoalAria", { name: goal.name })}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -69,7 +83,7 @@ export function GoalCard({
   const cardTint = getColorStyle(goal.color || "#3B82F6", 0.14);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:bg-muted/30 hover:shadow-md active:scale-[0.99]">
+    <div className="rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:bg-muted/30 hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span
@@ -91,8 +105,15 @@ export function GoalCard({
           <Button
             variant="ghost"
             size="icon"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => onEdit(goal)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(goal);
+            }}
             aria-label={t("goal.edit")}
           >
             <Pencil className="h-4 w-4" />
@@ -100,8 +121,13 @@ export function GoalCard({
           <Button
             variant="ghost"
             size="icon"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             className="h-8 w-8 rounded-full text-muted-foreground hover:bg-rose-50 hover:text-destructive dark:hover:bg-rose-950/30"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               const goalToRestore = structuredClone(goal);
               removeGoal(goal.id);
               toast.success(t("goal.deleted"), {
