@@ -3,11 +3,13 @@ import { getLocalClientId, trackLocalPush } from "@/lib/realtime";
 import {
   clearPendingSyncFlag,
   clearTombstone,
+  getAllItemsFromStore,
   getLastPushTimestamp,
   getLastSyncTimestamp,
   getPendingSyncRecords,
   getSyncRecords,
   mergeSyncRecord,
+  removeLocalOnly,
   setLastPushTimestamp,
   setLastSyncTimestamp,
   type SyncRecord,
@@ -15,6 +17,18 @@ import {
 
 const SYNC_TABLE = "cadence_sync_records";
 let syncInFlight: Promise<boolean> | null = null;
+
+export const RECONCILED_ENTITY_STORES = [
+  "habits",
+  "goals",
+  "routines",
+  "badHabits",
+  "habitLogs",
+  "routineLogs",
+  "groups",
+] as const;
+
+export type ReconciledEntityStore = (typeof RECONCILED_ENTITY_STORES)[number];
 
 interface RemoteSyncRow {
   store_name: string;
@@ -73,6 +87,54 @@ export async function getAuthenticatedUserId(): Promise<string | null> {
 }
 
 /**
+ * Simultaneously removes a record from Supabase cloud database during local deletion mutations.
+ * Ensures the cloud and local stores are synchronized immediately when online.
+ */
+export async function deleteRecordFromCloud(store: string, id: string): Promise<boolean> {
+  if (!isOnline() || !isSupabaseConfigured) return false;
+  const userId = await getAuthenticatedUserId();
+  if (!userId) return false;
+
+  const now = new Date().toISOString();
+  trackLocalPush(store, id, now);
+
+  try {
+    // 1. Direct deletion from Supabase cadence_sync_records
+    const { error: delError } = await supabase
+      .from(SYNC_TABLE)
+      .delete()
+      .eq("user_id", userId)
+      .eq("store_name", store)
+      .eq("record_id", id);
+
+    if (delError) {
+      console.warn(
+        `Direct cloud deletion failed for ${store}:${id}, attempting RPC fallback:`,
+        delError,
+      );
+      const { error: rpcError } = await supabase.rpc("upsert_cadence_sync_record", {
+        p_store_name: store,
+        p_record_id: id,
+        p_data: { _clientId: getLocalClientId() },
+        p_updated_at: now,
+        p_deleted: true,
+      });
+      if (rpcError) {
+        console.error(`Cloud deletion failed for ${store}:${id}:`, rpcError);
+        return false;
+      }
+    }
+
+    // Successfully removed remotely: clear local tombstone
+    await clearTombstone(store, id);
+    return true;
+  } catch (error) {
+    console.warn(`Network error deleting record ${store}:${id} from cloud:`, error);
+    return false;
+  }
+}
+
+/**
  * Fetches all local items flagged with pending_sync: true (or pending deletions)
  * and pushes them to Supabase. Once each item is successfully saved remotely,
  * its pending_sync flag is removed from local storage.
@@ -93,33 +155,64 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
   for (const record of pendingRecords) {
     try {
       trackLocalPush(record.store, record.id, record.updatedAt);
-      // Remove local-only pending_sync flag before uploading to Supabase
-      let payloadData: Record<string, unknown> | null = null;
-      if (record.data) {
-        const { pending_sync, ...rest } = record.data;
-        payloadData = { ...rest, synced: true, _clientId: clientId };
-      } else if (record.deleted) {
-        payloadData = { _clientId: clientId };
-      }
 
-      const { error } = await supabase.rpc("upsert_cadence_sync_record", {
-        p_store_name: record.store,
-        p_record_id: record.id,
-        p_data: payloadData,
-        p_updated_at: record.updatedAt,
-        p_deleted: record.deleted,
-      });
+      if (record.deleted) {
+        // Direct delete from Supabase table
+        const { error: delError } = await supabase
+          .from(SYNC_TABLE)
+          .delete()
+          .eq("user_id", userId)
+          .eq("store_name", record.store)
+          .eq("record_id", record.id);
 
-      if (error) {
-        console.error(`Failed to push record ${record.store}:${record.id} to Supabase:`, error);
-        failedCount++;
-      } else {
-        pushedCount++;
-        // Push succeeded: remove pending_sync flag from local item
-        if (record.deleted) {
+        let rpcFailed = false;
+        if (delError) {
+          // Fallback to RPC upsert with deleted: true
+          const { error: rpcError } = await supabase.rpc("upsert_cadence_sync_record", {
+            p_store_name: record.store,
+            p_record_id: record.id,
+            p_data: { _clientId: clientId },
+            p_updated_at: record.updatedAt,
+            p_deleted: true,
+          });
+          if (rpcError) {
+            console.error(
+              `Failed to push deleted tombstone ${record.store}:${record.id}:`,
+              rpcError,
+            );
+            rpcFailed = true;
+            failedCount++;
+          }
+        }
+
+        if (!rpcFailed) {
+          pushedCount++;
           await clearTombstone(record.store, record.id);
-        } else if (record.data) {
-          await clearPendingSyncFlag(record.store, record.id, record.data);
+        }
+      } else {
+        // Remove local-only pending_sync flag before uploading to Supabase
+        let payloadData: Record<string, unknown> | null = null;
+        if (record.data) {
+          const { pending_sync, ...rest } = record.data;
+          payloadData = { ...rest, synced: true, _clientId: clientId };
+        }
+
+        const { error } = await supabase.rpc("upsert_cadence_sync_record", {
+          p_store_name: record.store,
+          p_record_id: record.id,
+          p_data: payloadData,
+          p_updated_at: record.updatedAt,
+          p_deleted: false,
+        });
+
+        if (error) {
+          console.error(`Failed to push record ${record.store}:${record.id} to Supabase:`, error);
+          failedCount++;
+        } else {
+          pushedCount++;
+          if (record.data) {
+            await clearPendingSyncFlag(record.store, record.id, record.data);
+          }
         }
       }
     } catch (pushError) {
@@ -140,6 +233,14 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
   return { pushedCount, failedCount };
 }
 
+/**
+ * Global Sync Reconciliation Logic:
+ * 1. Fetches all sync records for the authenticated user from Supabase.
+ * 2. Compares active cloud IDs against local IndexedDB records across EVERY entity store.
+ * 3. Explicitly executes local DELETE operations for any records that exist locally but are
+ *    missing from Supabase (deleted on another device or removed in cloud).
+ * 4. Hydrates and merges incoming newer modifications into local storage.
+ */
 export async function pullRemoteRecords(): Promise<boolean> {
   if (!isOnline()) return false;
   const userId = await getAuthenticatedUserId();
@@ -151,14 +252,13 @@ export async function pullRemoteRecords(): Promise<boolean> {
     let from = 0;
     const allRows: RemoteSyncRow[] = [];
 
-    // Paginate using .range(from, to) to safely bypass PostgREST's 1,000-row default limit
+    // Paginate using .range(from, to) to safely fetch all cloud sync records for this user
     while (true) {
       const to = from + PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from(SYNC_TABLE)
         .select("store_name, record_id, data, updated_at, deleted")
         .eq("user_id", userId)
-        .gt("updated_at", lastSyncTimestamp)
         .order("updated_at", { ascending: true })
         .order("record_id", { ascending: true })
         .range(from, to);
@@ -179,11 +279,22 @@ export async function pullRemoteRecords(): Promise<boolean> {
       from += PAGE_SIZE;
     }
 
-    if (allRows.length === 0) {
-      return false;
+    let hasChanges = false;
+    let newestTimestamp = lastSyncTimestamp;
+
+    // 1. Map all active remote record IDs by store (where deleted === false)
+    const activeRemoteIdsByStore = new Map<string, Set<string>>();
+    for (const store of RECONCILED_ENTITY_STORES) {
+      activeRemoteIdsByStore.set(store, new Set<string>());
     }
 
-    let newestTimestamp = lastSyncTimestamp;
+    for (const row of allRows) {
+      if (!row.deleted) {
+        activeRemoteIdsByStore.get(row.store_name)?.add(row.record_id);
+      }
+    }
+
+    // 2. Hydrate/update local store with remote records
     const localRecords = await getSyncRecords();
     const localMap = new Map<string, SyncRecord>();
     for (const item of localRecords) {
@@ -204,17 +315,57 @@ export async function pullRemoteRecords(): Promise<boolean> {
       const localTime = local ? new Date(local.updatedAt).getTime() || 0 : 0;
       const remoteTime = new Date(record.updatedAt).getTime() || 0;
 
-      if (!local || localTime < remoteTime) {
+      // Remote tombstone: delete from local IndexedDB if present
+      if (record.deleted) {
+        if (local) {
+          await mergeSyncRecord(record);
+          localMap.delete(`${record.store}-${record.id}`);
+          hasChanges = true;
+        }
+      } else if (!local || localTime < remoteTime) {
         await mergeSyncRecord(record);
         localMap.set(`${record.store}-${record.id}`, record);
+        hasChanges = true;
       }
-      if (record.updatedAt > newestTimestamp) newestTimestamp = record.updatedAt;
+
+      if (record.updatedAt > newestTimestamp) {
+        newestTimestamp = record.updatedAt;
+      }
+    }
+
+    // 3. Global Reconciliation Across EVERY Entity:
+    // Compare local records against active IDs fetched from Supabase.
+    // If a record exists locally with synced: true (or without pending offline changes)
+    // but is completely missing from Supabase's active IDs, explicitly delete it locally.
+    for (const store of RECONCILED_ENTITY_STORES) {
+      const activeIds = activeRemoteIdsByStore.get(store) ?? new Set<string>();
+      const localStoreItems = await getAllItemsFromStore(store);
+
+      for (const localItem of localStoreItems) {
+        // Active in cloud: keep
+        if (activeIds.has(localItem.id)) {
+          continue;
+        }
+
+        // Offline safety: protect locally-created or edited items that haven't pushed yet
+        if (localItem.pending_sync === true || localItem.synced === false) {
+          continue;
+        }
+
+        // The item was previously synced with cloud, but is no longer active in Supabase cloud.
+        // It was deleted on mobile/another device or removed in Supabase.
+        // Explicitly execute local DELETE operation!
+        await removeLocalOnly(store, localItem.id);
+        await clearTombstone(store, localItem.id);
+        hasChanges = true;
+      }
     }
 
     if (newestTimestamp !== lastSyncTimestamp) {
       await setLastSyncTimestamp(newestTimestamp);
     }
-    return allRows.length > 0;
+
+    return hasChanges;
   } catch (pullError) {
     console.error("Network error while pulling remote records:", pullError);
     return false;

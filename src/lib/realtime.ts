@@ -196,8 +196,36 @@ export async function processPostgresChange(
     store = "habits";
     id = (activeRow["id"] as string) || "";
     data = newRow ? { ...newRow } : null;
-  } else if (payload.table === "progress" || payload.table === "habit_logs") {
+  } else if (
+    payload.table === "progress" ||
+    payload.table === "habit_logs" ||
+    payload.table === "habitLogs"
+  ) {
     store = "habitLogs";
+    id = (activeRow["id"] as string) || "";
+    data = newRow ? { ...newRow } : null;
+  } else if (payload.table === "goals") {
+    store = "goals";
+    id = (activeRow["id"] as string) || "";
+    data = newRow ? { ...newRow } : null;
+  } else if (payload.table === "routines") {
+    store = "routines";
+    id = (activeRow["id"] as string) || "";
+    data = newRow ? { ...newRow } : null;
+  } else if (payload.table === "routine_logs" || payload.table === "routineLogs") {
+    store = "routineLogs";
+    id = (activeRow["id"] as string) || "";
+    data = newRow ? { ...newRow } : null;
+  } else if (
+    payload.table === "bad_habits" ||
+    payload.table === "badHabits" ||
+    payload.table === "quit_trackers"
+  ) {
+    store = "badHabits";
+    id = (activeRow["id"] as string) || "";
+    data = newRow ? { ...newRow } : null;
+  } else if (payload.table === "groups") {
+    store = "groups";
     id = (activeRow["id"] as string) || "";
     data = newRow ? { ...newRow } : null;
   } else {
@@ -260,6 +288,10 @@ export async function processPostgresChange(
     };
 
     await repo.mergeSyncRecord(syncRecord);
+
+    if (isDeleted) {
+      await repo.clearTombstone(store, id);
+    }
 
     // Update last sync timestamp if remote event is newer
     const lastSync = await repo.getLastSyncTimestamp();

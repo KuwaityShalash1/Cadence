@@ -172,6 +172,7 @@ export interface AppActions {
   updateHabit: (habit: Habit) => void;
   archiveHabit: (id: string, archived: boolean) => void;
   removeHabit: (id: string) => void;
+  deleteHabit: (id: string) => void;
   /** Undo-delete support: re-inserts a previously deleted habit (logs stay in the DB). */
   restoreHabit: (habit: Habit) => void;
   reorderHabits: (orderedIds: string[]) => void;
@@ -182,21 +183,26 @@ export interface AppActions {
   clearLog: (habitId: string, date: string) => void;
   upsertGroup: (group: Group) => void;
   removeGroup: (id: string) => void;
+  deleteGroup: (id: string) => void;
   upsertGoal: (goal: Goal) => void;
   adjustGoalValue: (goalId: string, delta: number) => void;
   setGoalValue: (goalId: string, value: number) => void;
   removeGoal: (id: string) => void;
+  deleteGoal: (id: string) => void;
   reorderGoals: (orderedIds: string[]) => void;
   /** Undo-delete support: re-inserts a previously deleted goal. */
   restoreGoal: (goal: Goal) => void;
   upsertRoutine: (routine: Routine) => void;
   removeRoutine: (id: string) => void;
+  deleteRoutine: (id: string) => void;
   reorderRoutines: (orderedIds: string[]) => void;
   /** Undo-delete support: re-inserts a previously deleted routine. */
   restoreRoutine: (routine: Routine) => void;
   toggleRoutineStep: (routineId: string, stepId: string, date: string) => void;
   upsertBadHabit: (habit: BadHabit) => void;
   removeBadHabit: (id: string) => void;
+  deleteBadHabit: (id: string) => void;
+  deleteQuitTracker: (id: string) => void;
   reorderTrackers: (orderedIds: string[]) => void;
   /** Undo-delete support: re-inserts a previously deleted quit tracker (history included). */
   restoreBadHabit: (habit: BadHabit) => void;
@@ -1003,6 +1009,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
         for (const g of goalsToSave) void repo.saveGoal(g);
         for (const r of routinesToSave) void repo.saveRoutine(r);
       },
+      deleteHabit(id) {
+        const goalsToSave: Goal[] = [];
+        const routinesToSave: Routine[] = [];
+
+        setState((prev) => {
+          const habits = prev.habits.filter((h) => h.id !== id);
+          const goals = prev.goals.map((g) => {
+            if (!g.habitIds.includes(id)) return g;
+            const nextGoal = { ...g, habitIds: g.habitIds.filter((hid) => hid !== id) };
+            goalsToSave.push(nextGoal);
+            return nextGoal;
+          });
+          const routines = prev.routines.map((r) => {
+            if (!r.steps.some((s) => s.habitId === id)) return r;
+            const nextRoutine = {
+              ...r,
+              steps: r.steps.map((s) => (s.habitId === id ? { ...s, habitId: undefined } : s)),
+            };
+            routinesToSave.push(nextRoutine);
+            return nextRoutine;
+          });
+
+          return { ...prev, habits, goals, routines };
+        });
+
+        void repo.deleteHabit(id);
+        for (const g of goalsToSave) void repo.saveGoal(g);
+        for (const r of routinesToSave) void repo.saveRoutine(r);
+      },
       restoreHabit(habit) {
         // A deleted habit's daily logs were never removed (only the habit
         // record itself), so pushing the original object back restores the
@@ -1107,6 +1142,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({ ...prev, groups: prev.groups.filter((g) => g.id !== id) }));
         void repo.deleteGroup(id);
       },
+      deleteGroup(id) {
+        setState((prev) => ({ ...prev, groups: prev.groups.filter((g) => g.id !== id) }));
+        void repo.deleteGroup(id);
+      },
       upsertGoal(goal) {
         const selectedHabitIds = new Set(goal.habitIds);
         const goalsToSave: Goal[] = [];
@@ -1203,6 +1242,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         void repo.deleteGoal(id);
         for (const h of habitsToSave) void repo.saveHabit(h);
       },
+      deleteGoal(id) {
+        const habitsToSave: Habit[] = [];
+        setState((prev) => {
+          habitsToSave.length = 0;
+          const habits = prev.habits.map((habit) => {
+            if (habit.goalId !== id) return habit;
+            const updatedHabit = { ...habit, goalId: undefined };
+            habitsToSave.push(updatedHabit);
+            return updatedHabit;
+          });
+          const goals = prev.goals.filter((g) => g.id !== id);
+          return { ...prev, habits, goals };
+        });
+
+        void repo.deleteGoal(id);
+        for (const h of habitsToSave) void repo.saveHabit(h);
+      },
       restoreGoal(goal) {
         const selectedHabitIds = new Set(goal.habitIds);
         const goalsToSave: Goal[] = [];
@@ -1264,6 +1320,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         void repo.saveRoutine(routine);
       },
       removeRoutine(id) {
+        setState((prev) => ({ ...prev, routines: prev.routines.filter((r) => r.id !== id) }));
+        void repo.deleteRoutine(id);
+      },
+      deleteRoutine(id) {
         setState((prev) => ({ ...prev, routines: prev.routines.filter((r) => r.id !== id) }));
         void repo.deleteRoutine(id);
       },
@@ -1562,6 +1622,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           badHabits: prev.badHabits.filter((h) => h.id !== id),
         }));
         void repo.deleteBadHabit(id);
+      },
+      deleteBadHabit(id) {
+        setState((prev) => ({
+          ...prev,
+          badHabits: prev.badHabits.filter((h) => h.id !== id),
+        }));
+        void repo.deleteBadHabit(id);
+      },
+      deleteQuitTracker(id) {
+        setState((prev) => ({
+          ...prev,
+          badHabits: prev.badHabits.filter((h) => h.id !== id),
+        }));
+        void repo.deleteQuitTracker(id);
       },
       restoreBadHabit(habit) {
         // The relapse history lives inside the BadHabit object itself, so

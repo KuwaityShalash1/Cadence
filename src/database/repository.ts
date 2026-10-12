@@ -140,15 +140,30 @@ export async function clearTombstone(store: string, id: string): Promise<void> {
   }
 }
 
-function removeAndSync(store: Parameters<typeof remove>[0], id: string): Promise<void> {
-  return remove(store, id).then(async () => {
-    await recordTombstone(store, id);
-    void import("@/lib/sync")
-      .then(({ pushPendingRecords }) => pushPendingRecords())
-      .catch((error: unknown) => {
+export async function getAllItemsFromStore(
+  store: Parameters<typeof remove>[0],
+): Promise<SyncableRecord[]> {
+  return getAll<SyncableRecord>(store);
+}
+
+export async function removeAndSync(
+  store: Parameters<typeof remove>[0],
+  id: string,
+): Promise<void> {
+  await remove(store, id);
+  await recordTombstone(store, id);
+  try {
+    const { deleteRecordFromCloud, pushPendingRecords } = await import("@/lib/sync");
+    // Attempt simultaneous cloud deletion if network and auth are available
+    const deletedInCloud = await deleteRecordFromCloud(store, id);
+    if (!deletedInCloud) {
+      void pushPendingRecords().catch((error: unknown) => {
         console.warn("Background sync delete push deferred or failed:", error);
       });
-  });
+    }
+  } catch (error: unknown) {
+    console.warn("Simultaneous cloud delete deferred to background sync:", error);
+  }
 }
 
 export interface Snapshot {
@@ -277,9 +292,11 @@ export const deleteGoal = (id: string) => removeAndSync("goals", id);
 export const saveRoutine = (routine: Routine) => write("routines", routine);
 export const deleteRoutine = (id: string) => removeAndSync("routines", id);
 export const saveRoutineLog = (log: RoutineLog) => write("routineLogs", log);
+export const deleteRoutineLog = (id: string) => removeAndSync("routineLogs", id);
 
 export const saveBadHabit = (habit: BadHabit) => write("badHabits", habit);
 export const deleteBadHabit = (id: string) => removeAndSync("badHabits", id);
+export const deleteQuitTracker = (id: string) => removeAndSync("badHabits", id);
 
 export const saveSettings = (settings: AppSettings) => write("meta", settings);
 export const saveTimer = (timer: TimerState) => write("meta", timer);

@@ -122,14 +122,8 @@ export function mergeBadHabitRecord(
   remoteHabit: BadHabit,
   canonicalId: string,
 ): BadHabit {
-  const localTime = Math.max(
-    toTimestampMs(localHabit.updatedAt),
-    localHabit.createdAt,
-  );
-  const remoteTime = Math.max(
-    toTimestampMs(remoteHabit.updatedAt),
-    remoteHabit.createdAt,
-  );
+  const localTime = Math.max(toTimestampMs(localHabit.updatedAt), localHabit.createdAt);
+  const remoteTime = Math.max(toTimestampMs(remoteHabit.updatedAt), remoteHabit.createdAt);
 
   const primary = localTime >= remoteTime ? localHabit : remoteHabit;
   const secondary = localTime >= remoteTime ? remoteHabit : localHabit;
@@ -142,9 +136,7 @@ export function mergeBadHabitRecord(
   for (const record of primary.history ?? []) {
     if (record?.id) historyMap.set(record.id, record);
   }
-  const mergedHistory = Array.from(historyMap.values()).sort(
-    (a, b) => b.relapsedAt - a.relapsedAt,
-  );
+  const mergedHistory = Array.from(historyMap.values()).sort((a, b) => b.relapsedAt - a.relapsedAt);
 
   // Merge usageLogs (UsageLog[]): deduplicate by ID or date and sort ascending by date
   const usageMap = new Map<string, UsageLog>();
@@ -591,7 +583,20 @@ export async function mergeLocalDataToCloud(
           continue;
         }
 
-        // No match: local-only habit created offline
+        // No match:
+        // If remote has active entities and this local habit was previously synced with cloud,
+        // it was deleted on another device/cloud. Delete locally to reconcile!
+        if (
+          hasRemoteEntities &&
+          (localHabit as repo.SyncableRecord).synced === true &&
+          !(localHabit as repo.SyncableRecord).pending_sync
+        ) {
+          localHabitsToDelete.push(localHabit.id);
+          stats.habitsResolved++;
+          continue;
+        }
+
+        // Local-only habit created offline
         idMapping.set(localHabit.id, localHabit.id);
         const localOnlyHabit: Habit = {
           ...localHabit,
@@ -670,6 +675,17 @@ export async function mergeLocalDataToCloud(
           });
           stats.logsResolved++;
         } else {
+          // If remote has data and this log was previously synced, it was deleted remotely
+          if (
+            hasRemoteEntities &&
+            (localLog as repo.SyncableRecord).synced === true &&
+            !(localLog as repo.SyncableRecord).pending_sync
+          ) {
+            localLogsToDelete.push(canonicalLogId);
+            stats.logsResolved++;
+            continue;
+          }
+
           // Local-only progress log
           const syncedLog: HabitLog = { ...localLog, synced: true };
           habitLogsToSaveLocally.push(syncedLog);
@@ -693,7 +709,24 @@ export async function mergeLocalDataToCloud(
 
       // 5. Remap references in Goals and Routines if habit IDs changed
       const goalsToSave: Goal[] = [];
+      const remoteGoalsById = new Map<string, Goal>();
+      for (const rg of remoteData.goals) {
+        remoteGoalsById.set(rg.id, rg);
+      }
+      const localGoalsToDelete: string[] = [];
+
       for (const goal of localData.goals) {
+        const remoteGoal = remoteGoalsById.get(goal.id);
+        if (
+          !remoteGoal &&
+          hasRemoteEntities &&
+          (goal as repo.SyncableRecord).synced === true &&
+          !(goal as repo.SyncableRecord).pending_sync
+        ) {
+          localGoalsToDelete.push(goal.id);
+          continue;
+        }
+
         let changed = false;
         const nextHabitIds = goal.habitIds.map((hid) => {
           const remapped = idMapping.get(hid);
@@ -705,7 +738,7 @@ export async function mergeLocalDataToCloud(
         });
 
         const updatedGoal = changed ? { ...goal, habitIds: nextHabitIds } : goal;
-        goalsToSave.push({ ...updatedGoal, synced: true });
+        goalsToSave.push({ ...(remoteGoal ?? updatedGoal), synced: true });
         recordsToUpload.push({
           store: "goals",
           id: updatedGoal.id,
@@ -715,8 +748,31 @@ export async function mergeLocalDataToCloud(
         });
       }
 
+      for (const rg of remoteData.goals) {
+        if (!localData.goals.some((g) => g.id === rg.id)) {
+          goalsToSave.push({ ...rg, synced: true });
+        }
+      }
+
       const routinesToSave: Routine[] = [];
+      const remoteRoutinesById = new Map<string, Routine>();
+      for (const rr of remoteData.routines) {
+        remoteRoutinesById.set(rr.id, rr);
+      }
+      const localRoutinesToDelete: string[] = [];
+
       for (const routine of localData.routines) {
+        const remoteRoutine = remoteRoutinesById.get(routine.id);
+        if (
+          !remoteRoutine &&
+          hasRemoteEntities &&
+          (routine as repo.SyncableRecord).synced === true &&
+          !(routine as repo.SyncableRecord).pending_sync
+        ) {
+          localRoutinesToDelete.push(routine.id);
+          continue;
+        }
+
         let changed = false;
         const nextSteps = routine.steps.map((step) => {
           if (step.habitId && idMapping.has(step.habitId)) {
@@ -730,7 +786,7 @@ export async function mergeLocalDataToCloud(
         });
 
         const updatedRoutine = changed ? { ...routine, steps: nextSteps } : routine;
-        routinesToSave.push({ ...updatedRoutine, synced: true });
+        routinesToSave.push({ ...(remoteRoutine ?? updatedRoutine), synced: true });
         recordsToUpload.push({
           store: "routines",
           id: updatedRoutine.id,
@@ -738,6 +794,47 @@ export async function mergeLocalDataToCloud(
           updatedAt: updatedRoutine.updatedAt ?? new Date().toISOString(),
           deleted: false,
         });
+      }
+
+      for (const rr of remoteData.routines) {
+        if (!localData.routines.some((r) => r.id === rr.id)) {
+          routinesToSave.push({ ...rr, synced: true });
+        }
+      }
+
+      // Routine logs reconciliation
+      const routineLogsToSave: RoutineLog[] = [];
+      const remoteRoutineLogsById = new Map<string, RoutineLog>();
+      for (const rLog of remoteData.routineLogs) {
+        remoteRoutineLogsById.set(rLog.id, rLog);
+      }
+      const localRoutineLogsToDelete: string[] = [];
+
+      for (const rLog of localData.routineLogs) {
+        const remoteRLog = remoteRoutineLogsById.get(rLog.id);
+        if (
+          !remoteRLog &&
+          hasRemoteEntities &&
+          (rLog as repo.SyncableRecord).synced === true &&
+          !(rLog as repo.SyncableRecord).pending_sync
+        ) {
+          localRoutineLogsToDelete.push(rLog.id);
+          continue;
+        }
+        routineLogsToSave.push({ ...(remoteRLog ?? rLog), synced: true });
+        recordsToUpload.push({
+          store: "routineLogs",
+          id: rLog.id,
+          data: (remoteRLog ?? rLog) as unknown as Record<string, unknown>,
+          updatedAt: new Date((remoteRLog ?? rLog).updatedAt).toISOString(),
+          deleted: false,
+        });
+      }
+
+      for (const rLog of remoteData.routineLogs) {
+        if (!localData.routineLogs.some((l) => l.id === rLog.id)) {
+          routineLogsToSave.push({ ...rLog, synced: true });
+        }
       }
 
       // 6. Conflict Resolution for Bad Habits (Quit Trackers)
@@ -791,7 +888,20 @@ export async function mergeLocalDataToCloud(
           continue;
         }
 
-        // No match: local-only quit tracker created offline
+        // No match:
+        // If remote has data and this local quit tracker was previously synced with cloud,
+        // it was deleted remotely! Reconcile by deleting locally.
+        if (
+          hasRemoteEntities &&
+          (localBadHabit as repo.SyncableRecord).synced === true &&
+          !(localBadHabit as repo.SyncableRecord).pending_sync
+        ) {
+          localBadHabitsToDelete.push(localBadHabit.id);
+          stats.badHabitsResolved = (stats.badHabitsResolved ?? 0) + 1;
+          continue;
+        }
+
+        // Local-only quit tracker created offline
         const localOnlyBadHabit: BadHabit = {
           ...localBadHabit,
           synced: true,
@@ -822,9 +932,19 @@ export async function mergeLocalDataToCloud(
         remoteGroupsById.set(rg.id, rg);
       }
       const processedRemoteGroupIds = new Set<string>();
+      const localGroupsToDelete: string[] = [];
 
       for (const group of localData.groups) {
         const remoteGroup = remoteGroupsById.get(group.id);
+        if (
+          !remoteGroup &&
+          hasRemoteEntities &&
+          (group as repo.SyncableRecord).synced === true &&
+          !(group as repo.SyncableRecord).pending_sync
+        ) {
+          localGroupsToDelete.push(group.id);
+          continue;
+        }
         const mergedGroup: Group = remoteGroup
           ? { ...remoteGroup, ...group, synced: true }
           : { ...group, synced: true };
@@ -849,7 +969,7 @@ export async function mergeLocalDataToCloud(
       await pushRecordsToSupabase(recordsToUpload, userId);
 
       // 9. Apply local storage updates atomically
-      // Remove old remapped local records
+      // Remove old remapped or deleted local records
       for (const oldHabitId of localHabitsToDelete) {
         await repo.removeLocalOnly("habits", oldHabitId);
       }
@@ -858,6 +978,18 @@ export async function mergeLocalDataToCloud(
       }
       for (const oldBadHabitId of localBadHabitsToDelete) {
         await repo.removeLocalOnly("badHabits", oldBadHabitId);
+      }
+      for (const oldGoalId of localGoalsToDelete) {
+        await repo.removeLocalOnly("goals", oldGoalId);
+      }
+      for (const oldRoutineId of localRoutinesToDelete) {
+        await repo.removeLocalOnly("routines", oldRoutineId);
+      }
+      for (const oldRLogId of localRoutineLogsToDelete) {
+        await repo.removeLocalOnly("routineLogs", oldRLogId);
+      }
+      for (const oldGroupId of localGroupsToDelete) {
+        await repo.removeLocalOnly("groups", oldGroupId);
       }
 
       // Save unified merged datasets marked with synced: true
@@ -868,6 +1000,9 @@ export async function mergeLocalDataToCloud(
       }
       if (routinesToSave.length > 0) {
         await repo.saveSyncedMany("routines", routinesToSave);
+      }
+      if (routineLogsToSave.length > 0) {
+        await repo.saveSyncedMany("routineLogs", routineLogsToSave);
       }
       if (badHabitsToSaveLocally.length > 0) {
         await repo.saveSyncedMany("badHabits", badHabitsToSaveLocally);
