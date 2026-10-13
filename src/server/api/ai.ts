@@ -1,43 +1,12 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { AiRequestBody, AiResponsePayload, ToolCallPayload } from "../../types/ai";
 
-/**
- * Loads API keys from process.env or falls back to reading .env.local / .env from disk.
- * Ensures secrets are never required to be bundled on the client side.
- */
-function getApiKeys(): { geminiApiKey: string; groqApiKey: string } {
-  let geminiApiKey = process.env["GEMINI_API_KEY"] || "";
-  let groqApiKey = process.env["GROQ_API_KEY"] || "";
-
-  if (!geminiApiKey || !groqApiKey) {
-    try {
-      const candidates = [
-        path.resolve(process.cwd(), ".env.local"),
-        path.resolve(process.cwd(), ".env"),
-      ];
-      for (const envPath of candidates) {
-        if (fs.existsSync(envPath)) {
-          const content = fs.readFileSync(envPath, "utf8");
-          for (const line of content.split("\n")) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith("#")) continue;
-            const [k, ...vParts] = trimmed.split("=");
-            const key = k?.trim();
-            let val = vParts.join("=").trim();
-            if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-            if (val.startsWith("'") && val.endsWith("'")) val = val.slice(1, -1);
-            if (key === "GEMINI_API_KEY" && !geminiApiKey) geminiApiKey = val;
-            if (key === "GROQ_API_KEY" && !groqApiKey) groqApiKey = val;
-          }
-        }
-      }
-    } catch {
-      // Ignore file reading errors in serverless environments
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      GEMINI_API_KEY?: string;
+      GROQ_API_KEY?: string;
     }
   }
-
-  return { geminiApiKey, groqApiKey };
 }
 
 /**
@@ -386,102 +355,116 @@ When you execute a tool call, accompany it with a short, helpful explanation of 
 }
 
 /**
+ * Strict timeout constant to prevent Vercel Serverless Function 10-second termination.
+ */
+const TIMEOUT_MS = 4500;
+
+/**
  * Primary Provider: Google Gemini
  */
 async function callGemini(body: AiRequestBody, geminiKey: string): Promise<AiResponsePayload> {
   const systemInstructionText = buildSystemPrompt(body);
 
-  // Translate messages into Gemini format
   const contents = body.messages.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
   }));
 
-  // Potential models in order of priority
   const models = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
     "gemini-3.8-flash",
     "gemini-flash-latest",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
   ];
 
-  let lastError: Error | null = null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  for (const model of models) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7000);
+  let lastError: unknown = null;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          signal: controller.signal,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: {
-              parts: [{ text: systemInstructionText }],
-            },
-            tools: GEMINI_TOOLS,
-          }),
-        },
-      );
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini [${model}] HTTP ${response.status}: ${errorText}`);
+  try {
+    for (const model of models) {
+      if (controller.signal.aborted) {
+        throw new Error(`Gemini request timed out after ${TIMEOUT_MS}ms`);
       }
 
-      const data = (await response.json()) as {
-        candidates?: Array<{
-          content?: {
-            parts?: Array<{
-              text?: string;
-              functionCall?: {
-                name: string;
-                args: Record<string, unknown>;
-              };
-            }>;
-          };
-        }>;
-      };
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+          {
+            method: "POST",
+            signal: controller.signal,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents,
+              systemInstruction: {
+                parts: [{ text: systemInstructionText }],
+              },
+              tools: GEMINI_TOOLS,
+            }),
+          },
+        );
 
-      const candidate = data.candidates?.[0];
-      if (!candidate?.content?.parts) {
-        throw new Error(`Gemini [${model}] returned empty candidates`);
-      }
-
-      let text = "";
-      const toolCalls: ToolCallPayload[] = [];
-
-      for (const part of candidate.content.parts) {
-        if (part.text) {
-          text += part.text;
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Gemini [${model}] HTTP ${response.status}: ${errorText}`);
         }
-        if (part.functionCall) {
-          toolCalls.push({
-            name: part.functionCall.name,
-            args: part.functionCall.args || {},
-          });
-        }
-      }
 
-      return {
-        text: text.trim(),
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        providerUsed: "gemini",
-      };
-    } catch (err: unknown) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      // Continue to next Gemini candidate model if 404 or 503
-      continue;
+        const data = (await response.json()) as {
+          candidates?: Array<{
+            content?: {
+              parts?: Array<{
+                text?: string;
+                functionCall?: {
+                  name: string;
+                  args: Record<string, unknown>;
+                };
+              }>;
+            };
+          }>;
+        };
+
+        const candidate = data.candidates?.[0];
+        if (!candidate?.content?.parts) {
+          throw new Error(`Gemini [${model}] returned empty candidates`);
+        }
+
+        let text = "";
+        const toolCalls: ToolCallPayload[] = [];
+
+        for (const part of candidate.content.parts) {
+          if (part.text) {
+            text += part.text;
+          }
+          if (part.functionCall) {
+            toolCalls.push({
+              name: part.functionCall.name,
+              args: part.functionCall.args || {},
+            });
+          }
+        }
+
+        return {
+          text: text.trim(),
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          providerUsed: "gemini",
+        };
+      } catch (err: unknown) {
+        lastError = err;
+        if (controller.signal.aborted) {
+          break;
+        }
+        // If model-specific failure, continue to next candidate model
+        continue;
+      }
     }
+  } finally {
+    clearTimeout(timeoutId);
   }
 
-  throw lastError ?? new Error("Gemini invocation failed on all candidate models");
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError ?? "Gemini invocation failed"));
 }
 
 /**
@@ -498,91 +481,108 @@ async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiRespons
     })),
   ];
 
-  // Candidates on Groq: standard llama-3.1-8b-instant, with verified fallback
-  const models = ["llama-3.1-8b-instant", "qwen/qwen3.8-27b", "openai/gpt-oss-20b"];
+  const models = [
+    "llama-3.1-8b-instant",
+    "llama-3.3-70b-versatile",
+    "qwen/qwen3.8-27b",
+  ];
 
-  let lastError: Error | null = null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  for (const model of models) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 9000);
+  let lastError: unknown = null;
 
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          tools: GROQ_TOOLS,
-          tool_choice: "auto",
-        }),
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Groq [${model}] HTTP ${response.status}: ${errorText}`);
+  try {
+    for (const model of models) {
+      if (controller.signal.aborted) {
+        throw new Error(`Groq request timed out after ${TIMEOUT_MS}ms`);
       }
 
-      const data = (await response.json()) as {
-        choices?: Array<{
-          message?: {
-            content?: string;
-            tool_calls?: Array<{
-              id?: string;
-              function: {
-                name: string;
-                arguments: string;
-              };
-            }>;
-          };
-        }>;
-      };
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            tools: GROQ_TOOLS,
+            tool_choice: "auto",
+          }),
+        });
 
-      const choice = data.choices?.[0];
-      if (!choice?.message) {
-        throw new Error(`Groq [${model}] returned empty response choice`);
-      }
-
-      let text = choice.message.content || "";
-      // Strip any internal reasoning tags if present
-      text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-
-      const toolCalls: ToolCallPayload[] = [];
-      if (choice.message.tool_calls) {
-        for (const tc of choice.message.tool_calls) {
-          let parsedArgs: Record<string, unknown> = {};
-          try {
-            parsedArgs = JSON.parse(tc.function.arguments);
-          } catch {
-            parsedArgs = {};
-          }
-          toolCalls.push({
-            id: tc.id,
-            name: tc.function.name,
-            args: parsedArgs,
-          });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Groq [${model}] HTTP ${response.status}: ${errorText}`);
         }
-      }
 
-      return {
-        text,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        providerUsed: "groq",
-      };
-    } catch (err: unknown) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      continue;
+        const data = (await response.json()) as {
+          choices?: Array<{
+            message?: {
+              content?: string;
+              tool_calls?: Array<{
+                id?: string;
+                function: {
+                  name: string;
+                  arguments: string;
+                };
+              }>;
+            };
+          }>;
+        };
+
+        const choice = data.choices?.[0];
+        if (!choice?.message) {
+          throw new Error(`Groq [${model}] returned empty response choice`);
+        }
+
+        let text = choice.message.content || "";
+        // Strip any internal reasoning tags if present
+        text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+
+        const toolCalls: ToolCallPayload[] = [];
+        if (choice.message.tool_calls) {
+          for (const tc of choice.message.tool_calls) {
+            let parsedArgs: Record<string, unknown> = {};
+            try {
+              parsedArgs = JSON.parse(tc.function.arguments);
+            } catch {
+              parsedArgs = {};
+            }
+            const payload: ToolCallPayload = {
+              name: tc.function.name,
+              args: parsedArgs,
+            };
+            if (tc.id !== undefined) {
+              payload.id = tc.id;
+            }
+            toolCalls.push(payload);
+          }
+        }
+
+        return {
+          text,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          providerUsed: "groq",
+        };
+      } catch (err: unknown) {
+        lastError = err;
+        if (controller.signal.aborted) {
+          break;
+        }
+        continue;
+      }
     }
+  } finally {
+    clearTimeout(timeoutId);
   }
 
-  throw lastError ?? new Error("Groq invocation failed on all candidate models");
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError ?? "Groq invocation failed"));
 }
 
 /**
@@ -627,7 +627,8 @@ export async function handleAiRequest(request: Request): Promise<Response> {
     );
   }
 
-  const { geminiApiKey, groqApiKey } = getApiKeys();
+  const geminiApiKey = process.env.GEMINI_API_KEY || "";
+  const groqApiKey = process.env.GROQ_API_KEY || "";
 
   // Dual-Provider Pipeline: Primary Gemini -> Fallback Groq
   let result: AiResponsePayload | null = null;
@@ -652,7 +653,7 @@ export async function handleAiRequest(request: Request): Promise<Response> {
       return new Response(
         JSON.stringify({
           error: "All AI providers failed or missing keys",
-          details: geminiError instanceof Error ? geminiError.message : "No keys",
+          details: geminiError instanceof Error ? geminiError.message : "No keys configured",
         }),
         {
           status: 502,
