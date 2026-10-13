@@ -587,101 +587,100 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // if a caller bypasses the UI.
       if (date > todayKey()) return;
 
-      let sideEffects: (() => void) | null = null;
+      const prev = stateRef.current;
+      const habit = prev.habits.find((h) => h.id === habitId);
+      if (!habit) return;
+      const id = logKey(habitId, date);
+      const existing = prev.habitLogs.find((l) => l.id === id);
+      const next = mutate(existing, habit);
 
-      setState((prev) => {
-        const habit = prev.habits.find((h) => h.id === habitId);
-        if (!habit) return prev;
-        const id = logKey(habitId, date);
-        const existing = prev.habitLogs.find((l) => l.id === id);
-        const next = mutate(existing, habit);
+      const wasComplete = existing ? existing.status === "complete" : false;
+      const isNowComplete = next ? next.status === "complete" : false;
+      const shouldPlaySound = !wasComplete && isNowComplete;
 
-        const wasComplete = existing ? existing.status === "complete" : false;
-        const isNowComplete = next ? next.status === "complete" : false;
-        const shouldPlaySound = !wasComplete && isNowComplete;
+      let routineLogs = prev.routineLogs;
+      const routineLogsToSave: RoutineLog[] = [];
+      const linkedRoutines = prev.routines.filter((routine) =>
+        routine.steps.some((step) => step.habitId === habitId),
+      );
+      for (const routine of linkedRoutines) {
+        const linkedStepIds = routine.steps
+          .filter((step) => step.habitId === habitId)
+          .map((step) => step.id);
+        const routineLogId = `${routine.id}:${date}`;
+        const existingRoutineLog = routineLogs.find((log) => log.id === routineLogId);
+        const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
 
-        let routineLogs = prev.routineLogs;
-        const routineLogsToSave: RoutineLog[] = [];
-        const linkedRoutines = prev.routines.filter((routine) =>
-          routine.steps.some((step) => step.habitId === habitId),
-        );
-        for (const routine of linkedRoutines) {
-          const linkedStepIds = routine.steps
-            .filter((step) => step.habitId === habitId)
-            .map((step) => step.id);
-          const routineLogId = `${routine.id}:${date}`;
-          const existingRoutineLog = routineLogs.find((log) => log.id === routineLogId);
-          const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
-
-          for (const stepId of linkedStepIds) {
-            if (isNowComplete) completedStepIds.add(stepId);
-            else completedStepIds.delete(stepId);
-          }
-
-          const nextCompletedStepIds = [...completedStepIds];
-          const changed = linkedStepIds.some((stepId) =>
-            isNowComplete
-              ? !existingRoutineLog?.completedStepIds.includes(stepId)
-              : existingRoutineLog?.completedStepIds.includes(stepId),
-          );
-          if (!changed) continue;
-
-          const nextRoutineLog: RoutineLog = {
-            id: routineLogId,
-            routineId: routine.id,
-            date,
-            completedStepIds: nextCompletedStepIds,
-            updatedAt: Date.now(),
-          };
-          routineLogsToSave.push(nextRoutineLog);
-          routineLogs = existingRoutineLog
-            ? routineLogs.map((log) => (log.id === routineLogId ? nextRoutineLog : log))
-            : [...routineLogs, nextRoutineLog];
+        for (const stepId of linkedStepIds) {
+          if (isNowComplete) completedStepIds.add(stepId);
+          else completedStepIds.delete(stepId);
         }
 
-        const nextHabitLogs = !next
-          ? prev.habitLogs.filter((l) => l.id !== id)
-          : existing
-            ? prev.habitLogs.map((l) => (l.id === id ? next : l))
-            : [...prev.habitLogs, next];
+        const nextCompletedStepIds = [...completedStepIds];
+        const changed = linkedStepIds.some((stepId) =>
+          isNowComplete
+            ? !existingRoutineLog?.completedStepIds.includes(stepId)
+            : existingRoutineLog?.completedStepIds.includes(stepId),
+        );
+        if (!changed) continue;
 
-        sideEffects = () => {
-          if (shouldPlaySound) {
-            playCompleteHabitSound();
-          }
+        const nextRoutineLog: RoutineLog = {
+          id: routineLogId,
+          routineId: routine.id,
+          date,
+          completedStepIds: nextCompletedStepIds,
+          updatedAt: Date.now(),
+        };
+        routineLogsToSave.push(nextRoutineLog);
+        routineLogs = existingRoutineLog
+          ? routineLogs.map((log) => (log.id === routineLogId ? nextRoutineLog : log))
+          : [...routineLogs, nextRoutineLog];
+      }
 
+      const nextHabitLogs = !next
+        ? prev.habitLogs.filter((l) => l.id !== id)
+        : existing
+          ? prev.habitLogs.map((l) => (l.id === id ? next : l))
+          : [...prev.habitLogs, next];
+
+      // 1. Pure state update derived from current state
+      const nextState = {
+        ...prev,
+        routineLogs,
+        habitLogs: nextHabitLogs,
+      };
+      stateRef.current = nextState;
+      setState(nextState);
+
+      // 2. Play sound effect outside setState
+      if (shouldPlaySound) {
+        playCompleteHabitSound();
+      }
+
+      // 3. Side effects outside setState with automated rollback and error toast
+      const persist = async () => {
+        try {
           const persistTasks: Promise<void>[] = [
             ...routineLogsToSave.map((rLog) => repo.saveRoutineLog(rLog)),
             !next ? repo.deleteLog(id) : repo.saveLog(next),
           ];
+          await Promise.all(persistTasks);
+        } catch (err) {
+          console.error("Critical: Failed to persist habit log to IndexedDB:", err);
+          toast.error(
+            t(
+              "appStore.saveFailed",
+              "Storage error: Progress could not be saved locally. Reverting changes.",
+            ),
+          );
+          // Automated rollback: restore in-memory state from database snapshot
+          const snapshot = await repo.loadSnapshot();
+          stateRef.current = snapshot;
+          setState(snapshot);
+        }
+      };
 
-          Promise.all(persistTasks).catch((err) => {
-            console.error("Critical: Failed to persist habit log to IndexedDB:", err);
-            toast.error(
-              t(
-                "appStore.saveFailed",
-                "Storage error: Progress could not be saved locally. Reverting changes.",
-              ),
-            );
-            // Automatic rollback: restore in-memory state from database snapshot
-            void repo.loadSnapshot().then((snapshot) => {
-              setState(snapshot);
-            });
-          });
-        };
-
-        // 1. Pure state transition derived strictly from prev
-        return {
-          ...prev,
-          routineLogs,
-          habitLogs: nextHabitLogs,
-        };
-      });
-
-      // 2. Side effects outside and after setState (prevents StrictMode double-execution and race conditions)
-      if (sideEffects) {
-        (sideEffects as () => void)();
-      }
+      void persist();
     },
     [t],
   );
@@ -796,145 +795,143 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         const monthKey = dayKey.slice(0, 7);
 
-        let result: FreezeResult = buildFreezeFailure("missing", 0, 0);
-        let sideEffects: (() => void) | null = null;
+        const prev = stateRef.current;
+        const habit = prev.habits.find((h) => h.id === habitId);
+        if (!habit) {
+          return buildFreezeFailure("missing", 0, 0);
+        }
 
-        setState((prev) => {
-          const habit = prev.habits.find((h) => h.id === habitId);
-          if (!habit) {
-            result = buildFreezeFailure("missing", 0, 0);
-            return prev;
-          }
+        // Roll the legacy monthly counter forward when the month changes.
+        const habitCurrent =
+          (habit.lastFreezeResetDate?.slice(0, 7) || monthKey) < monthKey
+            ? { ...habit, freezesUsedThisMonth: 0, lastFreezeResetDate: monthKey }
+            : habit;
 
-          // Roll the legacy monthly counter forward when the month changes.
-          const habitCurrent =
-            (habit.lastFreezeResetDate?.slice(0, 7) || monthKey) < monthKey
-              ? { ...habit, freezesUsedThisMonth: 0, lastFreezeResetDate: monthKey }
-              : habit;
+        const frozenDates = Array.isArray(habitCurrent.frozenDates) ? habitCurrent.frozenDates : [];
+        const isFrozen = frozenDates.includes(dayKey);
+        const max = habitCurrent.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT;
 
-          const frozenDates = Array.isArray(habitCurrent.frozenDates)
-            ? habitCurrent.frozenDates
-            : [];
-          const isFrozen = frozenDates.includes(dayKey);
-          const max = habitCurrent.freezesAllowedPerMonth ?? DEFAULT_MONTHLY_FREEZE_LIMIT;
+        const logId = logKey(habitId, dayKey);
+        const existingLog = prev.habitLogs.find((l) => l.id === logId);
 
-          const logId = logKey(habitId, dayKey);
-          const existingLog = prev.habitLogs.find((l) => l.id === logId);
+        // Completed days can't be frozen — the streak is already safe, so
+        // nothing is written and the monthly quota is not consumed.
+        if (!isFrozen && isCompletedLog(existingLog)) {
+          return buildFreezeFailure(
+            "already-completed",
+            countFrozenDaysThisMonth(habitCurrent, prev.habitLogs, monthKey),
+            max,
+          );
+        }
 
-          // Completed days can't be frozen — the streak is already safe, so
-          // nothing is written and the monthly quota is not consumed.
-          if (!isFrozen && isCompletedLog(existingLog)) {
-            result = buildFreezeFailure(
-              "already-completed",
-              countFrozenDaysThisMonth(habitCurrent, prev.habitLogs, monthKey),
-              max,
-            );
-            return prev;
-          }
+        // Used this calendar month — frozen logs merged with legacy dates.
+        const used = countFrozenDaysThisMonth(habitCurrent, prev.habitLogs, monthKey);
 
-          // Used this calendar month — frozen logs merged with legacy dates.
-          const used = countFrozenDaysThisMonth(habitCurrent, prev.habitLogs, monthKey);
+        // Enforce the monthly budget (unfreezing is always allowed).
+        if (!isFrozen && used >= max) {
+          return buildFreezeFailure("limit", used, max);
+        }
 
-          // Enforce the monthly budget (unfreezing is always allowed).
-          if (!isFrozen && used >= max) {
-            result = buildFreezeFailure("limit", used, max);
-            return prev;
-          }
+        const nextFrozenDates = isFrozen
+          ? frozenDates.filter((d) => d !== dayKey)
+          : [...frozenDates, dayKey];
+        const updatedHabit: Habit = {
+          ...habitCurrent,
+          frozenDates: nextFrozenDates,
+          freezesUsedThisMonth: isFrozen
+            ? Math.max(0, (habitCurrent.freezesUsedThisMonth ?? 0) - 1)
+            : (habitCurrent.freezesUsedThisMonth ?? 0) + 1,
+          lastFreezeResetDate: monthKey,
+          updatedAt: new Date().toISOString(),
+          pending_sync: true,
+          synced: false,
+        };
 
-          const nextFrozenDates = isFrozen
-            ? frozenDates.filter((d) => d !== dayKey)
-            : [...frozenDates, dayKey];
-          const updatedHabit: Habit = {
-            ...habitCurrent,
-            frozenDates: nextFrozenDates,
-            freezesUsedThisMonth: isFrozen
-              ? Math.max(0, (habitCurrent.freezesUsedThisMonth ?? 0) - 1)
-              : (habitCurrent.freezesUsedThisMonth ?? 0) + 1,
-            lastFreezeResetDate: monthKey,
-            updatedAt: new Date().toISOString(),
+        // Daily log — freezing overrides any existing state (even 'complete');
+        // unfreezing restores the previous completion when it still holds.
+        let nextLogs = prev.habitLogs;
+        let logToSave: HabitLog | null = null;
+        let logToDelete: string | null = null;
+
+        if (!isFrozen) {
+          const frozenLog: HabitLog = {
+            id: logId,
+            habitId,
+            date: dayKey,
+            // A completed day keeps its value — the status is what flips.
+            value: existingLog?.value ?? 0,
+            target: existingLog?.target ?? habit.target,
+            status: "frozen",
+            updatedAt: Date.now(),
             pending_sync: true,
             synced: false,
           };
-
-          // Daily log — freezing overrides any existing state (even 'complete');
-          // unfreezing restores the previous completion when it still holds.
-          let nextLogs = prev.habitLogs;
-          let logToSave: HabitLog | null = null;
-          let logToDelete: string | null = null;
-
-          if (!isFrozen) {
-            const frozenLog: HabitLog = {
-              id: logId,
-              habitId,
-              date: dayKey,
-              // A completed day keeps its value — the status is what flips.
-              value: existingLog?.value ?? 0,
-              target: existingLog?.target ?? habit.target,
-              status: "frozen",
+          logToSave = frozenLog;
+          nextLogs = existingLog
+            ? prev.habitLogs.map((l) => (l.id === logId ? frozenLog : l))
+            : [...prev.habitLogs, frozenLog];
+        } else if (existingLog && existingLog.status === "frozen") {
+          if (existingLog.value >= existingLog.target) {
+            const restoredLog: HabitLog = {
+              ...existingLog,
+              status: "complete",
               updatedAt: Date.now(),
               pending_sync: true,
               synced: false,
             };
-            logToSave = frozenLog;
-            nextLogs = existingLog
-              ? prev.habitLogs.map((l) => (l.id === logId ? frozenLog : l))
-              : [...prev.habitLogs, frozenLog];
-          } else if (existingLog && existingLog.status === "frozen") {
-            if (existingLog.value >= existingLog.target) {
-              const restoredLog: HabitLog = {
-                ...existingLog,
-                status: "complete",
-                updatedAt: Date.now(),
-                pending_sync: true,
-                synced: false,
-              };
-              logToSave = restoredLog;
-              nextLogs = prev.habitLogs.map((l) => (l.id === logId ? restoredLog : l));
-            } else {
-              logToDelete = logId;
-              nextLogs = prev.habitLogs.filter((l) => l.id !== logId);
-            }
+            logToSave = restoredLog;
+            nextLogs = prev.habitLogs.map((l) => (l.id === logId ? restoredLog : l));
+          } else {
+            logToDelete = logId;
+            nextLogs = prev.habitLogs.filter((l) => l.id !== logId);
           }
+        }
 
-          // A running timer for this habit can't continue through a freeze.
-          const stoppedTimer = !isFrozen && prev.timer?.habitId === habitId;
+        // A running timer for this habit can't continue through a freeze.
+        const stoppedTimer = !isFrozen && prev.timer?.habitId === habitId;
 
-          sideEffects = () => {
-            void repo.saveHabit(updatedHabit);
+        const nextState = {
+          ...prev,
+          timer: stoppedTimer ? null : prev.timer,
+          habits: prev.habits.map((h) => (h.id === habitId ? updatedHabit : h)),
+          habitLogs: nextLogs,
+        };
+        stateRef.current = nextState;
+        setState(nextState);
+
+        const result: FreezeResult = {
+          ok: true,
+          frozen: !isFrozen,
+          used: isFrozen ? Math.max(0, used - 1) : Math.min(used + 1, max),
+          max,
+          daysUntilReset: daysUntilMonthlyReset(),
+          ...(habit.name ? { habitName: habit.name } : {}),
+          ...(stoppedTimer ? { stoppedTimer: true } : {}),
+        };
+
+        // DB writes outside setState with rollback on persistence error
+        const persist = async () => {
+          try {
+            await repo.saveHabit(updatedHabit);
             if (logToSave) {
-              void repo.saveLog(logToSave);
+              await repo.saveLog(logToSave);
             }
             if (logToDelete) {
-              void repo.deleteLog(logToDelete);
+              await repo.deleteLog(logToDelete);
             }
             if (stoppedTimer) {
-              void repo.clearTimer();
+              await repo.clearTimer();
             }
-          };
+          } catch (err) {
+            console.error("Critical: Failed to persist freeze state to IndexedDB:", err);
+            toast.error(t("appStore.freezeFailed", "Failed to update streak freeze"));
+            const snapshot = await repo.loadSnapshot();
+            stateRef.current = snapshot;
+            setState(snapshot);
+          }
+        };
 
-          result = {
-            ok: true,
-            frozen: !isFrozen,
-            used: isFrozen ? Math.max(0, used - 1) : Math.min(used + 1, max),
-            max,
-            daysUntilReset: daysUntilMonthlyReset(),
-            ...(habit.name ? { habitName: habit.name } : {}),
-            ...(stoppedTimer ? { stoppedTimer: true } : {}),
-          };
-
-          // 1. Single pure state merge derived strictly from prev
-          return {
-            ...prev,
-            timer: stoppedTimer ? null : prev.timer,
-            habits: prev.habits.map((h) => (h.id === habitId ? updatedHabit : h)),
-            habitLogs: nextLogs,
-          };
-        });
-
-        // 2. DB writes outside and after setState
-        if (sideEffects) {
-          (sideEffects as () => void)();
-        }
+        void persist();
 
         return result;
       } catch (error) {
@@ -1517,135 +1514,216 @@ export function AppProvider({ children }: { children: ReactNode }) {
         void repo.saveTimer(timer);
       },
       pauseTimer() {
-        let timerToSave: TimerState | null = null;
-        setState((prev) => {
-          if (!prev.timer?.startedAt) return prev;
-          const timer: TimerState = {
-            ...prev.timer,
-            accumulatedMs: prev.timer.accumulatedMs + (Date.now() - prev.timer.startedAt),
-            startedAt: null,
-          };
-          timerToSave = timer;
-          return { ...prev, timer };
-        });
-        if (timerToSave) void repo.saveTimer(timerToSave);
+        const prev = stateRef.current;
+        if (!prev.timer?.startedAt) return;
+        const timer: TimerState = {
+          ...prev.timer,
+          accumulatedMs: prev.timer.accumulatedMs + (Date.now() - prev.timer.startedAt),
+          startedAt: null,
+        };
+        const nextState = { ...prev, timer };
+        stateRef.current = nextState;
+        setState(nextState);
+
+        const persist = async () => {
+          try {
+            await repo.saveTimer(timer);
+          } catch (err) {
+            console.error("Critical: Failed to pause timer in IndexedDB:", err);
+            const snapshot = await repo.loadSnapshot();
+            stateRef.current = snapshot;
+            setState(snapshot);
+          }
+        };
+        void persist();
       },
       resumeTimer() {
-        let timerToSave: TimerState | null = null;
-        setState((prev) => {
-          if (!prev.timer || prev.timer.startedAt) return prev;
-          const timer: TimerState = { ...prev.timer, startedAt: Date.now() };
-          timerToSave = timer;
-          return { ...prev, timer };
-        });
-        if (timerToSave) void repo.saveTimer(timerToSave);
+        const prev = stateRef.current;
+        if (!prev.timer || prev.timer.startedAt) return;
+        const timer: TimerState = { ...prev.timer, startedAt: Date.now() };
+        const nextState = { ...prev, timer };
+        stateRef.current = nextState;
+        setState(nextState);
+
+        const persist = async () => {
+          try {
+            await repo.saveTimer(timer);
+          } catch (err) {
+            console.error("Critical: Failed to resume timer in IndexedDB:", err);
+            const snapshot = await repo.loadSnapshot();
+            stateRef.current = snapshot;
+            setState(snapshot);
+          }
+        };
+        void persist();
       },
       stopTimer(saveMinutes) {
-        let sideEffects: (() => void) | null = null;
+        const prev = stateRef.current;
+        const timer = prev.timer;
+        if (!timer) return;
 
-        setState((prev) => {
-          const timer = prev.timer;
-          if (!timer) return prev;
+        if (!saveMinutes) {
+          const nextState = { ...prev, timer: null };
+          stateRef.current = nextState;
+          setState(nextState);
 
-          if (!saveMinutes) {
-            sideEffects = () => {
-              void repo.clearTimer();
-            };
-            return { ...prev, timer: null };
-          }
-
-          const elapsed =
-            timer.accumulatedMs + (timer.startedAt ? Date.now() - timer.startedAt : 0);
-          const minutes = Math.round(elapsed / 60000);
-          const habit = prev.habits.find((h) => h.id === timer.habitId);
-          if (!habit || minutes <= 0) {
-            sideEffects = () => {
-              void repo.clearTimer();
-            };
-            return { ...prev, timer: null };
-          }
-
-          const date = todayKey();
-          const id = logKey(habit.id, date);
-          const existing = prev.habitLogs.find((l) => l.id === id);
-          const target = existing?.target ?? habit.target;
-          const value = (existing?.value ?? 0) + minutes;
-          const status = value >= target ? "complete" : "partial";
-          const wasComplete = existing ? existing.status === "complete" : false;
-          const isNowComplete = status === "complete";
-          const shouldPlaySound = !wasComplete && isNowComplete;
-
-          const log: HabitLog = {
-            id,
-            habitId: habit.id,
-            date,
-            value,
-            target,
-            status,
-            updatedAt: Date.now(),
-          };
-
-          let routineLogs = prev.routineLogs;
-          const routineLogsToSave: RoutineLog[] = [];
-          for (const routine of prev.routines) {
-            const linkedStepIds = routine.steps
-              .filter((step) => step.habitId === habit.id)
-              .map((step) => step.id);
-            if (linkedStepIds.length === 0) continue;
-            const routineLogId = `${routine.id}:${date}`;
-            const existingRoutineLog = routineLogs.find((item) => item.id === routineLogId);
-            const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
-            for (const stepId of linkedStepIds) completedStepIds.add(stepId);
-            const nextRoutineLog: RoutineLog = {
-              id: routineLogId,
-              routineId: routine.id,
-              date,
-              completedStepIds: [...completedStepIds],
-              updatedAt: Date.now(),
-            };
-            routineLogsToSave.push(nextRoutineLog);
-            routineLogs = existingRoutineLog
-              ? routineLogs.map((item) => (item.id === routineLogId ? nextRoutineLog : item))
-              : [...routineLogs, nextRoutineLog];
-          }
-
-          const nextHabitLogs = existing
-            ? prev.habitLogs.map((l) => (l.id === id ? log : l))
-            : [...prev.habitLogs, log];
-
-          sideEffects = () => {
-            void repo.clearTimer();
-            if (shouldPlaySound) playCompleteHabitSound();
-            void repo.saveLog(log);
-            for (const rLog of routineLogsToSave) {
-              void repo.saveRoutineLog(rLog);
+          const persist = async () => {
+            try {
+              await repo.clearTimer();
+            } catch (err) {
+              console.error("Critical: Failed to clear timer in IndexedDB:", err);
+              toast.error(
+                t(
+                  "appStore.saveFailed",
+                  "Storage error: Progress could not be saved locally. Reverting changes.",
+                ),
+              );
+              const snapshot = await repo.loadSnapshot();
+              stateRef.current = snapshot;
+              setState(snapshot);
             }
           };
-
-          return {
-            ...prev,
-            timer: null,
-            routineLogs,
-            habitLogs: nextHabitLogs,
-          };
-        });
-
-        if (sideEffects) {
-          (sideEffects as () => void)();
+          void persist();
+          return;
         }
+
+        const elapsed = timer.accumulatedMs + (timer.startedAt ? Date.now() - timer.startedAt : 0);
+        const minutes = Math.round(elapsed / 60000);
+        const habit = prev.habits.find((h) => h.id === timer.habitId);
+        if (!habit || minutes <= 0) {
+          const nextState = { ...prev, timer: null };
+          stateRef.current = nextState;
+          setState(nextState);
+
+          const persist = async () => {
+            try {
+              await repo.clearTimer();
+            } catch (err) {
+              console.error("Critical: Failed to clear timer in IndexedDB:", err);
+              toast.error(
+                t(
+                  "appStore.saveFailed",
+                  "Storage error: Progress could not be saved locally. Reverting changes.",
+                ),
+              );
+              const snapshot = await repo.loadSnapshot();
+              stateRef.current = snapshot;
+              setState(snapshot);
+            }
+          };
+          void persist();
+          return;
+        }
+
+        const date = todayKey();
+        const id = logKey(habit.id, date);
+        const existing = prev.habitLogs.find((l) => l.id === id);
+        const target = existing?.target ?? habit.target;
+        const value = (existing?.value ?? 0) + minutes;
+        const status = value >= target ? "complete" : "partial";
+        const wasComplete = existing ? existing.status === "complete" : false;
+        const isNowComplete = status === "complete";
+        const shouldPlaySound = !wasComplete && isNowComplete;
+
+        const log: HabitLog = {
+          id,
+          habitId: habit.id,
+          date,
+          value,
+          target,
+          status,
+          updatedAt: Date.now(),
+        };
+
+        let routineLogs = prev.routineLogs;
+        const routineLogsToSave: RoutineLog[] = [];
+        for (const routine of prev.routines) {
+          const linkedStepIds = routine.steps
+            .filter((step) => step.habitId === habit.id)
+            .map((step) => step.id);
+          if (linkedStepIds.length === 0) continue;
+          const routineLogId = `${routine.id}:${date}`;
+          const existingRoutineLog = routineLogs.find((item) => item.id === routineLogId);
+          const completedStepIds = new Set(existingRoutineLog?.completedStepIds ?? []);
+          for (const stepId of linkedStepIds) completedStepIds.add(stepId);
+          const nextRoutineLog: RoutineLog = {
+            id: routineLogId,
+            routineId: routine.id,
+            date,
+            completedStepIds: [...completedStepIds],
+            updatedAt: Date.now(),
+          };
+          routineLogsToSave.push(nextRoutineLog);
+          routineLogs = existingRoutineLog
+            ? routineLogs.map((item) => (item.id === routineLogId ? nextRoutineLog : item))
+            : [...routineLogs, nextRoutineLog];
+        }
+
+        const nextHabitLogs = existing
+          ? prev.habitLogs.map((l) => (l.id === id ? log : l))
+          : [...prev.habitLogs, log];
+
+        const nextState = {
+          ...prev,
+          timer: null,
+          routineLogs,
+          habitLogs: nextHabitLogs,
+        };
+        stateRef.current = nextState;
+        setState(nextState);
+
+        if (shouldPlaySound) playCompleteHabitSound();
+
+        const persist = async () => {
+          try {
+            await repo.clearTimer();
+            await repo.saveLog(log);
+            for (const rLog of routineLogsToSave) {
+              await repo.saveRoutineLog(rLog);
+            }
+          } catch (err) {
+            console.error("Critical: Failed to persist stopped timer to IndexedDB:", err);
+            toast.error(
+              t(
+                "appStore.saveFailed",
+                "Storage error: Progress could not be saved locally. Reverting changes.",
+              ),
+            );
+            const snapshot = await repo.loadSnapshot();
+            stateRef.current = snapshot;
+            setState(snapshot);
+          }
+        };
+        void persist();
       },
       adjustTimer(minutes) {
-        let timerToSave: TimerState | null = null;
-        setState((prev) => {
-          if (!prev.timer) return prev;
-          const timer: TimerState = {
-            ...prev.timer,
-            accumulatedMs: Math.max(0, prev.timer.accumulatedMs + minutes * 60000),
-          };
-          timerToSave = timer;
-          return { ...prev, timer };
-        });
-        if (timerToSave) void repo.saveTimer(timerToSave);
+        const prev = stateRef.current;
+        if (!prev.timer) return;
+        const timer: TimerState = {
+          ...prev.timer,
+          accumulatedMs: Math.max(0, prev.timer.accumulatedMs + minutes * 60000),
+        };
+        const nextState = { ...prev, timer };
+        stateRef.current = nextState;
+        setState(nextState);
+
+        const persist = async () => {
+          try {
+            await repo.saveTimer(timer);
+          } catch (err) {
+            console.error("Critical: Failed to persist adjusted timer to IndexedDB:", err);
+            toast.error(
+              t(
+                "appStore.saveFailed",
+                "Storage error: Progress could not be saved locally. Reverting changes.",
+              ),
+            );
+            const snapshot = await repo.loadSnapshot();
+            stateRef.current = snapshot;
+            setState(snapshot);
+          }
+        };
+        void persist();
       },
 
       upsertBadHabit(habit) {

@@ -135,12 +135,11 @@ export async function deleteRecordFromCloud(store: string, id: string): Promise<
   }
 }
 
-/**
- * Fetches all local items flagged with pending_sync: true (or pending deletions)
- * and pushes them to Supabase. Once each item is successfully saved remotely,
- * its pending_sync flag is removed from local storage.
- */
-export async function pushPendingRecords(): Promise<{ pushedCount: number; failedCount: number }> {
+let pushInFlight = false;
+let pushQueued = false;
+let currentPushPromise: Promise<{ pushedCount: number; failedCount: number }> | null = null;
+
+async function executePushPendingRecords(): Promise<{ pushedCount: number; failedCount: number }> {
   if (!isOnline()) return { pushedCount: 0, failedCount: 0 };
   const userId = await getAuthenticatedUserId();
   if (!userId) return { pushedCount: 0, failedCount: 0 };
@@ -236,6 +235,53 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
   }
 
   return { pushedCount, failedCount };
+}
+
+/**
+ * Fetches all local items flagged with pending_sync: true (or pending deletions)
+ * and pushes them to Supabase. Once each item is successfully saved remotely,
+ * its pending_sync flag is removed from local storage.
+ *
+ * Protected with an asynchronous concurrency mutex (pushInFlight and pushQueued)
+ * to serialize rapid successive invocations and prevent race conditions.
+ */
+export async function pushPendingRecords(): Promise<{ pushedCount: number; failedCount: number }> {
+  if (pushInFlight) {
+    pushQueued = true;
+    return currentPushPromise!.then(async () => {
+      if (pushQueued) {
+        return pushPendingRecords();
+      }
+      return { pushedCount: 0, failedCount: 0 };
+    });
+  }
+
+  pushInFlight = true;
+  pushQueued = false;
+
+  currentPushPromise = (async () => {
+    let totalPushed = 0;
+    let totalFailed = 0;
+    try {
+      const res = await executePushPendingRecords();
+      totalPushed += res.pushedCount;
+      totalFailed += res.failedCount;
+
+      while (pushQueued) {
+        pushQueued = false;
+        const queuedRes = await executePushPendingRecords();
+        totalPushed += queuedRes.pushedCount;
+        totalFailed += queuedRes.failedCount;
+      }
+
+      return { pushedCount: totalPushed, failedCount: totalFailed };
+    } finally {
+      pushInFlight = false;
+      currentPushPromise = null;
+    }
+  })();
+
+  return currentPushPromise;
 }
 
 /**

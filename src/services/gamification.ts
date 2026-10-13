@@ -97,27 +97,61 @@ export function calculateGamificationStats(habits: Habit[], logMap: LogMap): Gam
     }
   }
 
-  // 2. Calculate Current Streak (consecutive days of habit completion)
+  // Helper to determine if any active habit was scheduled on a given date
+  const hadScheduledHabits = (date: string): boolean => {
+    return activeHabits.some((h) => isScheduledOn(h, date));
+  };
+
+  // 2. Calculate Current Streak (consecutive days of habit completion, skipping unscheduled rest days)
   let currentStreak = 0;
-  const yesterday = addDays(today, -1);
+  if (activeHabits.length > 0 && completionDatesSet.size > 0) {
+    const minCompletionDate = Array.from(completionDatesSet).reduce(
+      (min, d) => (d < min ? d : min),
+      today,
+    );
 
-  // If today has completed habits, streak extends through today
-  // If today is in progress but yesterday had completions, streak is still active from yesterday
-  const streakStartDate = completionDatesSet.has(today)
-    ? today
-    : completionDatesSet.has(yesterday)
-      ? yesterday
-      : null;
+    // If today has completed habits, streak extends through today.
+    // If today does not have completions:
+    // - If today has scheduled habits, it is in progress (does not break streak yet).
+    // - Scan backward through past days: unscheduled rest days are skipped without breaking streak,
+    //   while a missed scheduled day breaks the streak.
+    let streakStartDate: string | null = null;
+    if (completionDatesSet.has(today)) {
+      streakStartDate = today;
+    } else {
+      let scanDate = addDays(today, -1);
+      while (scanDate >= minCompletionDate) {
+        if (completionDatesSet.has(scanDate)) {
+          streakStartDate = scanDate;
+          break;
+        }
+        if (hadScheduledHabits(scanDate)) {
+          // Scheduled day was missed without completions: streak is broken
+          break;
+        }
+        // Unscheduled rest day: keep looking back without breaking streak
+        scanDate = addDays(scanDate, -1);
+      }
+    }
 
-  if (streakStartDate) {
-    let checkDate = streakStartDate;
-    while (completionDatesSet.has(checkDate)) {
-      currentStreak += 1;
-      checkDate = addDays(checkDate, -1);
+    if (streakStartDate) {
+      let checkDate = streakStartDate;
+      while (checkDate >= minCompletionDate) {
+        if (completionDatesSet.has(checkDate)) {
+          currentStreak += 1;
+          checkDate = addDays(checkDate, -1);
+        } else if (!hadScheduledHabits(checkDate)) {
+          // Unscheduled rest day (e.g. weekend): keep the streak alive without breaking it
+          checkDate = addDays(checkDate, -1);
+        } else {
+          // Scheduled day had no completions: streak ends
+          break;
+        }
+      }
     }
   }
 
-  // 3. Calculate Longest Streak (all-time longest consecutive days run)
+  // 3. Calculate Longest Streak (all-time longest run, preserving streaks across unscheduled rest days)
   const sortedDates = Array.from(completionDatesSet).sort();
   let longestStreak = 0;
   let runningStreak = 0;
@@ -131,7 +165,13 @@ export function calculateGamificationStats(habits: Habit[], logMap: LogMap): Gam
       if (diff === 1) {
         runningStreak += 1;
       } else if (diff > 1) {
-        runningStreak = 1;
+        const gapDays = rangeKeys(addDays(previousDate, 1), addDays(date, -1));
+        const allRestDays = gapDays.length > 0 && gapDays.every((d) => !hadScheduledHabits(d));
+        if (allRestDays) {
+          runningStreak += 1;
+        } else {
+          runningStreak = 1;
+        }
       }
     }
     previousDate = date;
@@ -329,7 +369,13 @@ export function calculateGamificationStats(habits: Habit[], logMap: LogMap): Gam
       if (diff === 1) {
         runningFreezeFreeStreak += 1;
       } else {
-        runningFreezeFreeStreak = 1;
+        const gapDays = rangeKeys(addDays(prevDateForIron, 1), addDays(date, -1));
+        const allRestDays = gapDays.length > 0 && gapDays.every((d) => !hadScheduledHabits(d));
+        if (allRestDays) {
+          runningFreezeFreeStreak += 1;
+        } else {
+          runningFreezeFreeStreak = 1;
+        }
       }
     }
     prevDateForIron = date;

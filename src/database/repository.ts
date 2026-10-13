@@ -116,34 +116,46 @@ function writeMany<T extends { id: string }>(
     });
 }
 
+let tombstoneQueue: Promise<void> = Promise.resolve();
+
 async function recordTombstone(store: string, id: string): Promise<void> {
-  const existing = (await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID)) ?? {
-    id: SYNC_TOMBSTONES_ID,
-    values: {},
-  };
-  await put("meta", {
-    id: SYNC_TOMBSTONES_ID,
-    values: {
-      ...existing.values,
-      [`${store}:${id}`]: { updatedAt: nowIso(), pending_sync: true },
-    },
+  tombstoneQueue = tombstoneQueue.then(async () => {
+    try {
+      const existing = (await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID)) ?? {
+        id: SYNC_TOMBSTONES_ID,
+        values: {},
+      };
+      await put("meta", {
+        id: SYNC_TOMBSTONES_ID,
+        values: {
+          ...existing.values,
+          [`${store}:${id}`]: { updatedAt: nowIso(), pending_sync: true },
+        },
+      });
+    } catch (error) {
+      console.error(`Failed to record tombstone for ${store}:${id}:`, error);
+    }
   });
+  return tombstoneQueue;
 }
 
 export async function clearTombstone(store: string, id: string): Promise<void> {
-  try {
-    const existing = await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID);
-    if (existing?.values) {
-      const key = `${store}:${id}`;
-      if (key in existing.values) {
-        const nextValues = { ...existing.values };
-        delete nextValues[key];
-        await put("meta", { id: SYNC_TOMBSTONES_ID, values: nextValues });
+  tombstoneQueue = tombstoneQueue.then(async () => {
+    try {
+      const existing = await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID);
+      if (existing?.values) {
+        const key = `${store}:${id}`;
+        if (key in existing.values) {
+          const nextValues = { ...existing.values };
+          delete nextValues[key];
+          await put("meta", { id: SYNC_TOMBSTONES_ID, values: nextValues });
+        }
       }
+    } catch (error) {
+      console.error(`Failed to clear tombstone for ${store}:${id}:`, error);
     }
-  } catch (error) {
-    console.error(`Failed to clear tombstone for ${store}:${id}:`, error);
-  }
+  });
+  return tombstoneQueue;
 }
 
 export async function getAllItemsFromStore(
@@ -434,6 +446,10 @@ export async function recordSyncFailure(
 /**
  * Removes the pending_sync flag from a local record and marks it as synced: true.
  * Executed immediately upon successful push to Supabase cloud.
+ *
+ * Re-fetches the latest record directly from IndexedDB and compares __syncUpdatedAt
+ * timestamps. If a local mutation occurred while the push was in-flight, preserves
+ * pending_sync: true and aborts overwriting with the stale pre-push snapshot.
  */
 export async function clearPendingSyncFlag(
   store: Parameters<typeof put>[0],
@@ -441,16 +457,35 @@ export async function clearPendingSyncFlag(
   recordData?: SyncableRecord,
 ): Promise<void> {
   try {
-    const current = recordData ?? (await getOne<SyncableRecord>(store, id));
-    if (current) {
-      const { pending_sync, sync_attempts, sync_error, poisoned, ...rest } = current;
-      const cleanRecord = {
-        ...rest,
-        synced: true,
-        __syncUpdatedAt: (current["__syncUpdatedAt"] as string) ?? nowIso(),
-      };
-      await put(store, cleanRecord);
+    const latest = await getOne<SyncableRecord>(store, id);
+    if (!latest) return;
+
+    if (recordData) {
+      const pushedSyncTime =
+        (recordData["__syncUpdatedAt"] as string) ??
+        (typeof recordData["updatedAt"] === "number"
+          ? new Date(recordData["updatedAt"]).toISOString()
+          : (recordData["updatedAt"] as string));
+      const latestSyncTime =
+        (latest["__syncUpdatedAt"] as string) ??
+        (typeof latest["updatedAt"] === "number"
+          ? new Date(latest["updatedAt"]).toISOString()
+          : (latest["updatedAt"] as string));
+
+      if (pushedSyncTime && latestSyncTime && latestSyncTime > pushedSyncTime) {
+        // A local mutation occurred while the push was in-flight.
+        // Preserve pending_sync: true and abort overwriting with the stale pre-push snapshot.
+        return;
+      }
     }
+
+    const { pending_sync, sync_attempts, sync_error, poisoned, ...rest } = latest;
+    const cleanRecord = {
+      ...rest,
+      synced: true,
+      __syncUpdatedAt: (latest["__syncUpdatedAt"] as string) ?? nowIso(),
+    };
+    await put(store, cleanRecord);
   } catch (error) {
     console.error(`Failed to clear pending_sync flag for ${store}:${id}:`, error);
   }

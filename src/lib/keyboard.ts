@@ -134,20 +134,39 @@ export function getNormalizedKey(event: KeyboardEvent): string {
 }
 
 /**
+ * Checks if any modal, sheet, drawer, or dialog is currently open in the DOM.
+ * Targets Radix Dialogs, Alert Dialogs, and Vaul Drawers.
+ */
+export function isModalOpen(): boolean {
+  if (typeof document === "undefined") return false;
+  return Boolean(
+    document.querySelector(
+      "[role='dialog'][data-state='open'], [role='alertdialog'][data-state='open'], [data-vaul-drawer][data-state='open']",
+    ),
+  );
+}
+
+/**
  * Determines whether the keyboard event originated from or is active within
- * an editable text context where global single-key shortcuts must NOT be triggered.
+ * an editable text context or an open dialog/modal where global single-key shortcuts
+ * must NOT be triggered.
  *
  * Checks:
+ * - Open modals, dialogs, alert dialogs, or drawers
  * - `<input>` elements
  * - `<textarea>` elements
  * - `<select>` elements
  * - `isContentEditable` nodes (e.g. rich text editors or contenteditable div/span)
- * - Ancestors matching editable form elements
+ * - Ancestors matching editable form elements or open dialogs
  */
 export function isTypingTarget(
   target: EventTarget | null,
   activeElement: Element | null = typeof document !== "undefined" ? document.activeElement : null,
 ): boolean {
+  if (isModalOpen()) {
+    return true;
+  }
+
   const elements = [target, activeElement];
 
   for (const item of elements) {
@@ -173,6 +192,14 @@ export function isTypingTarget(
     }
 
     if (el.closest?.("input, textarea, select, [contenteditable='true'], [contenteditable='']")) {
+      return true;
+    }
+
+    if (
+      el.closest?.(
+        "[role='dialog'][data-state='open'], [role='alertdialog'][data-state='open'], [data-vaul-drawer][data-state='open']",
+      )
+    ) {
       return true;
     }
   }

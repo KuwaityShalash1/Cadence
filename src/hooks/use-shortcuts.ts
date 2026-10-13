@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/hooks/use-command-palette";
-import { getNormalizedKey, isTypingTarget } from "@/lib/keyboard";
+import { getNormalizedKey, isModalOpen, isTypingTarget } from "@/lib/keyboard";
 
 // Canonical event names for context-aware "Add New" shortcuts.
 export const OPEN_ADD_MODAL_EVENT = "cadence:open-add-modal";
@@ -121,9 +121,9 @@ export function useShortcuts(): void {
     if (typeof window === "undefined") return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      // CRITICAL safety guard: never hijack keystrokes while typing.
+      // CRITICAL safety guard: never hijack keystrokes while typing or when a modal/dialog/sheet is open.
       const active = typeof document !== "undefined" ? document.activeElement : null;
-      if (isTypingTarget(e.target, active)) return;
+      if (isTypingTarget(e.target, active) || isModalOpen()) return;
 
       // Ignore IME composition and auto-repeat for single-press actions.
       if (e.isComposing || e.keyCode === 229) return;
