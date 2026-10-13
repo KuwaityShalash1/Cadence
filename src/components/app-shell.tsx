@@ -45,6 +45,7 @@ import { useBackupReminderStatus } from "@/hooks/use-weekly-backup";
 import { useAppBadge } from "@/hooks/use-app-badge";
 import { useAuth } from "@/auth/auth-context";
 import { dispatchOpenAddModal } from "@/hooks/use-shortcuts";
+import { AiAssistantTrigger } from "@/components/ai/ai-assistant-drawer";
 
 /**
  * Nav item definitions use translation key references rather than hardcoded
@@ -465,22 +466,31 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Global Mobile FAB — floats safely outside animated page wrappers and transitions */}
-      {fabConfig && (
-        <button
-          type="button"
-          aria-label={fabConfig.label}
-          onClick={fabConfig.action}
-          className={cn(
-            "fixed end-6 z-50 flex items-center justify-center rounded-full p-4 md:hidden",
-            isTimerActive ? "bottom-[136px] sm:bottom-[140px]" : "bottom-24",
-            "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all duration-300 active:scale-95",
-            "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
-          )}
-        >
-          <Plus className="h-6 w-6" />
-        </button>
-      )}
+      {/* Floating Action Buttons Container: Vertically stacked AI Assistant trigger & creation FAB */}
+      <div
+        className={cn(
+          "fixed end-4 z-40 flex flex-col items-center gap-3 transition-all duration-300",
+          isTimerActive ? "bottom-[136px] sm:bottom-[140px]" : "bottom-24",
+          "md:bottom-6 md:end-6",
+        )}
+      >
+        <AiAssistantTrigger />
+
+        {fabConfig && (
+          <button
+            type="button"
+            aria-label={fabConfig.label}
+            onClick={fabConfig.action}
+            className={cn(
+              "flex h-14 w-14 items-center justify-center rounded-full md:hidden",
+              "bg-primary text-primary-foreground shadow-xl ring-1 ring-black/5 transition-all duration-300 active:scale-95",
+              "hover:bg-primary/90 dark:bg-sky-500 dark:text-white dark:ring-white/10 dark:hover:bg-sky-400",
+            )}
+          >
+            <Plus className="h-6 w-6" />
+          </button>
+        )}
+      </div>
 
       <TimerDock />
 

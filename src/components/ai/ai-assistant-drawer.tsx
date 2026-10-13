@@ -17,6 +17,7 @@ import { useTranslation } from "@/i18n/context";
 import { todayKey } from "@/services/dates";
 import { useApp } from "@/stores/app-store";
 import type { AiAppContext, AiRequestBody, AiResponsePayload, ChatMessage } from "@/types/ai";
+import { cn } from "@/lib/utils";
 import { executeAiToolCalls } from "./tool-executor";
 import {
   Sheet,
@@ -27,6 +28,61 @@ import {
 } from "@/components/ui/sheet";
 
 const STORAGE_KEY = "cadence_ai_chat_history_v1";
+
+export const OPEN_AI_ASSISTANT_EVENT = "cadence:open-ai-assistant";
+export const CLOSE_AI_ASSISTANT_EVENT = "cadence:close-ai-assistant";
+export const TOGGLE_AI_ASSISTANT_EVENT = "cadence:toggle-ai-assistant";
+
+export function openAiAssistant(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(OPEN_AI_ASSISTANT_EVENT));
+  }
+}
+
+export function closeAiAssistant(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(CLOSE_AI_ASSISTANT_EVENT));
+  }
+}
+
+export function toggleAiAssistant(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(TOGGLE_AI_ASSISTANT_EVENT));
+  }
+}
+
+/**
+ * Floating trigger button for the AI Assistant.
+ * Stacks cleanly with other mobile action buttons or floats individually on desktop.
+ */
+export function AiAssistantTrigger({ className }: { className?: string }) {
+  const { language } = useTranslation();
+  const isOnline = useOnlineStatus();
+
+  return (
+    <button
+      type="button"
+      onClick={openAiAssistant}
+      aria-label={language === "ar" ? "فتح المساعد الذكي" : "Open AI Assistant"}
+      className={cn(
+        "flex h-12 w-12 items-center justify-center rounded-full border border-border/80 bg-card/95 text-foreground shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-primary/50 hover:bg-card hover:shadow-primary/10 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+        className,
+      )}
+    >
+      <span className="relative flex items-center justify-center">
+        <Sparkles className="h-5 w-5 text-primary transition-transform duration-300 group-hover:rotate-12" />
+        <span className="absolute -top-1 -end-1 flex h-2.5 w-2.5">
+          <span
+            className={cn(
+              "h-full w-full rounded-full",
+              isOnline ? "bg-emerald-500" : "bg-muted-foreground",
+            )}
+          />
+        </span>
+      </span>
+    </button>
+  );
+}
 
 export function AiAssistantDrawer() {
   const { habits, goals, habitLogs, ...actions } = useApp();
@@ -74,6 +130,23 @@ export function AiAssistantDrawer() {
     }, 250);
     return () => clearTimeout(timer);
   }, [isOpen, isOnline]);
+
+  // Global event listener to toggle or open AI drawer from external triggers
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    const handleClose = () => setIsOpen(false);
+    const handleToggle = () => setIsOpen((prev) => !prev);
+
+    window.addEventListener(OPEN_AI_ASSISTANT_EVENT, handleOpen);
+    window.addEventListener(CLOSE_AI_ASSISTANT_EVENT, handleClose);
+    window.addEventListener(TOGGLE_AI_ASSISTANT_EVENT, handleToggle);
+
+    return () => {
+      window.removeEventListener(OPEN_AI_ASSISTANT_EVENT, handleOpen);
+      window.removeEventListener(CLOSE_AI_ASSISTANT_EVENT, handleClose);
+      window.removeEventListener(TOGGLE_AI_ASSISTANT_EVENT, handleToggle);
+    };
+  }, []);
 
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -238,33 +311,17 @@ export function AiAssistantDrawer() {
         ];
 
   return (
-    <>
-      {/* Floating Trigger Button with Sparkles Icon */}
-      <button
-        onClick={() => setIsOpen(true)}
-        aria-label={language === "ar" ? "فتح المساعد الذكي" : "Open AI Assistant"}
-        className="fixed bottom-20 md:bottom-6 end-6 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-border/80 bg-card/95 text-foreground shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-primary/50 hover:bg-card hover:shadow-primary/10 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetContent
+        side={isRtl ? "left" : "right"}
+        className={cn(
+          "flex h-[100dvh] max-h-[100dvh] w-full flex-col p-0 sm:max-w-md bg-background border-border text-foreground shadow-2xl overflow-hidden",
+          "pt-[max(env(safe-area-inset-top),1.5rem)] pb-[max(env(safe-area-inset-bottom),1rem)]",
+          "[&>button]:top-[max(calc(env(safe-area-inset-top)+0.875rem),1.5rem)] sm:[&>button]:top-4",
+        )}
       >
-        <span className="relative flex items-center justify-center">
-          <Sparkles className="h-5 w-5 text-primary transition-transform duration-300 group-hover:rotate-12" />
-          <span className="absolute -top-1 -end-1 flex h-2.5 w-2.5">
-            <span
-              className={`h-full w-full rounded-full ${
-                isOnline ? "bg-emerald-500" : "bg-muted-foreground"
-              }`}
-            />
-          </span>
-        </span>
-      </button>
-
-      {/* Slide-over Sheet / Drawer */}
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent
-          side={isRtl ? "left" : "right"}
-          className="flex h-full w-full flex-col p-0 sm:max-w-md bg-background border-border text-foreground shadow-2xl"
-        >
-          {/* Header */}
-          <SheetHeader className="flex flex-row items-center justify-between border-b border-border/70 px-4 py-3 sm:px-6">
+        {/* Header */}
+        <SheetHeader className="flex flex-row items-center justify-between border-b border-border/70 px-4 py-3 sm:px-6 pe-12">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary border border-primary/20">
                 <Sparkles className="h-4 w-4" />
@@ -475,6 +532,5 @@ export function AiAssistantDrawer() {
           </div>
         </SheetContent>
       </Sheet>
-    </>
-  );
-}
+    );
+  }
