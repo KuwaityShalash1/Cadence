@@ -49,7 +49,7 @@ const GEMINI_TOOLS = [
       {
         name: "create_habit",
         description:
-          "Create a new habit in Cadence with name, recurrence schedule, and optional color theme.",
+          "Create a new habit in Cadence with name, recurrence schedule, dynamic icon from lucide-react, optional color theme, and optional linked goal ID.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -68,6 +68,16 @@ const GEMINI_TOOLS = [
               type: "STRING",
               description:
                 "Optional color token for the habit (e.g., 'emerald', 'teal', 'violet', 'amber', 'rose').",
+            },
+            icon: {
+              type: "STRING",
+              description:
+                "Highly relevant icon name from the `lucide-react` icon library (e.g., 'Dumbbell' for workouts, 'Droplet' for water, 'BookOpen' for reading, 'Briefcase' for work). Return the exact PascalCase component name as a string.",
+            },
+            goalId: {
+              type: "STRING",
+              description:
+                "Optional goal ID to link this habit to. Use this if the user asks to link the habit to a specific goal, or if it makes logical sense based on the get_app_summary context.",
             },
           },
           required: ["name", "schedule"],
@@ -142,7 +152,7 @@ const GROQ_TOOLS = [
     function: {
       name: "create_habit",
       description:
-        "Create a new habit in Cadence with name, recurrence schedule, and optional color theme.",
+        "Create a new habit in Cadence with name, recurrence schedule, dynamic icon from lucide-react, optional color theme, and optional linked goal ID.",
       parameters: {
         type: "object",
         properties: {
@@ -161,6 +171,16 @@ const GROQ_TOOLS = [
             type: "string",
             description:
               "Optional color token for the habit (e.g., 'emerald', 'teal', 'violet', 'amber', 'rose').",
+          },
+          icon: {
+            type: "string",
+            description:
+              "Highly relevant icon name from the `lucide-react` icon library (e.g., 'Dumbbell' for workouts, 'Droplet' for water, 'BookOpen' for reading, 'Briefcase' for work). Return the exact PascalCase component name as a string.",
+          },
+          goalId: {
+            type: "string",
+            description:
+              "Optional goal ID to link this habit to. Use this if the user asks to link the habit to a specific goal, or if it makes logical sense based on the get_app_summary context.",
           },
         },
         required: ["name", "schedule"],
@@ -242,14 +262,17 @@ function buildSystemPrompt(body: AiRequestBody): string {
     ? body.context.habits
         .map(
           (h) =>
-            `- ${h.name} (${h.schedule}, ${h.isCompletedToday ? "completed today" : "pending today"}, streak: ${h.streak ?? 0})`,
+            `- [ID: "${h.id || ""}"] ${h.name} (${h.schedule}, ${h.isCompletedToday ? "completed today" : "pending today"}, streak: ${h.streak ?? 0}${h.icon ? `, icon: ${h.icon}` : ""}${h.goalId ? `, linkedGoalId: ${h.goalId}` : ""})`,
         )
         .join("\n")
     : "No habits tracked yet.";
 
   const goalsContext = body.context?.goals
     ? body.context.goals
-        .map((g) => `- ${g.name} (${g.currentValue}/${g.targetValue} ${g.unit || ""})`)
+        .map(
+          (g) =>
+            `- [ID: "${g.id}"] "${g.name}" (${g.currentValue}/${g.targetValue} ${g.unit || ""})`,
+        )
         .join("\n")
     : "No goals tracked yet.";
 
@@ -268,12 +291,19 @@ ${goalsContext}
 
 AVAILABLE ACTIONS (FUNCTION CALLS):
 1. create_habit: Call when the user wants to add or create a habit.
-   Args: name (string), schedule ("everyday" | "weekdays" | "weekends"), color (optional).
+   - When creating a habit, ALWAYS select a highly relevant icon name from the \`lucide-react\` icon library (e.g., 'Dumbbell' for workouts, 'Droplet' for water, 'BookOpen' for reading, 'Briefcase' for work). Return the exact PascalCase component name as a string.
+   - Intelligently link habits to existing goals: If the user asks to link the habit to a specific goal, or if it makes logical sense based on the goals in context or the \`get_app_summary\` context, provide the matching goal's ID in the \`goalId\` argument.
+   - Args:
+     * name (string, required): Title or name of the habit.
+     * schedule ("everyday" | "weekdays" | "weekends", required): Frequency schedule.
+     * color (string, optional): Color theme token ('emerald', 'teal', 'violet', 'amber', 'rose').
+     * icon (string, optional): PascalCase component name from \`lucide-react\` (e.g., 'Dumbbell', 'Droplet', 'BookOpen', 'Briefcase').
+     * goalId (string, optional): ID of an existing goal to link this habit to.
 2. create_goal: Call when the user wants to set a new goal with a target number.
    Args: name (string), targetValue (number), unit (optional string).
 3. log_habit: Call when the user says they completed or skipped a habit today.
    Args: habitName (string), status ("done" | "skipped").
-4. get_app_summary: Call when the user asks for an overview of their habits or goals.
+4. get_app_summary: Call when the user asks for an overview of their habits or goals, or when you need to inspect existing goals and habits to make intelligent linking decisions.
 
 When you execute a tool call, accompany it with a short, helpful explanation of what you are doing.`;
 }

@@ -199,15 +199,19 @@ export function AiAssistantDrawer() {
             }
 
             return {
+              id: h.id,
               name: h.name,
               type: h.type,
               target: h.target,
               unit: h.unit,
               schedule: scheduleStr,
               isCompletedToday: Boolean(isCompletedToday),
+              icon: h.icon,
+              goalId: h.goalId,
             };
           }),
         goals: goals.map((g) => ({
+          id: g.id,
           name: g.name,
           targetValue: g.targetValue,
           currentValue: g.currentValue,

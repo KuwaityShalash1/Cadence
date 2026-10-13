@@ -87,6 +87,16 @@ export const ICONS: Record<string, LucideIcon> = {
   Lock,
 };
 
+import {
+  DynamicIcon,
+  getLucideIcon,
+  hasLucideIcon,
+  isValidLucideIcon,
+  toPascalCase,
+} from "@/components/ui/dynamic-icon";
+
+export { DynamicIcon, getLucideIcon, hasLucideIcon, isValidLucideIcon };
+
 export const ICON_NAMES = Object.keys(ICONS);
 
 /** Suggestion-chip shorthand names mapped onto canonical `ICONS` keys. */
@@ -96,19 +106,19 @@ const ICON_ALIASES: Record<string, string> = {
 
 /**
  * Normalises a friendly icon name to the canonical key used by the `ICONS`
- * map, so the "Quick Suggestions" data can ship kebab-case names ("sun",
+ * map or full Lucide library, so the "Quick Suggestions" data can ship kebab-case names ("sun",
  * "refresh-cw", "pizza") while pickers, previews and saved records all keep
  * working with the canonical PascalCase keys. Unknown names pass through
  * unchanged — they may be custom icon ids.
  */
 export function resolveIconName(name: string): string {
-  if (!name || name in ICONS) return name;
+  if (!name) return "Target";
+  if (name in ICONS) return name;
   const aliased = ICON_ALIASES[name];
   if (aliased) return aliased;
-  const pascal = name.replace(/(^|-)([a-z0-9])/g, (_match, _separator: string, ch: string) =>
-    ch.toUpperCase(),
-  );
-  return pascal in ICONS ? pascal : name;
+  const pascal = toPascalCase(name);
+  if (pascal in ICONS) return pascal;
+  return pascal;
 }
 
 /**
@@ -332,12 +342,14 @@ export function HabitIcon({
   className,
   style,
   customIcons,
+  fallback = Target,
 }: {
   name: string;
   className?: string;
   style?: React.CSSProperties;
   /** User-uploaded icons. Checked first so custom ids never fall back. */
   customIcons?: CustomIcon[];
+  fallback?: LucideIcon;
 }) {
   const customIcon = findCustomIcon(customIcons, name);
 
@@ -352,8 +364,15 @@ export function HabitIcon({
     );
   }
 
-  const Cmp = ICONS[resolveIconName(name)] ?? Target;
-  return <Cmp className={className} style={style} aria-hidden="true" />;
+  return (
+    <DynamicIcon
+      name={name}
+      className={className}
+      style={style}
+      fallback={fallback}
+      aria-hidden="true"
+    />
+  );
 }
 
 /**

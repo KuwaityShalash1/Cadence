@@ -244,13 +244,14 @@ export interface AppActions {
   /** High-level helper for adding a habit (supports AI tools and UI shortcuts). */
   addHabit: (input: {
     name: string;
-    schedule?: "everyday" | "weekdays" | "weekends" | Schedule;
-    color?: string;
-    type?: HabitType;
-    target?: number;
-    unit?: string;
-    icon?: string;
-    description?: string;
+    schedule?: "everyday" | "weekdays" | "weekends" | Schedule | undefined;
+    color?: string | undefined;
+    type?: HabitType | undefined;
+    target?: number | undefined;
+    unit?: string | undefined;
+    icon?: string | undefined;
+    goalId?: string | undefined;
+    description?: string | undefined;
   }) => Habit;
   /** High-level helper for adding a goal (supports AI tools and UI shortcuts). */
   addGoal: (input: {
@@ -959,8 +960,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
           frozenDates: input.frozenDates ?? [],
           lastFreezeResetDate: input.lastFreezeResetDate ?? todayKey().slice(0, 7),
         };
-        setState((prev) => ({ ...prev, habits: [...prev.habits, habit] }));
+        const goalsToSave: Goal[] = [];
+        setState((prev) => {
+          const goals = habit.goalId
+            ? prev.goals.map((g) => {
+                if (g.id !== habit.goalId || g.habitIds.includes(habit.id)) return g;
+                const nextGoal: Goal = {
+                  ...g,
+                  habitIds: [...g.habitIds, habit.id],
+                  updatedAt: new Date().toISOString(),
+                  pending_sync: true,
+                  synced: false,
+                };
+                goalsToSave.push(nextGoal);
+                return nextGoal;
+              })
+            : prev.goals;
+          return { ...prev, habits: [...prev.habits, habit], goals };
+        });
         void repo.saveHabit(habit);
+        for (const g of goalsToSave) void repo.saveGoal(g);
         return habit;
       },
       freezeHabitDay(habitId, date) {
@@ -2127,6 +2146,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           schedule: scheduleObj,
           color: input.color || "emerald",
           icon: input.icon || "Sparkles",
+          goalId: input.goalId,
           type: input.type || "boolean",
           target: input.target ?? 1,
           unit: input.unit || "",

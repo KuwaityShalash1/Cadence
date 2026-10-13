@@ -25,15 +25,19 @@ export interface ChatMessage {
 
 export interface AiAppContext {
   habits: Array<{
+    id?: string | undefined;
     name: string;
     type: string;
     target: number;
     unit: string;
     schedule: string;
-    isCompletedToday?: boolean;
-    streak?: number;
+    isCompletedToday?: boolean | undefined;
+    streak?: number | undefined;
+    icon?: string | undefined;
+    goalId?: string | undefined;
   }>;
   goals: Array<{
+    id: string;
     name: string;
     targetValue: number;
     currentValue: number;
@@ -59,7 +63,9 @@ export interface AiResponsePayload {
 export interface CreateHabitArgs {
   name: string;
   schedule: "everyday" | "weekdays" | "weekends";
-  color?: string;
+  color?: string | undefined;
+  icon?: string | undefined;
+  goalId?: string | undefined;
 }
 
 export interface CreateGoalArgs {
