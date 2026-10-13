@@ -262,6 +262,14 @@ export interface AppActions {
     icon?: string;
     description?: string;
   }) => Goal;
+  /** High-level helper for adding a bad habit / quit tracker (supports AI tools and UI shortcuts). */
+  addBadHabit: (input: {
+    name: string;
+    triggerCategory?: string | undefined;
+    limit?: number | undefined;
+    color?: string | undefined;
+    icon?: string | undefined;
+  }) => BadHabit;
   /** High-level helper for marking/logging a habit by name or ID. */
   logHabit: (
     habitNameOrId: string,
@@ -2179,6 +2187,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
         actionsObj.upsertGoal(goal);
         return goal;
+      },
+      addBadHabit(input) {
+        const now = Date.now();
+        const hasLimit = typeof input.limit === "number" && !isNaN(input.limit) && input.limit > 0;
+        const badHabit: BadHabit = {
+          id: uid(),
+          title: input.name.trim(),
+          quitDate: now,
+          history: [],
+          createdAt: now,
+          updatedAt: new Date().toISOString(),
+          icon: input.icon || "Flame",
+          color: input.color || "rose",
+          strategy: hasLimit ? "limit" : "cold-turkey",
+          ...(hasLimit && input.limit !== undefined
+            ? { limitType: "count" as const, limitValue: input.limit }
+            : {}),
+          usageLogs: [],
+          triggerCategory: input.triggerCategory,
+        };
+        actionsObj.upsertBadHabit(badHabit);
+        return badHabit;
       },
       logHabit(habitNameOrId, status) {
         const current = stateRef.current;

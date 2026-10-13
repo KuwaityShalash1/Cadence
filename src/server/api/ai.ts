@@ -84,6 +84,32 @@ const GEMINI_TOOLS = [
         },
       },
       {
+        name: "create_bad_habit",
+        description:
+          "Create a new bad habit / quit tracker in Cadence when the user wants to STOP, QUIT, REDUCE, or BREAK a negative behavior (e.g., smoking, gossiping, biting nails, doomscrolling).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: {
+              type: "STRING",
+              description:
+                "The name or title of the bad habit to stop or quit (e.g., 'Stop Gossiping', 'Quit Smoking', 'Reduce Doomscrolling').",
+            },
+            triggerCategory: {
+              type: "STRING",
+              description:
+                "Optional primary trigger category (e.g., 'stress', 'boredom', 'social', 'digital', 'custom').",
+            },
+            limit: {
+              type: "NUMBER",
+              description:
+                "Optional daily limit number for moderation or reduction. Omit for complete cessation (cold turkey).",
+            },
+          },
+          required: ["name"],
+        },
+      },
+      {
         name: "create_goal",
         description:
           "Create a new target goal in Cadence with name, target value, and optional unit.",
@@ -190,6 +216,35 @@ const GROQ_TOOLS = [
   {
     type: "function",
     function: {
+      name: "create_bad_habit",
+      description:
+        "Create a new bad habit / quit tracker in Cadence when the user wants to STOP, QUIT, REDUCE, or BREAK a negative behavior (e.g., smoking, gossiping, biting nails, doomscrolling).",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description:
+              "The name or title of the bad habit to stop or quit (e.g., 'Stop Gossiping', 'Quit Smoking', 'Reduce Doomscrolling').",
+          },
+          triggerCategory: {
+            type: "string",
+            description:
+              "Optional primary trigger category (e.g., 'stress', 'boredom', 'social', 'digital', 'custom').",
+          },
+          limit: {
+            type: "number",
+            description:
+              "Optional daily limit number for moderation or reduction. Omit for complete cessation (cold turkey).",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "create_goal",
       description:
         "Create a new target goal in Cadence with name, target value, and optional unit.",
@@ -276,8 +331,18 @@ function buildSystemPrompt(body: AiRequestBody): string {
         .join("\n")
     : "No goals tracked yet.";
 
+  const badHabitsContext =
+    body.context?.badHabits && body.context.badHabits.length > 0
+      ? body.context.badHabits
+          .map(
+            (bh) =>
+              `- [ID: "${bh.id || ""}"] "${bh.name}" (${bh.strategy === "limit" ? `limit: ${bh.limitValue ?? "custom"}` : "cold-turkey (abstinence)"}, ${bh.daysClean ?? 0} days clean)`,
+          )
+          .join("\n")
+      : "No quit trackers recorded yet.";
+
   return `You are Cadence AI Assistant, a concise, intelligent, and resilient companion for the Cadence habit tracker app.
-Cadence is an offline-first, minimalist habit tracker designed to help users build routines, track goals, and stay consistent effortlessly.
+Cadence is an offline-first, minimalist habit tracker designed to help users build routines, track goals, and stay consistent effortlessly. It also includes a dedicated Quit Tracker section for breaking unwanted vices and negative behaviors.
 
 You seamlessly support both English and Arabic. When the user speaks Arabic, reply in Arabic. When the user speaks English, reply in English.
 Keep your responses minimalist, warm, actionable, and free of fluff.
@@ -289,8 +354,15 @@ ${habitsContext}
 Goals:
 ${goalsContext}
 
+Quit Trackers (Bad Habits):
+${badHabitsContext}
+
+IMPORTANT HABIT VS QUIT TRACKER RULE:
+If the user wants to start doing something positive (e.g., read, workout, study), use the \`create_habit\` tool. However, if the user wants to STOP, QUIT, REDUCE, or BREAK a negative behavior (e.g., smoking, gossiping, biting nails, doomscrolling), you MUST use the \`create_bad_habit\` tool instead.
+
 AVAILABLE ACTIONS (FUNCTION CALLS):
-1. create_habit: Call when the user wants to add or create a habit.
+1. create_habit: Call when the user wants to build or start a POSITIVE routine or habit (e.g., 'Drink 2L Water', 'Morning Meditation', 'Workout').
+   - Do NOT use this tool if the user wants to stop, quit, or reduce a bad behavior or vice. For any negative habit, use \`create_bad_habit\` instead.
    - When creating a habit, ALWAYS select a highly relevant icon name from the \`lucide-react\` icon library (e.g., 'Dumbbell' for workouts, 'Droplet' for water, 'BookOpen' for reading, 'Briefcase' for work). Return the exact PascalCase component name as a string.
    - Intelligently link habits to existing goals: If the user asks to link the habit to a specific goal, or if it makes logical sense based on the goals in context or the \`get_app_summary\` context, provide the matching goal's ID in the \`goalId\` argument.
    - Args:
@@ -299,11 +371,16 @@ AVAILABLE ACTIONS (FUNCTION CALLS):
      * color (string, optional): Color theme token ('emerald', 'teal', 'violet', 'amber', 'rose').
      * icon (string, optional): PascalCase component name from \`lucide-react\` (e.g., 'Dumbbell', 'Droplet', 'BookOpen', 'Briefcase').
      * goalId (string, optional): ID of an existing goal to link this habit to.
-2. create_goal: Call when the user wants to set a new goal with a target number.
+2. create_bad_habit: Call when the user wants to STOP, QUIT, REDUCE, or BREAK a negative behavior or bad habit (e.g., smoking, gossiping, biting nails, doomscrolling, junk food). This logs the entry in Cadence's dedicated Quit Tracker section rather than the standard positive habits list.
+   - Args:
+     * name (string, required): Title or name of the bad habit to stop or quit (e.g., 'Stop Gossiping', 'Quit Smoking', 'Reduce Doomscrolling').
+     * triggerCategory (string, optional): Optional primary trigger category (e.g., 'stress', 'boredom', 'social', 'digital', 'custom').
+     * limit (number, optional): Optional daily numerical limit for moderation or gradual reduction. Omit for complete cessation (cold turkey).
+3. create_goal: Call when the user wants to set a new goal with a target number.
    Args: name (string), targetValue (number), unit (optional string).
-3. log_habit: Call when the user says they completed or skipped a habit today.
+4. log_habit: Call when the user says they completed or skipped a habit today.
    Args: habitName (string), status ("done" | "skipped").
-4. get_app_summary: Call when the user asks for an overview of their habits or goals, or when you need to inspect existing goals and habits to make intelligent linking decisions.
+5. get_app_summary: Call when the user asks for an overview of their habits, quit trackers, or goals, or when you need to inspect existing goals and habits to make intelligent linking decisions.
 
 When you execute a tool call, accompany it with a short, helpful explanation of what you are doing.`;
 }

@@ -43,6 +43,13 @@ export interface AiAppContext {
     currentValue: number;
     unit: string;
   }>;
+  badHabits?: Array<{
+    id?: string | undefined;
+    name: string;
+    strategy?: string | undefined;
+    limitValue?: number | undefined;
+    daysClean?: number | undefined;
+  }>;
   language?: "en" | "ar" | undefined;
 }
 
@@ -66,6 +73,12 @@ export interface CreateHabitArgs {
   color?: string | undefined;
   icon?: string | undefined;
   goalId?: string | undefined;
+}
+
+export interface CreateBadHabitArgs {
+  name: string;
+  triggerCategory?: string | undefined;
+  limit?: number | undefined;
 }
 
 export interface CreateGoalArgs {

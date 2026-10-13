@@ -1,11 +1,14 @@
 import { hasLucideIcon, resolveIconName } from "@/components/icon-map";
 import type { AppActions, Goal, Habit } from "@/stores/app-store";
+import { uid } from "@/stores/app-store";
+import type { BadHabit } from "@/types";
 import type { ToolCallPayload, ToolExecutionResult } from "@/types/ai";
 
 export interface ToolExecutorContext {
   actions: AppActions;
   habits: Habit[];
   goals: Goal[];
+  badHabits?: BadHabit[];
   language: "en" | "ar";
 }
 
@@ -94,6 +97,121 @@ export async function executeAiToolCalls(
           success: true,
           data: habit,
         });
+      } else if (tc.name === "create_bad_habit") {
+        const name = String(tc.args["name"] || "").trim();
+        const triggerCategory = tc.args["triggerCategory"]
+          ? String(tc.args["triggerCategory"]).trim()
+          : undefined;
+        const limitRaw = tc.args["limit"];
+        const limit =
+          typeof limitRaw === "number"
+            ? limitRaw
+            : limitRaw !== undefined && limitRaw !== null && !isNaN(Number(limitRaw))
+              ? Number(limitRaw)
+              : undefined;
+
+        if (!name) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr ? "فشل: اسم متتبع الإقلاع مطلوب" : "Failed: Bad habit name is required",
+            success: false,
+          });
+          continue;
+        }
+
+        // Intelligently infer an icon based on habit name or trigger
+        let resolvedIcon = "Flame";
+        const lowerName = name.toLowerCase();
+        if (
+          lowerName.includes("smok") ||
+          lowerName.includes("vape") ||
+          lowerName.includes("cigar") ||
+          lowerName.includes("nicotine")
+        ) {
+          resolvedIcon = "Flame";
+        } else if (
+          lowerName.includes("scroll") ||
+          lowerName.includes("phone") ||
+          lowerName.includes("screen") ||
+          lowerName.includes("media")
+        ) {
+          resolvedIcon = "Smartphone";
+        } else if (lowerName.includes("nail") || lowerName.includes("biting")) {
+          resolvedIcon = "Hand";
+        } else if (
+          lowerName.includes("sugar") ||
+          lowerName.includes("food") ||
+          lowerName.includes("eat") ||
+          lowerName.includes("snack") ||
+          lowerName.includes("junk")
+        ) {
+          resolvedIcon = "Pizza";
+        } else if (lowerName.includes("gossip") || lowerName.includes("talk")) {
+          resolvedIcon = "MessageSquareOff";
+        } else if (lowerName.includes("procrastinat") || lowerName.includes("delay")) {
+          resolvedIcon = "Clock";
+        } else if (
+          lowerName.includes("drink") ||
+          lowerName.includes("alcohol") ||
+          lowerName.includes("beer")
+        ) {
+          resolvedIcon = "Wine";
+        } else if (triggerCategory === "social") {
+          resolvedIcon = "Users";
+        } else if (triggerCategory === "stress") {
+          resolvedIcon = "Zap";
+        } else if (triggerCategory === "boredom") {
+          resolvedIcon = "Moon";
+        } else if (triggerCategory === "digital") {
+          resolvedIcon = "Smartphone";
+        }
+
+        if (hasLucideIcon(resolveIconName(resolvedIcon))) {
+          resolvedIcon = resolveIconName(resolvedIcon);
+        } else {
+          resolvedIcon = "Flame";
+        }
+
+        let badHabit: BadHabit;
+        if (typeof context.actions.addBadHabit === "function") {
+          badHabit = context.actions.addBadHabit({
+            name,
+            triggerCategory,
+            limit,
+            icon: resolvedIcon,
+          });
+        } else {
+          const now = Date.now();
+          const hasLimit = typeof limit === "number" && !isNaN(limit) && limit > 0;
+          badHabit = {
+            id: uid(),
+            title: name,
+            quitDate: now,
+            history: [],
+            createdAt: now,
+            updatedAt: new Date().toISOString(),
+            icon: resolvedIcon,
+            color: "rose",
+            strategy: hasLimit ? "limit" : "cold-turkey",
+            ...(hasLimit && limit !== undefined
+              ? { limitType: "count" as const, limitValue: limit }
+              : {}),
+            usageLogs: [],
+            triggerCategory,
+          };
+          context.actions.upsertBadHabit(badHabit);
+        }
+
+        const summary = isAr
+          ? `تم إنشاء متتبع الإقلاع: ${badHabit.title}`
+          : `Created Quit Tracker: ${badHabit.title}`;
+
+        results.push({
+          toolName: tc.name,
+          summary,
+          success: true,
+          data: badHabit,
+        });
       } else if (tc.name === "create_goal") {
         const name = String(tc.args["name"] || "").trim();
         const targetValue = Number(tc.args["targetValue"]) || 1;
@@ -173,10 +291,11 @@ export async function executeAiToolCalls(
       } else if (tc.name === "get_app_summary") {
         const activeHabitsCount = context.habits.filter((h) => !h.archived).length;
         const activeGoalsCount = context.goals.length;
+        const activeBadHabitsCount = (context.badHabits ?? []).length;
 
         const summary = isAr
-          ? `لديك حالياً ${activeHabitsCount} عادات نشطة و ${activeGoalsCount} أهداف قيد المتابعة.`
-          : `You currently have ${activeHabitsCount} active habit(s) and ${activeGoalsCount} goal(s).`;
+          ? `لديك حالياً ${activeHabitsCount} عادات نشطة، ${activeBadHabitsCount} متتبعات إقلاع، و ${activeGoalsCount} أهداف قيد المتابعة.`
+          : `You currently have ${activeHabitsCount} active habit(s), ${activeBadHabitsCount} quit tracker(s), and ${activeGoalsCount} goal(s).`;
 
         results.push({
           toolName: tc.name,
@@ -198,6 +317,12 @@ export async function executeAiToolCalls(
               targetValue: g.targetValue,
               currentValue: g.currentValue,
               unit: g.unit || "",
+            })),
+            badHabits: (context.badHabits ?? []).map((bh) => ({
+              id: bh.id,
+              title: bh.title,
+              strategy: bh.strategy,
+              limitValue: bh.limitValue,
             })),
           },
         });
