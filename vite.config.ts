@@ -1,8 +1,57 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { nitro } from "nitro/vite";
+
+function aiDevMiddlewarePlugin(): Plugin {
+  return {
+    name: "ai-dev-middleware",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url && (req.url === "/api/ai" || req.url.startsWith("/api/ai?"))) {
+          let bodyStr = "";
+          req.on("data", (chunk) => {
+            bodyStr += chunk;
+          });
+          req.on("end", async () => {
+            try {
+              const { handleAiRequest } = await server.ssrLoadModule("/src/server/api/ai.ts");
+              const fullUrl = `http://${req.headers.host || "localhost"}${req.url}`;
+              const headers = new Headers();
+              for (const [key, val] of Object.entries(req.headers)) {
+                if (typeof val === "string") headers.set(key, val);
+                else if (Array.isArray(val)) headers.set(key, val.join(", "));
+              }
+              const init: RequestInit = {
+                method: req.method || "GET",
+                headers,
+              };
+              if (req.method !== "GET" && req.method !== "HEAD" && bodyStr) {
+                init.body = bodyStr;
+              }
+              const webReq = new Request(fullUrl, init);
+              const webRes = await handleAiRequest(webReq);
+              res.statusCode = webRes.status;
+              webRes.headers.forEach((val: string, key: string) => {
+                res.setHeader(key, val);
+              });
+              const text = await webRes.text();
+              res.end(text);
+            } catch (err) {
+              console.error("[Vite Dev AI Error]:", err);
+              res.statusCode = 500;
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ error: "Internal dev error", details: String(err) }));
+            }
+          });
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 export default defineConfig(({ command }) => ({
   resolve: {
@@ -10,6 +59,7 @@ export default defineConfig(({ command }) => ({
   },
   plugins: [
     tailwindcss(),
+    aiDevMiddlewarePlugin(),
     tanstackStart({
       server: { entry: "server" },
     }),

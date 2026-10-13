@@ -26,9 +26,11 @@ import type {
   Group,
   Habit,
   HabitLog,
+  HabitType,
   RelapseRecord,
   Routine,
   RoutineLog,
+  Schedule,
   TimerState,
   UsageLog,
 } from "@/types";
@@ -239,6 +241,37 @@ export interface AppActions {
   getActiveTimer: () => TimerState | null;
   /** Manually trigger local-to-cloud data sync/merge. */
   syncData: () => Promise<boolean>;
+  /** High-level helper for adding a habit (supports AI tools and UI shortcuts). */
+  addHabit: (input: {
+    name: string;
+    schedule?: "everyday" | "weekdays" | "weekends" | Schedule;
+    color?: string;
+    type?: HabitType;
+    target?: number;
+    unit?: string;
+    icon?: string;
+    description?: string;
+  }) => Habit;
+  /** High-level helper for adding a goal (supports AI tools and UI shortcuts). */
+  addGoal: (input: {
+    name: string;
+    targetValue: number;
+    unit?: string;
+    color?: string;
+    icon?: string;
+    description?: string;
+  }) => Goal;
+  /** High-level helper for marking/logging a habit by name or ID. */
+  logHabit: (
+    habitNameOrId: string,
+    status: "done" | "skipped",
+  ) => { success: boolean; habit?: Habit };
+  /** Direct habit log writer. */
+  writeLog: (
+    habitId: string,
+    date: string,
+    mutate: (existing: HabitLog | undefined, habit: Habit) => HabitLog | null,
+  ) => void;
 }
 
 export type Store = AppState & AppActions;
@@ -911,7 +944,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    return {
+    const actionsObj: AppActions = {
       createHabit(input) {
         const habit: Habit = {
           ...input,
@@ -1997,7 +2030,84 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         return changed;
       },
+      addHabit(input) {
+        let scheduleObj: Schedule = { type: "daily" };
+        if (typeof input.schedule === "string") {
+          if (input.schedule === "weekdays") {
+            scheduleObj = { type: "weekdays", days: [1, 2, 3, 4, 5] };
+          } else if (input.schedule === "weekends") {
+            scheduleObj = { type: "weekdays", days: [0, 6] };
+          } else {
+            scheduleObj = { type: "daily" };
+          }
+        } else if (input.schedule && typeof input.schedule === "object") {
+          scheduleObj = input.schedule;
+        }
+
+        return actionsObj.createHabit({
+          name: input.name,
+          schedule: scheduleObj,
+          color: input.color || "emerald",
+          icon: input.icon || "Sparkles",
+          type: input.type || "boolean",
+          target: input.target ?? 1,
+          unit: input.unit || "",
+          description: input.description,
+          startDate: todayKey(),
+          reminderTimes: [],
+          reminderEnabled: false,
+          freezesAllowedPerMonth: DEFAULT_MONTHLY_FREEZE_LIMIT,
+          freezesUsedThisMonth: 0,
+          frozenDates: [],
+          lastFreezeResetDate: todayKey().slice(0, 7),
+        });
+      },
+      addGoal(input) {
+        const goal: Goal = {
+          id: uid(),
+          name: input.name,
+          targetValue: input.targetValue,
+          currentValue: 0,
+          unit: input.unit || "",
+          description: input.description,
+          habitIds: [],
+          type: "numeric",
+          color: input.color || "teal",
+          icon: input.icon || "Target",
+          createdAt: Date.now(),
+          updatedAt: new Date().toISOString(),
+          pending_sync: true,
+          synced: false,
+        };
+        actionsObj.upsertGoal(goal);
+        return goal;
+      },
+      logHabit(habitNameOrId, status) {
+        const current = stateRef.current;
+        const needle = habitNameOrId.trim().toLowerCase();
+        const habit =
+          current.habits.find((h) => h.id === habitNameOrId) ||
+          current.habits.find((h) => h.name.trim().toLowerCase() === needle) ||
+          current.habits.find(
+            (h) => h.name.toLowerCase().includes(needle) || needle.includes(h.name.toLowerCase()),
+          );
+
+        if (!habit) return { success: false };
+
+        if (status === "done") {
+          actionsObj.setHabitValue(habit.id, todayKey(), habit.target || 1);
+        } else {
+          actionsObj.skipHabit(habit.id, todayKey());
+        }
+
+        return { success: true, habit };
+      },
+      writeLog(habitId, date, mutate) {
+        writeLog(habitId, date, mutate);
+      },
     };
+
+    return actionsObj;
   }, [writeLog, setCollapsed, toggleCollapse]);
 
   const value = useMemo<Store>(

@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ThemeSync } from "@/components/theme-sync";
 import { HeadMetadataSync } from "@/components/head-metadata-sync";
 import { CommandPaletteLoader } from "@/components/command-palette-loader";
+import { AiAssistantDrawer } from "@/components/ai/ai-assistant-drawer";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/stores/app-store";
@@ -509,6 +510,7 @@ function RootComponent() {
                   <Outlet />
                 </ErrorBoundary>
               </TooltipProvider>
+              <AiAssistantDrawer />
               <Toaster />
             </SyncProvider>
           </AppProvider>
