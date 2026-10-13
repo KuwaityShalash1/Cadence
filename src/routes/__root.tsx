@@ -120,13 +120,15 @@ const SITE_ORIGIN = "https://cadencepwa.vercel.app";
 /** Homepage copy: keyword-rich but still an accurate description of the app. */
 const HOME_TITLE = "Cadence | Minimalist Habit Tracker";
 const HOME_DESCRIPTION =
-  "Cadence is a hybrid local-first habit tracker for building daily routines, tracking goals, and staying consistent without mandatory accounts or ads.";
+  "Cadence is an offline-first, minimalist habit tracker designed to help you build routines, track goals, and stay consistent effortlessly.";
+const HOME_OG_DESCRIPTION =
+  "Track your habits and build routines with this offline-first minimalist app.";
 const HOME_KEYWORDS =
-  "habit tracker, offline habit tracker, moderation habits, daily routine planner, privacy-first pwa, habit tracker no ads";
+  "Cadence, habit tracker, offline habit tracker, متتبع عادات, تتبع العادات, بناء الروتين, إدارة الأهداف, تطبيق إنتاجية, بدون إنترنت";
 
 /** Social preview artwork (1200x630) served from /public along with the app. */
-const SOCIAL_IMAGE_URL = `${SITE_ORIGIN}/og-image.png?v=2`;
-const SOCIAL_IMAGE_ALT = "Cadence — free offline habit tracker and daily routine planner";
+const SOCIAL_IMAGE_URL = "/og-image.png";
+const SOCIAL_IMAGE_ALT = "Cadence | Minimalist Habit Tracker";
 
 /** Features advertised to search engines and AI answer engines. */
 const APP_FEATURE_LIST = [
@@ -246,19 +248,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { name: "googlebot", content: robotsDirective },
         { property: "og:site_name", content: "Cadence" },
         { property: "og:locale", content: "en_US" },
+        { property: "og:locale:alternate", content: "ar_AR" },
         { property: "og:type", content: "website" },
         { property: "og:title", content: HOME_TITLE },
-        { property: "og:description", content: HOME_DESCRIPTION },
+        { property: "og:description", content: HOME_OG_DESCRIPTION },
         { property: "og:url", content: canonicalUrl },
         { property: "og:image", content: SOCIAL_IMAGE_URL },
-        { property: "og:image:secure_url", content: SOCIAL_IMAGE_URL },
+        { property: "og:image:secure_url", content: `${SITE_ORIGIN}/og-image.png` },
         { property: "og:image:type", content: "image/png" },
         { property: "og:image:width", content: "1200" },
         { property: "og:image:height", content: "630" },
         { property: "og:image:alt", content: SOCIAL_IMAGE_ALT },
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: HOME_TITLE },
-        { name: "twitter:description", content: HOME_DESCRIPTION },
+        { name: "twitter:description", content: HOME_OG_DESCRIPTION },
         { name: "twitter:url", content: canonicalUrl },
         { name: "twitter:image", content: SOCIAL_IMAGE_URL },
         { name: "twitter:image:alt", content: SOCIAL_IMAGE_ALT },
@@ -294,11 +297,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
               { rel: "alternate" as const, hrefLang: "x-default", href: canonicalUrl },
             ]),
         { rel: "manifest", href: "/manifest.json?v=3" },
-        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png?v=2" },
-        { rel: "icon", href: "/favicon.ico?v=2", sizes: "48x48 32x32 16x16" },
-        { rel: "icon", type: "image/svg+xml", href: "/logo.svg?v=2" },
-        { rel: "icon", href: "/icon-192.png?v=2", sizes: "192x192", type: "image/png" },
-        { rel: "icon", href: "/icon-512.png?v=2", sizes: "512x512", type: "image/png" },
+        { rel: "icon", href: "/favicon.ico" },
+        { rel: "icon", type: "image/png", sizes: "192x192", href: "/logo192.png" },
+        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+        { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
+        { rel: "icon", href: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { rel: "icon", href: "/icon-512.png", sizes: "512x512", type: "image/png" },
       ],
     };
   },

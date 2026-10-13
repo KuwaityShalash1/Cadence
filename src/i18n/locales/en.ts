@@ -902,9 +902,11 @@ export const en = {
   "quitSuggestion.avoidingDifficultTasks.badge": "Growth",
   "seo.defaultTitle": "Cadence | Minimalist Habit Tracker",
   "seo.defaultDesc":
-    "Cadence is a hybrid local-first habit tracker for building daily routines, tracking goals, and staying consistent without mandatory accounts or ads.",
-  "seo.todayTitle": "Today — Cadence Habit Tracker",
-  "seo.todayDesc": "Track your daily habits, log progress, and build streaks with Cadence.",
+    "Cadence is an offline-first, minimalist habit tracker designed to help you build routines, track goals, and stay consistent effortlessly.",
+  "seo.todayTitle": "Cadence | Minimalist Habit Tracker",
+  "seo.todayDesc":
+    "Cadence is an offline-first, minimalist habit tracker designed to help you build routines, track goals, and stay consistent effortlessly.",
+  "seo.ogDesc": "Track your habits and build routines with this offline-first minimalist app.",
   "seo.calendarTitle": "Calendar — Cadence Habit Tracker",
   "seo.calendarDesc":
     "Review your habit consistency with interactive calendar heatmaps and completion history.",
