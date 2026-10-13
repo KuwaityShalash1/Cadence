@@ -471,6 +471,10 @@ async function callGemini(body: AiRequestBody, geminiKey: string): Promise<AiRes
  * Fallback Provider: Groq (OpenAI-compatible completions endpoint)
  */
 async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiResponsePayload> {
+  if (!groqKey) {
+    throw new Error("GROQ_API_KEY environment variable is not configured");
+  }
+
   const systemPrompt = buildSystemPrompt(body);
 
   const messages = [
@@ -481,21 +485,17 @@ async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiRespons
     })),
   ];
 
-  const models = [
-    "llama-3.1-8b-instant",
-    "llama-3.3-70b-versatile",
-    "qwen/qwen3.8-27b",
-  ];
+  const models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"];
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), 8500);
 
   let lastError: unknown = null;
 
   try {
     for (const model of models) {
       if (controller.signal.aborted) {
-        throw new Error(`Groq request timed out after ${TIMEOUT_MS}ms`);
+        throw new Error("Groq request timed out after 8500ms");
       }
 
       try {
@@ -627,63 +627,22 @@ export async function handleAiRequest(request: Request): Promise<Response> {
     );
   }
 
-  const geminiApiKey = process.env.GEMINI_API_KEY || "";
   const groqApiKey = process.env.GROQ_API_KEY || "";
 
-  // Dual-Provider Pipeline: Primary Gemini -> Fallback Groq
-  let result: AiResponsePayload | null = null;
-  let geminiError: unknown = null;
-
-  if (geminiApiKey) {
-    try {
-      result = await callGemini(body, geminiApiKey);
-    } catch (err) {
-      geminiError = err;
-      console.warn(
-        "[AI Provider] Google Gemini primary failed, gracefully dispatching fallback to Groq:",
-        err instanceof Error ? err.message : err,
-      );
-    }
-  } else {
-    console.warn("[AI Provider] No GEMINI_API_KEY detected, skipping to Groq fallback.");
+  try {
+    const result = await callGroq(body, groqApiKey);
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  } catch (err: unknown) {
+    const groqErr = err instanceof Error ? err : new Error(String(err));
+    console.error("[AI Provider] Groq invocation failed:", groqErr);
+    return new Response(JSON.stringify({ error: "Groq API Failed", details: groqErr.message }), {
+      status: 500,
+    });
   }
-
-  if (!result) {
-    if (!groqApiKey) {
-      return new Response(
-        JSON.stringify({
-          error: "All AI providers failed or missing keys",
-          details: geminiError instanceof Error ? geminiError.message : "No keys configured",
-        }),
-        {
-          status: 502,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    try {
-      result = await callGroq(body, groqApiKey);
-    } catch (groqErr) {
-      console.error("[AI Provider] Both Gemini and Groq fallback failed:", groqErr);
-      return new Response(
-        JSON.stringify({
-          error: "AI service temporarily unavailable. Please try again shortly.",
-          details: groqErr instanceof Error ? groqErr.message : String(groqErr),
-        }),
-        {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
-  }
-
-  return new Response(JSON.stringify(result), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
 }
