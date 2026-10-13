@@ -119,8 +119,6 @@ export interface HabitFormValues {
   description: string;
   icon: string;
   color: string;
-  groupId: string;
-  goalId: string;
   type: HabitType;
   target: string;
   unit: string;
@@ -145,7 +143,7 @@ interface Props {
 
 export function HabitForm({ habit, onDone }: Props) {
   const { t } = useTranslation();
-  const { groups, goals, createHabit, updateHabit, removeHabit } = useApp();
+  const { createHabit, updateHabit, removeHabit } = useApp();
 
   const { register, handleSubmit, watch, setValue, reset } = useForm<HabitFormValues>({
     defaultValues: {
@@ -153,8 +151,6 @@ export function HabitForm({ habit, onDone }: Props) {
       description: habit?.description ?? "",
       icon: habit?.icon ?? "Target",
       color: habit?.color ?? "teal",
-      groupId: habit?.groupId ?? "none",
-      goalId: habit?.goalId ?? "none",
       type: habit?.type ?? "boolean",
       target: String(habit?.target ?? 1),
       unit: habit?.unit ?? "",
@@ -185,8 +181,6 @@ export function HabitForm({ habit, onDone }: Props) {
         description: habit.description ?? "",
         icon: habit.icon ?? "Target",
         color: habit.color ?? "teal",
-        groupId: habit.groupId ?? "none",
-        goalId: habit.goalId ?? "none",
         type: habit.type ?? "boolean",
         target: String(habit.target ?? 1),
         unit: habit.unit ?? "",
@@ -214,8 +208,6 @@ export function HabitForm({ habit, onDone }: Props) {
   const name = watch("name");
   const color = watch("color");
   const icon = watch("icon");
-  const groupId = watch("groupId");
-  const goalId = watch("goalId");
   const type = watch("type");
   const scheduleType = watch("scheduleType");
   const weekdays = watch("weekdays");
@@ -319,8 +311,6 @@ export function HabitForm({ habit, onDone }: Props) {
       description: values.description.trim() || undefined,
       icon: values.icon,
       color: values.color,
-      groupId: values.groupId === "none" ? undefined : values.groupId,
-      goalId: values.goalId === "none" ? undefined : values.goalId,
       type: values.type,
       target: values.type === "boolean" ? 1 : Math.max(1, Number(values.target) || 1),
       unit: values.type === "boolean" ? "" : values.unit.trim(),
@@ -529,51 +519,6 @@ export function HabitForm({ habit, onDone }: Props) {
         selectedColor={color}
         onChange={(newColor) => setValue("color", newColor, { shouldDirty: true })}
       />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="habit-group">{t("habit.group")}</Label>
-          <Select
-            value={groupId}
-            onValueChange={(val) => setValue("groupId", val, { shouldDirty: true })}
-          >
-            <SelectTrigger id="habit-group">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("habit.noGroup")}</SelectItem>
-              {groups.map((g) => {
-                const groupKey = `group.${g.name.toLowerCase()}`;
-                const groupName = t(groupKey, g.name);
-                return (
-                  <SelectItem key={g.id} value={g.id}>
-                    {groupName}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="habit-goal">{t("habit.goal")}</Label>
-          <Select
-            value={goalId}
-            onValueChange={(val) => setValue("goalId", val, { shouldDirty: true })}
-          >
-            <SelectTrigger id="habit-goal">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("habit.noGoal")}</SelectItem>
-              {goals.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
       <div className="space-y-2">
         <Label htmlFor="habit-type">{t("habit.type")}</Label>
