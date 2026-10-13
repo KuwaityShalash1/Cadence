@@ -18,6 +18,9 @@ export interface SyncableRecord {
   id: string;
   pending_sync?: boolean;
   synced?: boolean;
+  sync_attempts?: number;
+  sync_error?: string;
+  poisoned?: boolean;
   __syncUpdatedAt?: string;
   updatedAt?: number | string;
   [key: string]: unknown;
@@ -36,6 +39,9 @@ const SYNC_TOMBSTONES_ID = "sync-tombstones";
 export interface TombstoneEntry {
   updatedAt: string;
   pending_sync: boolean;
+  sync_attempts?: number;
+  sync_error?: string;
+  poisoned?: boolean;
 }
 
 type Tombstones = {
@@ -368,6 +374,64 @@ export async function mergeSyncRecord(record: SyncRecord): Promise<void> {
 }
 
 /**
+ * Records a sync failure attempt on a pending record. If attempts reach maxRetries (default 5),
+ * marks the record as poisoned and clears pending_sync to avoid infinite retry storms.
+ */
+export async function recordSyncFailure(
+  store: Parameters<typeof put>[0],
+  id: string,
+  errorMsg: string,
+  isTombstone = false,
+  maxRetries = 5,
+): Promise<{ poisoned: boolean; attempts: number }> {
+  try {
+    if (isTombstone) {
+      const tombstones = await getOne<Tombstones>("meta", SYNC_TOMBSTONES_ID);
+      if (tombstones?.values) {
+        const key = `${store}:${id}`;
+        const rawEntry = tombstones.values[key];
+        const entry: TombstoneEntry =
+          typeof rawEntry === "object" && rawEntry !== null
+            ? { ...rawEntry }
+            : { updatedAt: typeof rawEntry === "string" ? rawEntry : nowIso(), pending_sync: true };
+
+        const attempts = (entry.sync_attempts ?? 0) + 1;
+        const poisoned = attempts >= maxRetries;
+
+        tombstones.values[key] = {
+          ...entry,
+          sync_attempts: attempts,
+          sync_error: errorMsg,
+          poisoned,
+          pending_sync: !poisoned,
+        };
+        await put("meta", tombstones);
+        return { poisoned, attempts };
+      }
+      return { poisoned: false, attempts: 1 };
+    }
+
+    const record = await getOne<SyncableRecord>(store, id);
+    if (record) {
+      const attempts = (record.sync_attempts ?? 0) + 1;
+      const poisoned = attempts >= maxRetries;
+      const updated: SyncableRecord = {
+        ...record,
+        sync_attempts: attempts,
+        sync_error: errorMsg,
+        poisoned,
+        pending_sync: !poisoned,
+      };
+      await put(store, updated);
+      return { poisoned, attempts };
+    }
+  } catch (err) {
+    console.error(`Failed recording sync failure for ${store}:${id}:`, err);
+  }
+  return { poisoned: false, attempts: 1 };
+}
+
+/**
  * Removes the pending_sync flag from a local record and marks it as synced: true.
  * Executed immediately upon successful push to Supabase cloud.
  */
@@ -379,11 +443,11 @@ export async function clearPendingSyncFlag(
   try {
     const current = recordData ?? (await getOne<SyncableRecord>(store, id));
     if (current) {
-      const { pending_sync, ...rest } = current;
+      const { pending_sync, sync_attempts, sync_error, poisoned, ...rest } = current;
       const cleanRecord = {
         ...rest,
         synced: true,
-        __syncUpdatedAt: (current.__syncUpdatedAt as string) ?? nowIso(),
+        __syncUpdatedAt: (current["__syncUpdatedAt"] as string) ?? nowIso(),
       };
       await put(store, cleanRecord);
     }
@@ -403,6 +467,7 @@ export interface PendingSyncItem {
 /**
  * Fetches all local items marked with pending_sync: true (or un-synced) across
  * all database stores, as well as pending deletion tombstones.
+ * Skips poisoned records that exceeded max sync retries.
  */
 export async function getPendingSyncRecords(): Promise<PendingSyncItem[]> {
   const pending: PendingSyncItem[] = [];
@@ -421,6 +486,7 @@ export async function getPendingSyncRecords(): Promise<PendingSyncItem[]> {
       const records = await getAll<SyncableRecord>(store);
       for (const record of records) {
         if (store === "meta" && record.id === SYNC_TOMBSTONES_ID) continue;
+        if (record.poisoned === true) continue;
         if (record.pending_sync === true || record.synced === false) {
           const updatedAt =
             typeof record["__syncUpdatedAt"] === "string"
@@ -455,16 +521,18 @@ export async function getPendingSyncRecords(): Promise<PendingSyncItem[]> {
         const id = key.slice(separator + 1);
         let updatedAt = nowIso();
         let isPending = true;
+        let isPoisoned = false;
 
         if (typeof tombstoneVal === "object" && tombstoneVal !== null) {
           updatedAt = tombstoneVal.updatedAt;
           isPending = tombstoneVal.pending_sync !== false;
+          isPoisoned = tombstoneVal.poisoned === true;
         } else if (typeof tombstoneVal === "string") {
           updatedAt = tombstoneVal;
           isPending = true;
         }
 
-        if (isPending) {
+        if (isPending && !isPoisoned) {
           pending.push({
             store,
             id,

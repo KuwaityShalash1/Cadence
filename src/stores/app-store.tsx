@@ -616,14 +616,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (shouldPlaySound) {
             playCompleteHabitSound();
           }
-          for (const rLog of routineLogsToSave) {
-            void repo.saveRoutineLog(rLog);
-          }
-          if (!next) {
-            void repo.deleteLog(id);
-          } else {
-            void repo.saveLog(next);
-          }
+
+          const persistTasks: Promise<void>[] = [
+            ...routineLogsToSave.map((rLog) => repo.saveRoutineLog(rLog)),
+            !next ? repo.deleteLog(id) : repo.saveLog(next),
+          ];
+
+          Promise.all(persistTasks).catch((err) => {
+            console.error("Critical: Failed to persist habit log to IndexedDB:", err);
+            toast.error(
+              t(
+                "appStore.saveFailed",
+                "Storage error: Progress could not be saved locally. Reverting changes.",
+              ),
+            );
+            // Automatic rollback: restore in-memory state from database snapshot
+            void repo.loadSnapshot().then((snapshot) => {
+              setState(snapshot);
+            });
+          });
         };
 
         // 1. Pure state transition derived strictly from prev
@@ -639,7 +650,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         (sideEffects as () => void)();
       }
     },
-    [],
+    [t],
   );
 
   const actions = useMemo<AppActions>(() => {

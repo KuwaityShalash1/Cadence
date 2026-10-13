@@ -132,7 +132,10 @@ export const BadHabitCard = memo(function BadHabitCard({ habit }: BadHabitCardPr
         .reduce((sum, log) => sum + log.value, 0) || 0
     : 0;
   const limitValue = habit.limitValue ?? 0;
-  const usagePercentage = limitValue > 0 ? Math.min(100, (todayUsage / limitValue) * 100) : 0;
+  const rawPercentage = limitValue > 0 ? (todayUsage / limitValue) * 100 : 0;
+  const usagePercentage = Number.isFinite(rawPercentage)
+    ? Math.min(100, Math.max(0, rawPercentage))
+    : 0;
   const isLimitExceeded = todayUsage > limitValue;
 
   const [inlineInputValue, setInlineInputValue] = useState<string>(String(todayUsage));

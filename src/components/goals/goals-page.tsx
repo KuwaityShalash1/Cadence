@@ -90,10 +90,11 @@ export function GoalsPage() {
       currentValues.set(goal.id, currentValue);
 
       if (goal.type === "numeric") {
-        progress.set(
-          goal.id,
-          goal.targetValue > 0 ? Math.max(0, currentValue / goal.targetValue) : 0,
-        );
+        const rawProgress = goal.targetValue > 0 ? currentValue / goal.targetValue : 0;
+        const safeProgress = Number.isFinite(rawProgress)
+          ? Math.min(1, Math.max(0, rawProgress))
+          : 0;
+        progress.set(goal.id, safeProgress);
         continue;
       }
 
@@ -101,10 +102,11 @@ export function GoalsPage() {
         progress.set(goal.id, 0);
         continue;
       }
-      progress.set(
-        goal.id,
-        goal.targetValue > 0 ? Math.max(0, currentValue / goal.targetValue) : 0,
-      );
+      const rawProgress = goal.targetValue > 0 ? currentValue / goal.targetValue : 0;
+      const safeProgress = Number.isFinite(rawProgress)
+        ? Math.min(1, Math.max(0, rawProgress))
+        : 0;
+      progress.set(goal.id, safeProgress);
     }
     return { progress, currentValues };
   }, [goals, logMap]);

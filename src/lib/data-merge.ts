@@ -26,6 +26,20 @@ const MIGRATION_STORAGE_KEY_PREFIX = "cadence_migrated_user_";
 let migrationInFlight: Promise<MigrationResult> | null = null;
 
 /**
+ * Safely inspects whether an entity was previously synced with cloud.
+ */
+function isSyncedRecord(item: unknown): boolean {
+  return typeof item === "object" && item !== null && (item as Record<string, unknown>)["synced"] === true;
+}
+
+/**
+ * Safely inspects whether an entity has pending un-pushed mutations.
+ */
+function isPendingSyncRecord(item: unknown): boolean {
+  return typeof item === "object" && item !== null && Boolean((item as Record<string, unknown>)["pending_sync"]);
+}
+
+/**
  * Computes a unique signature for a habit based on normalized name and type.
  * This signature identifies habits representing the same user intention
  * across different devices or offline sessions, preventing duplicate creation
@@ -588,8 +602,8 @@ export async function mergeLocalDataToCloud(
         // it was deleted on another device/cloud. Delete locally to reconcile!
         if (
           hasRemoteEntities &&
-          (localHabit as repo.SyncableRecord).synced === true &&
-          !(localHabit as repo.SyncableRecord).pending_sync
+          isSyncedRecord(localHabit) &&
+          !isPendingSyncRecord(localHabit)
         ) {
           localHabitsToDelete.push(localHabit.id);
           stats.habitsResolved++;
@@ -678,8 +692,8 @@ export async function mergeLocalDataToCloud(
           // If remote has data and this log was previously synced, it was deleted remotely
           if (
             hasRemoteEntities &&
-            (localLog as repo.SyncableRecord).synced === true &&
-            !(localLog as repo.SyncableRecord).pending_sync
+            isSyncedRecord(localLog) &&
+            !isPendingSyncRecord(localLog)
           ) {
             localLogsToDelete.push(canonicalLogId);
             stats.logsResolved++;
@@ -720,8 +734,8 @@ export async function mergeLocalDataToCloud(
         if (
           !remoteGoal &&
           hasRemoteEntities &&
-          (goal as repo.SyncableRecord).synced === true &&
-          !(goal as repo.SyncableRecord).pending_sync
+          isSyncedRecord(goal) &&
+          !isPendingSyncRecord(goal)
         ) {
           localGoalsToDelete.push(goal.id);
           continue;
@@ -766,8 +780,8 @@ export async function mergeLocalDataToCloud(
         if (
           !remoteRoutine &&
           hasRemoteEntities &&
-          (routine as repo.SyncableRecord).synced === true &&
-          !(routine as repo.SyncableRecord).pending_sync
+          isSyncedRecord(routine) &&
+          !isPendingSyncRecord(routine)
         ) {
           localRoutinesToDelete.push(routine.id);
           continue;
@@ -815,8 +829,8 @@ export async function mergeLocalDataToCloud(
         if (
           !remoteRLog &&
           hasRemoteEntities &&
-          (rLog as repo.SyncableRecord).synced === true &&
-          !(rLog as repo.SyncableRecord).pending_sync
+          isSyncedRecord(rLog) &&
+          !isPendingSyncRecord(rLog)
         ) {
           localRoutineLogsToDelete.push(rLog.id);
           continue;
@@ -893,8 +907,8 @@ export async function mergeLocalDataToCloud(
         // it was deleted remotely! Reconcile by deleting locally.
         if (
           hasRemoteEntities &&
-          (localBadHabit as repo.SyncableRecord).synced === true &&
-          !(localBadHabit as repo.SyncableRecord).pending_sync
+          isSyncedRecord(localBadHabit) &&
+          !isPendingSyncRecord(localBadHabit)
         ) {
           localBadHabitsToDelete.push(localBadHabit.id);
           stats.badHabitsResolved = (stats.badHabitsResolved ?? 0) + 1;
@@ -939,8 +953,8 @@ export async function mergeLocalDataToCloud(
         if (
           !remoteGroup &&
           hasRemoteEntities &&
-          (group as repo.SyncableRecord).synced === true &&
-          !(group as repo.SyncableRecord).pending_sync
+          isSyncedRecord(group) &&
+          !isPendingSyncRecord(group)
         ) {
           localGroupsToDelete.push(group.id);
           continue;

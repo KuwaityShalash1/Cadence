@@ -9,6 +9,7 @@ import {
   getPendingSyncRecords,
   getSyncRecords,
   mergeSyncRecord,
+  recordSyncFailure,
   removeLocalOnly,
   setLastPushTimestamp,
   setLastSyncTimestamp,
@@ -182,6 +183,7 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
             );
             rpcFailed = true;
             failedCount++;
+            await recordSyncFailure(record.store, record.id, rpcError.message, true);
           }
         }
 
@@ -193,7 +195,7 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
         // Remove local-only pending_sync flag before uploading to Supabase
         let payloadData: Record<string, unknown> | null = null;
         if (record.data) {
-          const { pending_sync, ...rest } = record.data;
+          const { pending_sync, sync_attempts, sync_error, poisoned, ...rest } = record.data;
           payloadData = { ...rest, synced: true, _clientId: clientId };
         }
 
@@ -208,6 +210,7 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
         if (error) {
           console.error(`Failed to push record ${record.store}:${record.id} to Supabase:`, error);
           failedCount++;
+          await recordSyncFailure(record.store, record.id, error.message, false);
         } else {
           pushedCount++;
           if (record.data) {
@@ -218,6 +221,8 @@ export async function pushPendingRecords(): Promise<{ pushedCount: number; faile
     } catch (pushError) {
       console.error(`Network error pushing record ${record.store}:${record.id}:`, pushError);
       failedCount++;
+      const msg = pushError instanceof Error ? pushError.message : String(pushError);
+      await recordSyncFailure(record.store, record.id, msg, record.deleted);
     }
   }
 

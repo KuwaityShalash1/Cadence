@@ -10,7 +10,9 @@ export function toDateKey(date: Date): string {
 
 export function fromDateKey(key: string): Date {
   const parts = key.split("-").map(Number);
-  return new Date(parts[0] ?? 1970, (parts[1] ?? 1) - 1, parts[2] ?? 1);
+  // Noon (12:00:00) provides a 12-hour safety buffer against Daylight Saving Time (DST)
+  // midnight shifts that would otherwise drift into the previous calendar day.
+  return new Date(parts[0] ?? 1970, (parts[1] ?? 1) - 1, parts[2] ?? 1, 12, 0, 0);
 }
 
 export function todayKey(): string {
@@ -47,7 +49,7 @@ export function startOfWeekKey(key: string, weekStartsOn: 0 | 1 = 1): string {
 }
 
 export function monthMatrix(year: number, month: number, weekStartsOn: 0 | 1 = 1): string[][] {
-  const first = new Date(year, month, 1);
+  const first = new Date(year, month, 1, 12, 0, 0);
   const lead = (first.getDay() - weekStartsOn + 7) % 7;
   const start = addDays(toDateKey(first), -lead);
   const weeks: string[][] = [];
