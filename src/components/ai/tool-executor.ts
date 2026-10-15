@@ -1,15 +1,16 @@
 import { hasLucideIcon, resolveIconName } from "@/components/icon-map";
 import { addDays, todayKey } from "@/services/dates";
 import { buildLogMap, consistencyScore, habitStats, streaks } from "@/services/stats";
-import type { AppActions, Goal, Habit } from "@/stores/app-store";
+import type { AppActions, Goal, Habit, Routine } from "@/stores/app-store";
 import { uid } from "@/stores/app-store";
-import type { BadHabit, HabitLog } from "@/types";
+import type { BadHabit, HabitLog, RoutineStep, Schedule } from "@/types";
 import type { ToolCallPayload, ToolExecutionResult } from "@/types/ai";
 
 export interface ToolExecutorContext {
   actions: AppActions;
   habits: Habit[];
   goals: Goal[];
+  routines?: Routine[] | undefined;
   badHabits?: BadHabit[] | undefined;
   habitLogs?: HabitLog[] | undefined;
   language: "en" | "ar";
@@ -21,7 +22,7 @@ export interface ToolExecutorContext {
 export function describeAction(
   toolCall: ToolCallPayload,
   language: "en" | "ar",
-  context?: { habits?: Habit[]; goals?: Goal[]; badHabits?: BadHabit[] },
+  context?: { habits?: Habit[]; goals?: Goal[]; badHabits?: BadHabit[]; routines?: Routine[] },
 ): string {
   const isAr = language === "ar";
   const { name, args } = toolCall;
@@ -50,6 +51,30 @@ export function describeAction(
     }
     habitName = habitName || habitId || (isAr ? "عادة محددة" : "Specified Habit");
     return isAr ? `حذف العادة: "${habitName}"` : `Delete Habit: "${habitName}"`;
+  }
+
+  if (name === "create_routine") {
+    const routineName = String(args["name"] || "Untitled Routine");
+    const habitCount = Array.isArray(args["habitNames"])
+      ? args["habitNames"].length
+      : Array.isArray(args["steps"])
+        ? args["steps"].length
+        : 0;
+    const stepsSuffix = habitCount > 0 ? (isAr ? ` (${habitCount} خطوات)` : ` (${habitCount} steps)`) : "";
+    return isAr
+      ? `إنشاء روتين: "${routineName}"${stepsSuffix}`
+      : `Create Routine: "${routineName}"${stepsSuffix}`;
+  }
+
+  if (name === "delete_routine") {
+    let rName = String(args["routineName"] || "").trim();
+    const rId = String(args["routineId"] || "").trim();
+    if (!rName && rId && context?.routines) {
+      const found = context.routines.find((r) => r.id === rId);
+      if (found) rName = found.name;
+    }
+    rName = rName || rId || (isAr ? "روتين محدد" : "Specified Routine");
+    return isAr ? `حذف الروتين: "${rName}"` : `Delete Routine: "${rName}"`;
   }
 
   if (name === "create_bad_habit") {
@@ -97,6 +122,17 @@ export function describeAction(
     return isAr ? `حذف الهدف: "${goalName}"` : `Delete Goal: "${goalName}"`;
   }
 
+  if (name === "clear_all_data") {
+    const sections = (args["sections"] as string[]) || ["all"];
+    if (sections.includes("all")) {
+      return isAr
+        ? "مسح وإعادة ضبط جميع البيانات بالكامل (عادات، روتينات، أهداف، إقلاع)"
+        : "Clear & Reset All Data (Habits, Routines, Goals, Quit Trackers)";
+    }
+    const label = sections.join(", ");
+    return isAr ? `مسح بيانات الأقسام: ${label}` : `Clear sections: ${label}`;
+  }
+
   if (name === "log_habit") {
     const habitName = String(args["habitName"] || "Habit");
     const status =
@@ -131,6 +167,20 @@ export function describeAction(
 }
 
 /**
+ * Assigns an execution phase priority so dependencies execute in safe order
+ * (e.g., clear_all_data -> deletions -> habit creations -> routine creations -> logging).
+ */
+function getToolExecutionPriority(toolName: string): number {
+  if (toolName === "clear_all_data") return 1;
+  if (toolName.startsWith("delete_")) return 2;
+  if (toolName === "create_goal") return 3;
+  if (toolName === "create_habit" || toolName === "create_bad_habit") return 4;
+  if (toolName === "create_routine") return 5;
+  if (toolName.startsWith("log_")) return 6;
+  return 7;
+}
+
+/**
  * Executes function calls returned by the AI Assistant against the local store.
  * Local mutations persist immediately, while Supabase synchronization
  * occurs automatically in the background.
@@ -142,7 +192,16 @@ export async function executeAiToolCalls(
   const results: ToolExecutionResult[] = [];
   const isAr = context.language === "ar";
 
-  for (const tc of toolCalls) {
+  // Sort calls so habits exist before routines attempt to reference their IDs
+  const sortedCalls = [...toolCalls].sort(
+    (a, b) => getToolExecutionPriority(a.name) - getToolExecutionPriority(b.name),
+  );
+
+  // Track habits created within this execution batch so routines can link to them
+  const createdHabitsByName = new Map<string, Habit>();
+  const createdHabitsById = new Map<string, Habit>();
+
+  for (const tc of sortedCalls) {
     try {
       if (tc.name === "create_habit") {
         const name = String(tc.args["name"] || "").trim();
@@ -190,6 +249,10 @@ export async function executeAiToolCalls(
           goalId: matchedGoal ? matchedGoal.id : goalIdRaw || undefined,
         });
 
+        // Register in newly created map for routine linking
+        createdHabitsByName.set(habit.name.trim().toLowerCase(), habit);
+        createdHabitsById.set(habit.id, habit);
+
         const scheduleLabel = isAr
           ? schedule === "everyday"
             ? "يومياً"
@@ -230,9 +293,10 @@ export async function executeAiToolCalls(
           results.push({
             toolName: tc.name,
             summary: isAr
-              ? `لم يتم العثور على عادة باسم أو معرف "${targetName}" لحذفها.`
-              : `Could not find habit "${targetName}" to delete.`,
-            success: false,
+              ? `العادة "${targetName}" تم حذفها بالفعل سابقاً.`
+              : `Habit "${targetName}" was already deleted.`,
+            success: true,
+            data: { id: habitId, name: targetName, alreadyDeleted: true },
           });
           continue;
         }
@@ -246,6 +310,223 @@ export async function executeAiToolCalls(
             : `Deleted habit: "${target.name}"`,
           success: true,
           data: { id: target.id, name: target.name },
+        });
+      } else if (tc.name === "create_routine") {
+        const name = String(tc.args["name"] || "").trim();
+        const scheduleRaw = String(tc.args["schedule"] || "everyday").toLowerCase();
+        const timeOfDay = String(tc.args["timeOfDay"] || "").toLowerCase();
+        const habitNames = Array.isArray(tc.args["habitNames"])
+          ? (tc.args["habitNames"] as string[])
+          : [];
+        const habitIds = Array.isArray(tc.args["habitIds"])
+          ? (tc.args["habitIds"] as string[])
+          : [];
+        const stepsRaw = Array.isArray(tc.args["steps"])
+          ? (tc.args["steps"] as Array<{ title?: string; habitName?: string; habitId?: string }>)
+          : [];
+
+        if (!name) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr ? "فشل: اسم الروتين مطلوب" : "Failed: Routine name is required",
+            success: false,
+          });
+          continue;
+        }
+
+        // Infer icon based on routine name / timeOfDay
+        let resolvedIcon = "Sparkles";
+        const lowerName = name.toLowerCase();
+        if (
+          timeOfDay === "morning" ||
+          lowerName.includes("morning") ||
+          lowerName.includes("صباح") ||
+          lowerName.includes("wake")
+        ) {
+          resolvedIcon = "Sun";
+        } else if (
+          timeOfDay === "evening" ||
+          lowerName.includes("evening") ||
+          lowerName.includes("night") ||
+          lowerName.includes("مساء") ||
+          lowerName.includes("sleep") ||
+          lowerName.includes("bed")
+        ) {
+          resolvedIcon = "Moon";
+        } else if (lowerName.includes("work") || lowerName.includes("study") || lowerName.includes("عمل")) {
+          resolvedIcon = "Briefcase";
+        } else if (lowerName.includes("gym") || lowerName.includes("workout") || lowerName.includes("تمرين")) {
+          resolvedIcon = "Dumbbell";
+        }
+
+        const routineSchedule: Schedule =
+          scheduleRaw === "weekdays"
+            ? { type: "weekdays", days: [1, 2, 3, 4, 5] }
+            : scheduleRaw === "weekends"
+              ? { type: "weekdays", days: [0, 6] }
+              : { type: "daily" };
+
+        // Helper to find habit across newly created habits and existing habits
+        const findHabit = (query: string): Habit | undefined => {
+          const q = query.trim().toLowerCase();
+          return (
+            createdHabitsById.get(query) ||
+            context.habits.find((h) => h.id === query) ||
+            createdHabitsByName.get(q) ||
+            context.habits.find((h) => h.name.trim().toLowerCase() === q) ||
+            context.habits.find((h) => h.name.toLowerCase().includes(q) || q.includes(h.name.toLowerCase()))
+          );
+        };
+
+        const routineSteps: RoutineStep[] = [];
+
+        if (stepsRaw.length > 0) {
+          for (const s of stepsRaw) {
+            const stepTitle = String(s.title || "").trim();
+            if (!stepTitle) continue;
+            const habitQuery = s.habitId || s.habitName || stepTitle;
+            const linkedHabit = findHabit(habitQuery);
+            routineSteps.push({
+              id: uid(),
+              title: stepTitle,
+              habitId: linkedHabit ? linkedHabit.id : undefined,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        } else if (habitNames.length > 0 || habitIds.length > 0) {
+          const combined = [...habitNames, ...habitIds];
+          for (const item of combined) {
+            const q = String(item).trim();
+            if (!q) continue;
+            const linkedHabit = findHabit(q);
+            routineSteps.push({
+              id: uid(),
+              title: linkedHabit ? linkedHabit.name : q,
+              habitId: linkedHabit ? linkedHabit.id : undefined,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        } else {
+          routineSteps.push({
+            id: uid(),
+            title: name,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        const newRoutine: Routine = {
+          id: uid(),
+          order: Date.now(),
+          name,
+          icon: resolvedIcon,
+          color: "teal",
+          steps: routineSteps,
+          schedule: routineSchedule,
+          createdAt: Date.now(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        context.actions.upsertRoutine(newRoutine);
+
+        const summary = isAr
+          ? `تم إنشاء الروتين بنجاح: "${newRoutine.name}" (${newRoutine.steps.length} خطوات)`
+          : `Created routine: "${newRoutine.name}" (${newRoutine.steps.length} step(s))`;
+
+        results.push({
+          toolName: tc.name,
+          summary,
+          success: true,
+          data: newRoutine,
+        });
+      } else if (tc.name === "delete_routine") {
+        const routineId = tc.args["routineId"] ? String(tc.args["routineId"]).trim() : "";
+        const routineName = tc.args["routineName"] ? String(tc.args["routineName"]).trim() : "";
+
+        const routinesList = context.routines || [];
+        const target = routinesList.find((r) => {
+          if (routineId && r.id === routineId) return true;
+          if (routineName && r.name.toLowerCase() === routineName.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!target) {
+          const targetName = routineName || routineId || "unknown";
+          results.push({
+            toolName: tc.name,
+            summary: isAr
+              ? `الروتين "${targetName}" تم حذفه بالفعل سابقاً.`
+              : `Routine "${targetName}" was already deleted.`,
+            success: true,
+            data: { id: routineId, name: targetName, alreadyDeleted: true },
+          });
+          continue;
+        }
+
+        context.actions.deleteRoutine(target.id);
+
+        results.push({
+          toolName: tc.name,
+          summary: isAr
+            ? `تم حذف الروتين بنجاح: "${target.name}"`
+            : `Deleted routine: "${target.name}"`,
+          success: true,
+          data: { id: target.id, name: target.name },
+        });
+      } else if (tc.name === "clear_all_data") {
+        const sections = Array.isArray(tc.args["sections"])
+          ? (tc.args["sections"] as string[])
+          : ["all"];
+
+        const wipeAll = sections.includes("all");
+        let habitsWiped = 0;
+        let badHabitsWiped = 0;
+        let goalsWiped = 0;
+        let routinesWiped = 0;
+
+        if (wipeAll || sections.includes("habits")) {
+          for (const h of context.habits) {
+            context.actions.deleteHabit(h.id);
+            habitsWiped++;
+          }
+        }
+        if (wipeAll || sections.includes("bad_habits")) {
+          for (const bh of context.badHabits || []) {
+            if (typeof context.actions.deleteBadHabit === "function") {
+              context.actions.deleteBadHabit(bh.id);
+            } else if (typeof context.actions.deleteQuitTracker === "function") {
+              context.actions.deleteQuitTracker(bh.id);
+            } else {
+              context.actions.removeBadHabit(bh.id);
+            }
+            badHabitsWiped++;
+          }
+        }
+        if (wipeAll || sections.includes("goals")) {
+          for (const g of context.goals) {
+            context.actions.deleteGoal(g.id);
+            goalsWiped++;
+          }
+        }
+        if (wipeAll || sections.includes("routines")) {
+          for (const r of context.routines || []) {
+            context.actions.deleteRoutine(r.id);
+            routinesWiped++;
+          }
+        }
+
+        if (wipeAll && typeof context.actions.resetAll === "function") {
+          await context.actions.resetAll();
+        }
+
+        const summary = isAr
+          ? `تم مسح البيانات بنجاح (${habitsWiped} عادات، ${badHabitsWiped} إقلاع، ${goalsWiped} أهداف، ${routinesWiped} روتينات).`
+          : `Cleared data successfully (${habitsWiped} habits, ${badHabitsWiped} quit trackers, ${goalsWiped} goals, ${routinesWiped} routines).`;
+
+        results.push({
+          toolName: tc.name,
+          summary,
+          success: true,
+          data: { habitsWiped, badHabitsWiped, goalsWiped, routinesWiped },
         });
       } else if (tc.name === "create_bad_habit") {
         const name = String(tc.args["name"] || "").trim();
@@ -378,9 +659,10 @@ export async function executeAiToolCalls(
           results.push({
             toolName: tc.name,
             summary: isAr
-              ? `لم يتم العثور على متتبع إقلاع باسم أو معرف "${targetName}" لحذفه.`
-              : `Could not find quit tracker "${targetName}" to delete.`,
-            success: false,
+              ? `متتبع الإقلاع "${targetName}" تم حذفه بالفعل سابقاً.`
+              : `Quit tracker "${targetName}" was already deleted.`,
+            success: true,
+            data: { id: badHabitId, title: targetName, alreadyDeleted: true },
           });
           continue;
         }
@@ -446,9 +728,10 @@ export async function executeAiToolCalls(
           results.push({
             toolName: tc.name,
             summary: isAr
-              ? `لم يتم العثور على هدف باسم أو معرف "${targetName}" لحذفه.`
-              : `Could not find goal "${targetName}" to delete.`,
-            success: false,
+              ? `الهدف "${targetName}" تم حذفه بالفعل سابقاً.`
+              : `Goal "${targetName}" was already deleted.`,
+            success: true,
+            data: { id: goalId, name: targetName, alreadyDeleted: true },
           });
           continue;
         }
@@ -556,7 +839,6 @@ export async function executeAiToolCalls(
         }
 
         const today = todayKey();
-        // Get the existing log value for this habit today
         const existingLog = (context.habitLogs || []).find(
           (l) => l.habitId === targetHabit.id && l.date === today,
         );
@@ -565,7 +847,6 @@ export async function executeAiToolCalls(
         if (mode === "set") {
           context.actions.setHabitValue(targetHabit.id, today, amount);
         } else {
-          // increment mode
           context.actions.incrementHabit(targetHabit.id, today, amount);
         }
 
@@ -682,10 +963,11 @@ export async function executeAiToolCalls(
         const activeHabitsCount = context.habits.filter((h) => !h.archived).length;
         const activeGoalsCount = context.goals.length;
         const activeBadHabitsCount = (context.badHabits ?? []).length;
+        const activeRoutinesCount = (context.routines ?? []).length;
 
         const summary = isAr
-          ? `لديك حالياً ${activeHabitsCount} عادات نشطة، ${activeBadHabitsCount} متتبعات إقلاع، و ${activeGoalsCount} أهداف قيد المتابعة.`
-          : `You currently have ${activeHabitsCount} active habit(s), ${activeBadHabitsCount} quit tracker(s), and ${activeGoalsCount} goal(s).`;
+          ? `لديك حالياً ${activeHabitsCount} عادات نشطة، ${activeRoutinesCount} روتينات، ${activeBadHabitsCount} متتبعات إقلاع، و ${activeGoalsCount} أهداف قيد المتابعة.`
+          : `You currently have ${activeHabitsCount} active habit(s), ${activeRoutinesCount} routine(s), ${activeBadHabitsCount} quit tracker(s), and ${activeGoalsCount} goal(s).`;
 
         results.push({
           toolName: tc.name,
@@ -701,6 +983,11 @@ export async function executeAiToolCalls(
                 icon: h.icon,
                 goalId: h.goalId,
               })),
+            routines: (context.routines ?? []).map((r) => ({
+              id: r.id,
+              name: r.name,
+              steps: r.steps,
+            })),
             goals: context.goals.map((g) => ({
               id: g.id,
               name: g.name,

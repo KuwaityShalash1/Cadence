@@ -502,7 +502,11 @@ function LoadingIndicator({
 // Main Drawer
 // ---------------------------------------------------------------------------
 export function AiAssistantDrawer() {
-  const { habits, goals, habitLogs, badHabits, ...actions } = useApp();
+  const store = useApp();
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
+  const { habits, goals, habitLogs, badHabits, ...actions } = store;
   const { language, isRtl } = useTranslation();
   const isOnline = useOnlineStatus();
 
@@ -589,12 +593,14 @@ export function AiAssistantDrawer() {
 
     try {
       const toolCalls = actionsToExecute.map((a) => a.toolCall);
+      const freshStore = storeRef.current;
       const results = await executeAiToolCalls(toolCalls, {
-        actions,
-        habits,
-        goals,
-        badHabits,
-        habitLogs,
+        actions: freshStore,
+        habits: freshStore.habits,
+        goals: freshStore.goals,
+        routines: freshStore.routines,
+        badHabits: freshStore.badHabits,
+        habitLogs: freshStore.habitLogs,
         language: language === "ar" ? "ar" : "en",
       });
 
@@ -705,16 +711,23 @@ export function AiAssistantDrawer() {
     const minDelayMs = complex ? COMPLEX_TOOL_MIN_MS : SIMPLE_REPLY_MIN_MS;
 
     try {
-      // Build comprehensive context of habits, goals, and analytics
+      // Build comprehensive context of habits, routines, goals, and analytics from live store
+      const liveStore = storeRef.current;
+      const liveHabits = liveStore.habits;
+      const liveGoals = liveStore.goals;
+      const liveRoutines = liveStore.routines || [];
+      const liveBadHabits = liveStore.badHabits || [];
+      const liveLogs = liveStore.habitLogs;
+
       const today = todayKey();
-      const logMap = buildLogMap(habitLogs);
-      const activeHabits = habits.filter((h) => !h.archived);
+      const logMap = buildLogMap(liveLogs);
+      const activeHabits = liveHabits.filter((h) => !h.archived);
       const overallConsistency = consistencyScore(activeHabits, logMap, 30);
       const startDate30d = addDays(today, -30);
 
       // Compute today's completion rate
       const completedToday = activeHabits.filter((h) => {
-        const log = habitLogs.find((l) => l.habitId === h.id && l.date === today);
+        const log = liveLogs.find((l) => l.habitId === h.id && l.date === today);
         return log?.status === "complete" || (log && log.value >= log.target);
       }).length;
       const todayCompletionRate =
@@ -739,7 +752,7 @@ export function AiAssistantDrawer() {
         todayCompletionRate,
         habits: activeHabits.map((h) => {
           const logId = `${h.id}:${today}`;
-          const log = habitLogs.find((l) => l.id === logId);
+          const log = liveLogs.find((l) => l.id === logId);
           const isCompletedToday = log?.status === "complete" || (log && log.value >= log.target);
 
           let scheduleStr = "daily";
@@ -761,14 +774,24 @@ export function AiAssistantDrawer() {
             goalId: h.goalId,
           };
         }),
-        goals: goals.map((g) => ({
+        routines: liveRoutines.map((r) => ({
+          id: r.id,
+          name: r.name,
+          schedule: r.schedule?.type,
+          steps: (r.steps || []).map((s) => ({
+            id: s.id,
+            title: s.title,
+            habitId: s.habitId,
+          })),
+        })),
+        goals: liveGoals.map((g) => ({
           id: g.id,
           name: g.name,
           targetValue: g.targetValue,
           currentValue: g.currentValue,
           unit: g.unit || "",
         })),
-        badHabits: (badHabits || []).map((bh) => ({
+        badHabits: liveBadHabits.map((bh) => ({
           id: bh.id,
           name: bh.title,
           strategy: bh.strategy ?? "cold-turkey",
@@ -819,11 +842,12 @@ export function AiAssistantDrawer() {
       let executionResults;
       if (safeCalls.length > 0) {
         executionResults = await executeAiToolCalls(safeCalls, {
-          actions,
-          habits,
-          goals,
-          badHabits,
-          habitLogs,
+          actions: liveStore,
+          habits: liveHabits,
+          goals: liveGoals,
+          routines: liveRoutines,
+          badHabits: liveBadHabits,
+          habitLogs: liveLogs,
           language: language === "ar" ? "ar" : "en",
         });
 
@@ -834,13 +858,60 @@ export function AiAssistantDrawer() {
         }
       }
 
+      // Filter out delete actions targeting items that are already absent from the store
+      const validMutationCalls = mutationCalls.filter((tc) => {
+        if (tc.name === "delete_habit") {
+          const habitId = String(tc.args?.["habitId"] || "").trim();
+          const habitName = String(tc.args?.["habitName"] || "").trim().toLowerCase();
+          const exists = liveHabits.some(
+            (h) => (habitId && h.id === habitId) || (habitName && h.name.trim().toLowerCase() === habitName),
+          );
+          return exists;
+        }
+        if (tc.name === "delete_bad_habit") {
+          const bhId = String(tc.args?.["badHabitId"] || "").trim();
+          const bhName = String(tc.args?.["badHabitName"] || "").trim().toLowerCase();
+          const exists = liveBadHabits.some(
+            (b) => (bhId && b.id === bhId) || (bhName && b.title.trim().toLowerCase() === bhName),
+          );
+          return exists;
+        }
+        if (tc.name === "delete_goal") {
+          const goalId = String(tc.args?.["goalId"] || "").trim();
+          const goalName = String(tc.args?.["goalName"] || "").trim().toLowerCase();
+          const exists = liveGoals.some(
+            (g) => (goalId && g.id === goalId) || (goalName && g.name.trim().toLowerCase() === goalName),
+          );
+          return exists;
+        }
+        if (tc.name === "delete_routine") {
+          const routineId = String(tc.args?.["routineId"] || "").trim();
+          const routineName = String(tc.args?.["routineName"] || "").trim().toLowerCase();
+          const exists = liveRoutines.some(
+            (r) => (routineId && r.id === routineId) || (routineName && r.name.trim().toLowerCase() === routineName),
+          );
+          return exists;
+        }
+        return true;
+      });
+
       // Propose mutation actions for Human-in-the-Loop review (all checked by default)
-      const pendingActions: PendingAction[] = mutationCalls.map((tc) => ({
+      const pendingActions: PendingAction[] = validMutationCalls.map((tc) => ({
         id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         toolCall: tc,
         status: "pending",
-        description: describeAction(tc, "en", { habits, goals, badHabits }),
-        descriptionAr: describeAction(tc, "ar", { habits, goals, badHabits }),
+        description: describeAction(tc, "en", {
+          habits: liveHabits,
+          goals: liveGoals,
+          badHabits: liveBadHabits,
+          routines: liveRoutines,
+        }),
+        descriptionAr: describeAction(tc, "ar", {
+          habits: liveHabits,
+          goals: liveGoals,
+          badHabits: liveBadHabits,
+          routines: liveRoutines,
+        }),
         checked: true,
       }));
 

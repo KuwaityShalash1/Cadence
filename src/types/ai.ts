@@ -70,6 +70,19 @@ export interface AiBadHabitContext {
   daysClean?: number | undefined;
 }
 
+export interface AiRoutineStepContext {
+  id: string;
+  title: string;
+  habitId?: string | undefined;
+}
+
+export interface AiRoutineContext {
+  id: string;
+  name: string;
+  schedule?: string | undefined;
+  steps: AiRoutineStepContext[];
+}
+
 export interface AiAnalyticsContext {
   overallConsistencyScore?: number | undefined;
   habitPerformance?:
@@ -88,6 +101,7 @@ export interface AiAppContext {
   habits: AiHabitContext[];
   goals: AiGoalContext[];
   badHabits?: AiBadHabitContext[] | undefined;
+  routines?: AiRoutineContext[] | undefined;
   analytics?: AiAnalyticsContext | undefined;
   language?: "en" | "ar" | undefined;
   /** User's current local hour (0-23) for coaching context. */
@@ -161,6 +175,31 @@ export interface LogHabitProgressArgs {
   amount: number;
   /** 'increment': add amount to current value; 'set': set current value directly. */
   mode: "increment" | "set";
+}
+
+export interface CreateRoutineArgs {
+  name: string;
+  schedule?: string | undefined;
+  timeOfDay?: string | undefined;
+  habitNames?: string[] | undefined;
+  habitIds?: string[] | undefined;
+  steps?: Array<{ title: string; habitName?: string; habitId?: string }> | undefined;
+}
+
+export interface DeleteRoutineArgs {
+  routineId?: string | undefined;
+  routineName?: string | undefined;
+}
+
+export interface ClearAllDataArgs {
+  sections: Array<"habits" | "bad_habits" | "goals" | "routines" | "all">;
+}
+
+export interface BatchOperationsArgs {
+  operations: Array<{
+    actionType: string;
+    payload: Record<string, unknown>;
+  }>;
 }
 
 export interface GetAppSummaryArgs {

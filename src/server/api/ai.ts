@@ -239,6 +239,113 @@ const GEMINI_TOOLS = [
           required: ["amount", "mode"],
         },
       },
+      {
+        name: "create_routine",
+        description:
+          "Create a new daily/weekly routine (e.g., 'Morning Routine', 'روتين الصباح', 'Evening Routine', 'روتين المساء') with steps optionally linked to existing or newly created habits.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: {
+              type: "STRING",
+              description: "The name of the routine (e.g., 'Morning Routine', 'روتين الصباح').",
+            },
+            schedule: {
+              type: "STRING",
+              enum: ["everyday", "weekdays", "weekends"],
+              description: "Schedule frequency for the routine.",
+            },
+            timeOfDay: {
+              type: "STRING",
+              enum: ["morning", "afternoon", "evening", "anytime"],
+              description: "Optional time of day classification for the routine.",
+            },
+            habitNames: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "List of habit names to automatically include as steps in this routine.",
+            },
+            steps: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING", description: "Title of the step." },
+                  habitName: { type: "STRING", description: "Optional habit name linked to this step." },
+                },
+                required: ["title"],
+              },
+              description: "Detailed list of routine steps.",
+            },
+          },
+          required: ["name"],
+        },
+      },
+      {
+        name: "delete_routine",
+        description: "Permanently delete an existing routine by name or ID.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            routineId: {
+              type: "STRING",
+              description: "Optional exact ID of the routine to delete.",
+            },
+            routineName: {
+              type: "STRING",
+              description: "The name of the routine to delete (e.g., 'Morning Routine').",
+            },
+          },
+        },
+      },
+      {
+        name: "clear_all_data",
+        description:
+          "Wipe or reset all data for specific sections or everything. Use this when the user says 'امسح كل حاجة / ابدأ من جديد / reset all / clear habits / wipe goals'.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            sections: {
+              type: "ARRAY",
+              items: {
+                type: "STRING",
+                enum: ["habits", "bad_habits", "goals", "routines", "all"],
+              },
+              description: "Sections to wipe: 'habits', 'bad_habits', 'goals', 'routines', or 'all'.",
+            },
+          },
+          required: ["sections"],
+        },
+      },
+      {
+        name: "batch_operations",
+        description:
+          "Execute multiple tool operations in a single plan (e.g., creating 5 habits, 1 quit tracker, and 2 routines together). Use this whenever proposing a multi-step plan so that all actions are included at once.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            operations: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  actionType: {
+                    type: "STRING",
+                    description: "Name of the tool to execute (e.g. 'create_habit', 'create_routine', 'delete_habit').",
+                  },
+                  payload: {
+                    type: "OBJECT",
+                    description: "Arguments matching the specified action tool parameters.",
+                  },
+                },
+                required: ["actionType", "payload"],
+              },
+              description: "Array of operations to execute in this batch plan.",
+            },
+          },
+          required: ["operations"],
+        },
+      },
     ],
   },
 ];
@@ -498,6 +605,125 @@ const GROQ_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "create_routine",
+      description:
+        "Create a new daily/weekly routine (e.g., 'Morning Routine', 'روتين الصباح', 'Evening Routine', 'روتين المساء') with steps optionally linked to existing or newly created habits.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "The name of the routine (e.g., 'Morning Routine', 'روتين الصباح').",
+          },
+          schedule: {
+            type: "string",
+            enum: ["everyday", "weekdays", "weekends"],
+            description: "Schedule frequency for the routine.",
+          },
+          timeOfDay: {
+            type: "string",
+            enum: ["morning", "afternoon", "evening", "anytime"],
+            description: "Optional time of day classification for the routine.",
+          },
+          habitNames: {
+            type: "array",
+            items: { type: "string" },
+            description: "List of habit names to automatically include as steps in this routine.",
+          },
+          steps: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Title of the step." },
+                habitName: { type: "string", description: "Optional habit name linked to this step." },
+              },
+              required: ["title"],
+            },
+            description: "Detailed list of routine steps.",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_routine",
+      description: "Permanently delete an existing routine by name or ID.",
+      parameters: {
+        type: "object",
+        properties: {
+          routineId: {
+            type: "string",
+            description: "Optional exact ID of the routine to delete.",
+          },
+          routineName: {
+            type: "string",
+            description: "The name of the routine to delete (e.g., 'Morning Routine').",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "clear_all_data",
+      description:
+        "Wipe or reset all data for specific sections or everything. Use this when the user says 'امسح كل حاجة / ابدأ من جديد / reset all / clear habits / wipe goals'.",
+      parameters: {
+        type: "object",
+        properties: {
+          sections: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: ["habits", "bad_habits", "goals", "routines", "all"],
+            },
+            description: "Sections to wipe: 'habits', 'bad_habits', 'goals', 'routines', or 'all'.",
+          },
+        },
+        required: ["sections"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "batch_operations",
+      description:
+        "Execute multiple tool operations in a single plan (e.g., creating 5 habits, 1 quit tracker, and 2 routines together). Use this whenever proposing a multi-step plan so that all actions are included at once.",
+      parameters: {
+        type: "object",
+        properties: {
+          operations: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                actionType: {
+                  type: "string",
+                  description: "Name of the tool to execute (e.g. 'create_habit', 'create_routine', 'delete_habit').",
+                },
+                payload: {
+                  type: "object",
+                  description: "Arguments matching the specified action tool parameters.",
+                },
+              },
+              required: ["actionType", "payload"],
+            },
+            description: "Array of operations to execute in this batch plan.",
+          },
+        },
+        required: ["operations"],
+      },
+    },
+  },
 ];
 
 /**
@@ -527,6 +753,16 @@ function buildSystemPrompt(body: AiRequestBody): string {
         )
         .join("\n")
     : "No habits tracked yet.";
+
+  const routinesContext =
+    body.context?.routines && body.context.routines.length > 0
+      ? body.context.routines
+          .map(
+            (r) =>
+              `- [ID: "${r.id || ""}"] "${r.name}" (${r.steps?.length ?? 0} steps: ${(r.steps || []).map((s) => s.title).join(", ")})`,
+          )
+          .join("\n")
+      : "No routines created yet.";
 
   const goalsContext = body.context?.goals
     ? body.context.goals
@@ -568,6 +804,19 @@ CURRENT TIME CONTEXT:
 - Local Time: ${timeOfDayLabel} (hour: ${localHour})
 - Today's Overall Completion Rate: ${Math.round(todayCompletionRate * 100)}% of habits done
 
+OPERATIONAL LAWS (MUST BE STRICTLY OBEYED AT ALL TIMES):
+1. LAW 1 — ZERO TEXT CONFIRMATION BEFORE TOOL CALLS:
+   Your tool calls DO NOT mutate the database immediately; they render an interactive 'Approval Card' with Approve/Reject buttons in the user's UI. Therefore, NEVER ask "Are you sure?" or "Reply yes to start" or "Should I proceed?" in text before emitting tool calls! Whenever the user asks to delete items, add habits, create routines, clear data, or agrees to build a plan, emit ALL corresponding tool calls IMMEDIATELY in the exact same turn.
+
+2. LAW 2 — COMPLETE PLAN EXECUTION (NO DRIP-FEEDING):
+   If you propose a plan with multiple items (e.g. 5 habits, 1 quit tracker, and 2 routines), you MUST emit ALL tool calls in that exact same response (either as parallel tool calls or grouped inside \`batch_operations\`). NEVER emit just 1 tool call and leave the rest as plain text! When asked to create or delete multiple things, handle EVERY requested item in this single turn.
+
+3. LAW 3 — LIVE CONTEXT IS ABSOLUTE TRUTH:
+   The \`CURRENT USER CONTEXT\` block below reflects the real-time database state. Never attempt to delete or modify an item that is no longer listed in \`CURRENT USER CONTEXT\`, even if it was mentioned earlier in the chat history. If an item is already absent from the context, acknowledge it is already gone and do not re-emit deletion tool calls.
+
+4. LAW 4 — SMART SEMANTIC TYPO CORRECTION:
+   Users often type quickly with keyboard typos (especially in Arabic, e.g. "قراة" -> "قراءة", "رياصة" -> "رياضة", "شرب ما" -> "شرب الماء", "smokng" -> "Quit Smoking"). NEVER copy raw user typos into habit, goal, routine, or quit-tracker names. Always understand the intended meaning and write a clean, grammatically correct, motivating title in the proper language.
+
 COACHING PHILOSOPHY & PROACTIVE AGENT BEHAVIOR:
 You are an observant, empathetic coach who is AWARE of the current time of day and the user's current completion rate.
 - Good morning (5–11): Energetically greet them, recap what's pending today.
@@ -578,34 +827,34 @@ You are an observant, empathetic coach who is AWARE of the current time of day a
 - When you notice a struggling streak (0 completions in 3+ days), proactively diagnose the root cause and suggest a schedule adjustment.
 - Spot patterns, celebrate winning streaks, and identify struggling routines.
 - Call \`get_analytics\` whenever you need deeper metrics on consistency, streaks, or completion rates.
-- HUMAN-IN-THE-LOOP APPROVAL WORKFLOW:
-  Cadence enforces a strict Human-in-the-Loop workflow. When you call ANY mutation tool (create_habit, delete_habit, create_bad_habit, delete_bad_habit, create_goal, delete_goal, log_habit, log_habit_progress), the mutation is NOT executed immediately. A rich UI card with approval buttons is shown to the user.
-  Because the user must explicitly approve mutations, feel completely free to be proactive! If a habit has a 0% completion rate or is causing burnout, recommend deleting or modifying it. If a user achieves a goal, propose setting a new target or cleaning up.
 
 DEEP REASONING MODE (Chain-of-Thought):
-For ANY complex request — especially unit conversions, analytics interpretation, or habit coaching advice — you MUST think step-by-step BEFORE formulating your answer or tool arguments.
+For ANY complex request — especially unit conversions, analytics interpretation, multi-step plans, or habit coaching advice — you MUST think step-by-step BEFORE formulating your answer or tool arguments.
 Wrap your internal reasoning inside <think>...</think> tags at the very start of your response.
 Only the final, clean answer comes after the </think> closing tag.
 Example format:
 <think>
-1. The user says "500ml". The habit "Drink Water" has unit "L" and target 3.
-2. Convert: 500ml ÷ 1000 = 0.5L.
-3. Current value is 1.0L. After increment: 1.0 + 0.5 = 1.5L (still below 3L target).
-4. I should call log_habit_progress with amount: 0.5, mode: "increment".
+1. The user wants to build a morning routine with 3 habits: drinking 500ml water, 10 min stretch, 15 min reading.
+2. I should correct any typos and normalize units: "Drink Water" (target: 2, unit: L -> 500ml is 0.5L), "Stretching" (10 mins), "Reading" (15 mins).
+3. I will propose create_habit for any new habits, and create_routine for "Morning Routine" grouping them.
+4. I will emit all tool calls in this turn without asking for text confirmation.
 </think>
-Okay, I've logged 0.5L of water for you! You're now at 1.5 / 3L. Keep it up!
+I've put together your morning routine plan! Review and approve the changes below to apply them to Cadence.
 
 CRITICAL UNIT CONVERSION RULE:
 ALWAYS inspect the target habit's \`unit\` and \`target\` in the context BEFORE calling \`log_habit_progress\`.
-- If the habit is tracked in Liters ('L', target: 3) and the user says 'I drank 500ml', you MUST convert 500ml → 0.5L and pass amount: 0.5.
-- If the habit unit is 'hours' and the user says '30 minutes', convert: 30 ÷ 60 = 0.5, pass amount: 0.5.
-- If the habit unit is 'km' and the user says '500m', convert: 500 ÷ 1000 = 0.5, pass amount: 0.5.
+- If the habit is tracked in Liters ('L', target: 3) and the user says 'I drank 500ml', you MUST convert 500ml -> 0.5L and pass amount: 0.5.
+- If the habit unit is 'hours' and the user says '30 minutes', convert: 30 / 60 = 0.5, pass amount: 0.5.
+- If the habit unit is 'km' and the user says '500m', convert: 500 / 1000 = 0.5, pass amount: 0.5.
 - Always normalize the user's input to match the habit's base unit before calling the tool.
 - For boolean habits with no unit, use \`log_habit\` with status 'done' or 'skipped' instead.
 
 CURRENT USER CONTEXT:
 Habits:
 ${habitsContext}
+
+Routines:
+${routinesContext}
 
 Goals:
 ${goalsContext}
@@ -624,21 +873,29 @@ AVAILABLE ACTIONS (FUNCTION CALLS):
    - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", req), color (string, opt), icon (string, opt), goalId (string, opt).
 2. delete_habit: Propose deleting an existing habit.
    - Args: habitId (string, opt), habitName (string, opt).
-3. create_bad_habit: Propose creating a quit tracker entry.
+3. create_routine: Propose creating a new routine (e.g., Morning Routine, Evening Routine) grouping habits.
+   - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", opt), timeOfDay ("morning" | "afternoon" | "evening" | "anytime", opt), habitNames (string[], opt), steps (array of { title, habitName }, opt).
+4. delete_routine: Propose deleting an existing routine.
+   - Args: routineId (string, opt), routineName (string, opt).
+5. create_bad_habit: Propose creating a quit tracker entry.
    - Args: name (string, req), triggerCategory (string, opt), limit (number, opt).
-4. delete_bad_habit: Propose deleting a quit tracker / bad habit.
+6. delete_bad_habit: Propose deleting a quit tracker / bad habit.
    - Args: badHabitId (string, opt), badHabitName (string, opt).
-5. create_goal: Propose creating a target milestone goal.
+7. create_goal: Propose creating a target milestone goal.
    - Args: name (string, req), targetValue (number, req), unit (string, opt).
-6. delete_goal: Propose deleting an existing goal.
+8. delete_goal: Propose deleting an existing goal.
    - Args: goalId (string, opt), goalName (string, opt).
-7. log_habit: Mark a boolean habit as 'done' or 'skipped' for today.
-   - Args: habitName (string, req), status ("done" | "skipped", req).
-8. log_habit_progress: Log partial/quantitative progress for a numeric habit. Use INSTEAD of log_habit for numeric habits.
-   - Args: habitId (string, opt), habitName (string, opt), amount (number, req — already converted to base unit), mode ("increment" | "set", req).
-9. get_analytics: Retrieve deep streaks, completion rates, and consistency statistics.
-   - Args: habitName (string, opt), timeRangeDays (number, opt).
-10. get_app_summary: Retrieve an overview summary of current habits and goals.
+9. clear_all_data: Propose clearing/wiping all data or specific sections.
+   - Args: sections (array of "habits" | "bad_habits" | "goals" | "routines" | "all", req).
+10. batch_operations: Propose executing multiple actions in one batch plan.
+    - Args: operations (array of { actionType: string, payload: object }, req).
+11. log_habit: Mark a boolean habit as 'done' or 'skipped' for today.
+    - Args: habitName (string, req), status ("done" | "skipped", req).
+12. log_habit_progress: Log partial/quantitative progress for a numeric habit. Use INSTEAD of log_habit for numeric habits.
+    - Args: habitId (string, opt), habitName (string, opt), amount (number, req — already converted to base unit), mode ("increment" | "set", req).
+13. get_analytics: Retrieve deep streaks, completion rates, and consistency statistics.
+    - Args: habitName (string, opt), timeRangeDays (number, opt).
+14. get_app_summary: Retrieve an overview summary of current habits and goals.
     - Args: query (string, opt).
 
 When you execute or propose a tool call, accompany it with a short, encouraging, and helpful explanation of your rationale.`;
@@ -660,6 +917,36 @@ function cleanApiKey(key?: string): string {
     .trim()
     .replace(/^["']|["']$/g, "")
     .trim();
+}
+
+/**
+ * Unwraps batch_operations into flat individual tool calls so that multi-step plans
+ * can be proposed either via parallel tool calling or via a single batch wrapper.
+ */
+function unwrapToolCalls(rawCalls: ToolCallPayload[]): ToolCallPayload[] {
+  const unwrapped: ToolCallPayload[] = [];
+  for (const tc of rawCalls) {
+    if (tc.name === "batch_operations" && tc.args && Array.isArray(tc.args["operations"])) {
+      const ops = tc.args["operations"] as Array<{
+        actionType?: string;
+        name?: string;
+        payload?: Record<string, unknown>;
+        args?: Record<string, unknown>;
+      }>;
+      for (const op of ops) {
+        const opName = op.actionType || op.name;
+        if (opName) {
+          unwrapped.push({
+            name: opName,
+            args: op.payload || op.args || {},
+          });
+        }
+      }
+    } else {
+      unwrapped.push(tc);
+    }
+  }
+  return unwrapped;
 }
 
 /**
@@ -757,9 +1044,11 @@ async function callGemini(
           }
         }
 
+        const unwrapped = unwrapToolCalls(toolCalls);
+
         return {
           text: text.trim(),
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          toolCalls: unwrapped.length > 0 ? unwrapped : undefined,
           providerUsed: "gemini",
         };
       } catch (err: unknown) {
@@ -842,6 +1131,7 @@ async function callGroq(
             messages,
             tools: GROQ_TOOLS,
             tool_choice: "auto",
+            parallel_tool_calls: true,
             temperature: 0.2,
           }),
         });
@@ -897,9 +1187,11 @@ async function callGroq(
           }
         }
 
+        const unwrapped = unwrapToolCalls(toolCalls);
+
         return {
           text,
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          toolCalls: unwrapped.length > 0 ? unwrapped : undefined,
           providerUsed: "groq",
           ...(reasoning !== undefined ? { reasoning } : {}),
         };
