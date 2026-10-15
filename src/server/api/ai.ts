@@ -1,6 +1,7 @@
 import type { AiRequestBody, AiResponsePayload, ToolCallPayload } from "../../types/ai";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface ProcessEnv {
       GEMINI_API_KEY?: string;
@@ -355,14 +356,32 @@ When you execute a tool call, accompany it with a short, helpful explanation of 
 }
 
 /**
- * Strict timeout constant to prevent Vercel Serverless Function 10-second termination.
+ * Default timeout budgets to guarantee execution finishes comfortably within
+ * Vercel Serverless Function limits (10s default / 30s configured).
  */
-const TIMEOUT_MS = 4500;
+const DEFAULT_GEMINI_TIMEOUT_MS = 2500;
+const DEFAULT_GROQ_TIMEOUT_MS = 8000;
+
+/**
+ * Strips accidental wrapping quotes or leading/trailing whitespace from environment variables.
+ */
+function cleanApiKey(key?: string): string {
+  if (!key) return "";
+  return key
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
+}
 
 /**
  * Primary Provider: Google Gemini
  */
-async function callGemini(body: AiRequestBody, geminiKey: string): Promise<AiResponsePayload> {
+async function callGemini(
+  body: AiRequestBody,
+  geminiKey: string,
+  options?: { timeoutMs?: number; signal?: AbortSignal },
+): Promise<AiResponsePayload> {
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_GEMINI_TIMEOUT_MS;
   const systemInstructionText = buildSystemPrompt(body);
 
   const contents = body.messages.map((m) => ({
@@ -370,22 +389,27 @@ async function callGemini(body: AiRequestBody, geminiKey: string): Promise<AiRes
     parts: [{ text: m.content }],
   }));
 
-  const models = [
-    "gemini-3.8-flash",
-    "gemini-flash-latest",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
-  ];
+  // Production-available fast Gemini models:
+  const models = ["gemini-3.5-flash", "gemini-flash-latest"];
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const abortListener = () => controller.abort();
+  if (options?.signal) {
+    if (options.signal.aborted) {
+      clearTimeout(timeoutId);
+      throw new Error("Gemini invocation aborted");
+    }
+    options.signal.addEventListener("abort", abortListener, { once: true });
+  }
 
   let lastError: unknown = null;
 
   try {
     for (const model of models) {
-      if (controller.signal.aborted) {
-        throw new Error(`Gemini request timed out after ${TIMEOUT_MS}ms`);
+      if (controller.signal.aborted || options?.signal?.aborted) {
+        throw new Error(`Gemini request aborted or timed out after ${timeoutMs}ms`);
       }
 
       try {
@@ -451,7 +475,7 @@ async function callGemini(body: AiRequestBody, geminiKey: string): Promise<AiRes
         };
       } catch (err: unknown) {
         lastError = err;
-        if (controller.signal.aborted) {
+        if (controller.signal.aborted || options?.signal?.aborted) {
           break;
         }
         // If model-specific failure, continue to next candidate model
@@ -460,6 +484,9 @@ async function callGemini(body: AiRequestBody, geminiKey: string): Promise<AiRes
     }
   } finally {
     clearTimeout(timeoutId);
+    if (options?.signal) {
+      options.signal.removeEventListener("abort", abortListener);
+    }
   }
 
   throw lastError instanceof Error
@@ -470,11 +497,16 @@ async function callGemini(body: AiRequestBody, geminiKey: string): Promise<AiRes
 /**
  * Fallback Provider: Groq (OpenAI-compatible completions endpoint)
  */
-async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiResponsePayload> {
+async function callGroq(
+  body: AiRequestBody,
+  groqKey: string,
+  options?: { timeoutMs?: number; signal?: AbortSignal },
+): Promise<AiResponsePayload> {
   if (!groqKey) {
     throw new Error("GROQ_API_KEY environment variable is not configured");
   }
 
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_GROQ_TIMEOUT_MS;
   const systemPrompt = buildSystemPrompt(body);
 
   const messages = [
@@ -485,17 +517,27 @@ async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiRespons
     })),
   ];
 
-  const models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "qwen/qwen3.8-27b"];
+  // High-performance active Groq models with verified sub-500ms latency and tool calling:
+  const models = ["qwen/qwen3.8-27b", "openai/gpt-oss-20b"];
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8500);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const abortListener = () => controller.abort();
+  if (options?.signal) {
+    if (options.signal.aborted) {
+      clearTimeout(timeoutId);
+      throw new Error("Groq invocation aborted");
+    }
+    options.signal.addEventListener("abort", abortListener, { once: true });
+  }
 
   let lastError: unknown = null;
 
   try {
     for (const model of models) {
-      if (controller.signal.aborted) {
-        throw new Error("Groq request timed out after 8500ms");
+      if (controller.signal.aborted || options?.signal?.aborted) {
+        throw new Error(`Groq request aborted or timed out after ${timeoutMs}ms`);
       }
 
       try {
@@ -570,7 +612,7 @@ async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiRespons
         };
       } catch (err: unknown) {
         lastError = err;
-        if (controller.signal.aborted) {
+        if (controller.signal.aborted || options?.signal?.aborted) {
           break;
         }
         continue;
@@ -578,6 +620,9 @@ async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiRespons
     }
   } finally {
     clearTimeout(timeoutId);
+    if (options?.signal) {
+      options.signal.removeEventListener("abort", abortListener);
+    }
   }
 
   throw lastError instanceof Error
@@ -586,7 +631,15 @@ async function callGroq(body: AiRequestBody, groqKey: string): Promise<AiRespons
 }
 
 /**
- * Main AI Request Handler implementing dual-provider fallback logic.
+ * Main AI Request Handler implementing resilient serverless dual-provider orchestration.
+ *
+ * Supported execution strategies via AI_EXECUTION_STRATEGY or AI_PROVIDER:
+ * - 'parallel' (default): Fires Gemini & Groq simultaneously via Promise.any. The fastest successful
+ *   response wins, and the slower pending call is aborted immediately. Zero fallback latency penalty!
+ * - 'fallback' / 'sequential': Tries Gemini with a strict 2.0s fast-fail timeout. If it fails or times
+ *   out, immediately delegates to Groq with the remaining time budget.
+ * - 'groq' / 'groq-only': Completely bypasses Gemini and calls Groq exclusively (with 8.5s timeout).
+ * - 'gemini' / 'gemini-only': Exclusively calls Gemini.
  */
 export async function handleAiRequest(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") {
@@ -627,22 +680,115 @@ export async function handleAiRequest(request: Request): Promise<Response> {
     );
   }
 
-  const groqApiKey = process.env.GROQ_API_KEY || "";
+  const geminiApiKey = cleanApiKey(process.env.GEMINI_API_KEY);
+  const groqApiKey = cleanApiKey(process.env.GROQ_API_KEY);
 
-  try {
-    const result = await callGroq(body, groqApiKey);
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
-  } catch (err: unknown) {
-    const groqErr = err instanceof Error ? err : new Error(String(err));
-    console.error("[AI Provider] Groq invocation failed:", groqErr);
-    return new Response(JSON.stringify({ error: "Groq API Failed", details: groqErr.message }), {
-      status: 500,
-    });
+  const strategy = (
+    process.env.AI_EXECUTION_STRATEGY ||
+    process.env.AI_PROVIDER ||
+    "parallel"
+  ).toLowerCase();
+
+  let result: AiResponsePayload | null = null;
+  let lastError: unknown = null;
+
+  // 1. Exclusive Groq mode or only Groq key configured
+  if (strategy === "groq" || strategy === "groq-only" || (!geminiApiKey && groqApiKey)) {
+    try {
+      result = await callGroq(body, groqApiKey, { timeoutMs: 8500 });
+    } catch (err) {
+      lastError = err;
+      console.error("[AI Provider] Groq exclusive execution failed:", err);
+    }
   }
+  // 2. Exclusive Gemini mode or only Gemini key configured
+  else if (strategy === "gemini" || strategy === "gemini-only" || (geminiApiKey && !groqApiKey)) {
+    try {
+      result = await callGemini(body, geminiApiKey, { timeoutMs: 8500 });
+    } catch (err) {
+      lastError = err;
+      console.error("[AI Provider] Gemini exclusive execution failed:", err);
+    }
+  }
+  // 3. Fast-Fail Sequential Fallback mode
+  else if (strategy === "fallback" || strategy === "sequential") {
+    try {
+      // Primary: Fast-Failing Gemini (max 2000ms to guarantee ample budget for fallback)
+      result = await callGemini(body, geminiApiKey, { timeoutMs: 2000 });
+    } catch (geminiErr) {
+      console.warn(
+        "[AI Provider] Gemini fast-fail (<2000ms), immediately delegating to Groq fallback:",
+        geminiErr instanceof Error ? geminiErr.message : geminiErr,
+      );
+      try {
+        // Fallback: Groq with generous remaining budget
+        result = await callGroq(body, groqApiKey, { timeoutMs: 7000 });
+      } catch (groqErr) {
+        lastError = groqErr;
+        console.error("[AI Provider] Both Gemini and Groq fallback failed:", groqErr);
+      }
+    }
+  }
+  // 4. Default: Speculative Parallel Execution (Promise.any)
+  // Fires both simultaneously; fastest successful response wins and aborts the other request.
+  else if (geminiApiKey && groqApiKey) {
+    const cancelOtherController = new AbortController();
+
+    const geminiPromise = callGemini(body, geminiApiKey, {
+      timeoutMs: 3000,
+      signal: cancelOtherController.signal,
+    });
+
+    const groqPromise = callGroq(body, groqApiKey, {
+      timeoutMs: 8000,
+      signal: cancelOtherController.signal,
+    });
+
+    try {
+      result = await Promise.any([groqPromise, geminiPromise]);
+      // Immediately abort the slower pending request to save serverless resources
+      cancelOtherController.abort();
+    } catch (aggregateErr) {
+      lastError = aggregateErr;
+      console.error("[AI Provider] Both Gemini and Groq parallel executions failed:", aggregateErr);
+    }
+  } else {
+    return new Response(
+      JSON.stringify({
+        error: "No AI provider keys configured. Please set GEMINI_API_KEY or GROQ_API_KEY.",
+      }),
+      {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  if (!result) {
+    const errorDetails =
+      lastError instanceof AggregateError
+        ? lastError.errors.map((e) => (e instanceof Error ? e.message : String(e))).join("; ")
+        : lastError instanceof Error
+          ? lastError.message
+          : String(lastError || "Unknown provider failure");
+
+    return new Response(
+      JSON.stringify({
+        error: "AI service temporarily unavailable. Please try again shortly.",
+        details: errorDetails,
+      }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }

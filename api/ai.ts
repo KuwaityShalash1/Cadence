@@ -12,6 +12,23 @@ interface VercelResponse extends ServerResponse {
   send: (body: unknown) => void;
 }
 
+async function getRequestBody(req: VercelRequest): Promise<string | undefined> {
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === "string") return req.body;
+    if (Buffer.isBuffer(req.body)) return req.body.toString("utf-8");
+    return JSON.stringify(req.body);
+  }
+
+  return new Promise((resolve) => {
+    let raw = "";
+    req.on("data", (chunk: Buffer | string) => {
+      raw += chunk;
+    });
+    req.on("end", () => resolve(raw || undefined));
+    req.on("error", () => resolve(undefined));
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const protocol = req.headers["x-forwarded-proto"] || "https";
@@ -29,8 +46,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers,
     };
 
-    if (req.method !== "GET" && req.method !== "HEAD" && req.body) {
-      init.body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      const body = await getRequestBody(req);
+      if (body) {
+        init.body = body;
+      }
     }
 
     const webReq = new Request(fullUrl, init);
