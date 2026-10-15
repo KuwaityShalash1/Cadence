@@ -63,8 +63,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const text = await webRes.text();
     return res.send(text);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Vercel AI Serverless Error:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    let errorMessage = error instanceof Error ? error.message : String(error);
+    if (error instanceof AggregateError) {
+      errorMessage =
+        "AggregateError: " +
+        error.errors.map((e) => (e instanceof Error ? e.message : String(e))).join(" | ");
+    }
+    res.setHeader("Content-Type", "application/json");
+    res.status(200);
+    return res.send(
+      JSON.stringify({
+        text: `🚨 CRITICAL BACKEND ERROR 🚨\n\n${errorMessage}`,
+        providerUsed: "error",
+      }),
+    );
   }
 }

@@ -642,153 +642,155 @@ async function callGroq(
  * - 'gemini' / 'gemini-only': Exclusively calls Gemini.
  */
 export async function handleAiRequest(request: Request): Promise<Response> {
-  if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
-  }
-
-  if (request.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  let body: AiRequestBody;
   try {
-    body = (await request.json()) as AiRequestBody;
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON request body" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+    }
 
-  if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
-    return new Response(
-      JSON.stringify({ error: "messages array is required and must not be empty" }),
-      {
-        status: 400,
+    if (request.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
         headers: { "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  const geminiApiKey = cleanApiKey(process.env.GEMINI_API_KEY);
-  const groqApiKey = cleanApiKey(process.env.GROQ_API_KEY);
-
-  const strategy = (
-    process.env.AI_EXECUTION_STRATEGY ||
-    process.env.AI_PROVIDER ||
-    "parallel"
-  ).toLowerCase();
-
-  let result: AiResponsePayload | null = null;
-  let lastError: unknown = null;
-
-  // 1. Exclusive Groq mode or only Groq key configured
-  if (strategy === "groq" || strategy === "groq-only" || (!geminiApiKey && groqApiKey)) {
-    try {
-      result = await callGroq(body, groqApiKey, { timeoutMs: 8500 });
-    } catch (err) {
-      lastError = err;
-      console.error("[AI Provider] Groq exclusive execution failed:", err);
+      });
     }
-  }
-  // 2. Exclusive Gemini mode or only Gemini key configured
-  else if (strategy === "gemini" || strategy === "gemini-only" || (geminiApiKey && !groqApiKey)) {
+
+    let body: AiRequestBody;
     try {
-      result = await callGemini(body, geminiApiKey, { timeoutMs: 8500 });
-    } catch (err) {
-      lastError = err;
-      console.error("[AI Provider] Gemini exclusive execution failed:", err);
-    }
-  }
-  // 3. Fast-Fail Sequential Fallback mode
-  else if (strategy === "fallback" || strategy === "sequential") {
-    try {
-      // Primary: Fast-Failing Gemini (max 2000ms to guarantee ample budget for fallback)
-      result = await callGemini(body, geminiApiKey, { timeoutMs: 2000 });
-    } catch (geminiErr) {
-      console.warn(
-        "[AI Provider] Gemini fast-fail (<2000ms), immediately delegating to Groq fallback:",
-        geminiErr instanceof Error ? geminiErr.message : geminiErr,
+      body = (await request.json()) as AiRequestBody;
+    } catch (parseErr) {
+      throw new Error(
+        `Failed to parse JSON request body: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
       );
+    }
+
+    if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
+      throw new Error("Invalid request body: 'messages' array is required and must not be empty");
+    }
+
+    const geminiApiKey = cleanApiKey(process.env.GEMINI_API_KEY);
+    const groqApiKey = cleanApiKey(process.env.GROQ_API_KEY);
+
+    const strategy = (
+      process.env.AI_EXECUTION_STRATEGY ||
+      process.env.AI_PROVIDER ||
+      "parallel"
+    ).toLowerCase();
+
+    let result: AiResponsePayload | null = null;
+    let lastError: unknown = null;
+
+    // 1. Exclusive Groq mode or only Groq key configured
+    if (strategy === "groq" || strategy === "groq-only" || (!geminiApiKey && groqApiKey)) {
       try {
-        // Fallback: Groq with generous remaining budget
-        result = await callGroq(body, groqApiKey, { timeoutMs: 7000 });
-      } catch (groqErr) {
-        lastError = groqErr;
-        console.error("[AI Provider] Both Gemini and Groq fallback failed:", groqErr);
+        result = await callGroq(body, groqApiKey, { timeoutMs: 8500 });
+      } catch (err) {
+        lastError = err;
+        console.error("[AI Provider] Groq exclusive execution failed:", err);
       }
     }
-  }
-  // 4. Default: Speculative Parallel Execution (Promise.any)
-  // Fires both simultaneously; fastest successful response wins and aborts the other request.
-  else if (geminiApiKey && groqApiKey) {
-    const cancelOtherController = new AbortController();
-
-    const geminiPromise = callGemini(body, geminiApiKey, {
-      timeoutMs: 3000,
-      signal: cancelOtherController.signal,
-    });
-
-    const groqPromise = callGroq(body, groqApiKey, {
-      timeoutMs: 8000,
-      signal: cancelOtherController.signal,
-    });
-
-    try {
-      result = await Promise.any([groqPromise, geminiPromise]);
-      // Immediately abort the slower pending request to save serverless resources
-      cancelOtherController.abort();
-    } catch (aggregateErr) {
-      lastError = aggregateErr;
-      console.error("[AI Provider] Both Gemini and Groq parallel executions failed:", aggregateErr);
+    // 2. Exclusive Gemini mode or only Gemini key configured
+    else if (strategy === "gemini" || strategy === "gemini-only" || (geminiApiKey && !groqApiKey)) {
+      try {
+        result = await callGemini(body, geminiApiKey, { timeoutMs: 8500 });
+      } catch (err) {
+        lastError = err;
+        console.error("[AI Provider] Gemini exclusive execution failed:", err);
+      }
     }
-  } else {
+    // 3. Fast-Fail Sequential Fallback mode
+    else if (strategy === "fallback" || strategy === "sequential") {
+      try {
+        // Primary: Fast-Failing Gemini (max 2000ms to guarantee ample budget for fallback)
+        result = await callGemini(body, geminiApiKey, { timeoutMs: 2000 });
+      } catch (geminiErr) {
+        console.warn(
+          "[AI Provider] Gemini fast-fail (<2000ms), immediately delegating to Groq fallback:",
+          geminiErr instanceof Error ? geminiErr.message : geminiErr,
+        );
+        try {
+          // Fallback: Groq with generous remaining budget
+          result = await callGroq(body, groqApiKey, { timeoutMs: 7000 });
+        } catch (groqErr) {
+          lastError = groqErr;
+          console.error("[AI Provider] Both Gemini and Groq fallback failed:", groqErr);
+        }
+      }
+    }
+    // 4. Default: Speculative Parallel Execution (Promise.any)
+    // Fires both simultaneously; fastest successful response wins and aborts the other request.
+    else if (geminiApiKey && groqApiKey) {
+      const cancelOtherController = new AbortController();
+
+      const geminiPromise = callGemini(body, geminiApiKey, {
+        timeoutMs: 3000,
+        signal: cancelOtherController.signal,
+      });
+
+      const groqPromise = callGroq(body, groqApiKey, {
+        timeoutMs: 8000,
+        signal: cancelOtherController.signal,
+      });
+
+      try {
+        result = await Promise.any([groqPromise, geminiPromise]);
+        // Immediately abort the slower pending request to save serverless resources
+        cancelOtherController.abort();
+      } catch (aggregateErr) {
+        lastError = aggregateErr;
+        console.error(
+          "[AI Provider] Both Gemini and Groq parallel executions failed:",
+          aggregateErr,
+        );
+      }
+    } else {
+      throw new Error(
+        "No AI provider keys configured on server. Please set GEMINI_API_KEY or GROQ_API_KEY in Vercel Environment Variables.",
+      );
+    }
+
+    if (!result) {
+      throw lastError instanceof Error
+        ? lastError
+        : lastError instanceof AggregateError
+          ? lastError
+          : new Error(String(lastError || "All AI providers failed to return a response"));
+    }
+
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
+  } catch (err: unknown) {
+    console.error("[AI Provider] Critical unhandled backend error:", err);
+    let errorMessage = err instanceof Error ? err.message : String(err);
+    if (err instanceof AggregateError) {
+      errorMessage =
+        "AggregateError: " +
+        err.errors.map((e) => (e instanceof Error ? e.message : String(e))).join(" | ");
+    }
+
     return new Response(
       JSON.stringify({
-        error: "No AI provider keys configured. Please set GEMINI_API_KEY or GROQ_API_KEY.",
+        text: `🚨 CRITICAL BACKEND ERROR 🚨\n\n${errorMessage}`,
+        providerUsed: "error",
       }),
       {
-        status: 502,
-        headers: { "Content-Type": "application/json" },
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
       },
     );
   }
-
-  if (!result) {
-    const errorDetails =
-      lastError instanceof AggregateError
-        ? lastError.errors.map((e) => (e instanceof Error ? e.message : String(e))).join("; ")
-        : lastError instanceof Error
-          ? lastError.message
-          : String(lastError || "Unknown provider failure");
-
-    return new Response(
-      JSON.stringify({
-        error: "AI service temporarily unavailable. Please try again shortly.",
-        details: errorDetails,
-      }),
-      {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  return new Response(JSON.stringify(result), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
 }

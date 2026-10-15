@@ -1,4 +1,4 @@
-export type AiProvider = "gemini" | "groq";
+export type AiProvider = "gemini" | "groq" | "error";
 
 export interface ToolCallPayload {
   id?: string | undefined;
