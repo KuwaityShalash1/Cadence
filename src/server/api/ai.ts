@@ -209,6 +209,36 @@ const GEMINI_TOOLS = [
           },
         },
       },
+      {
+        name: "log_habit_progress",
+        description:
+          "Log quantitative progress for a numeric/duration habit by incrementing or setting its current value. Use this INSTEAD of log_habit when the user reports partial progress (e.g., '500ml of water', '30 mins of meditation'). ALWAYS inspect the habit's unit and target from context BEFORE calling, and convert the user's amount to the habit's base unit.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            habitId: {
+              type: "STRING",
+              description: "Optional exact ID of the habit.",
+            },
+            habitName: {
+              type: "STRING",
+              description: "The name of the habit (e.g., 'Drink Water').",
+            },
+            amount: {
+              type: "NUMBER",
+              description:
+                "The amount in the habit's BASE unit after unit conversion (e.g., 0.5 for 500ml when unit is L, 0.5 for 30min when unit is hours).",
+            },
+            mode: {
+              type: "STRING",
+              enum: ["increment", "set"],
+              description:
+                "'increment': add amount to current value. 'set': set current value directly.",
+            },
+          },
+          required: ["amount", "mode"],
+        },
+      },
     ],
   },
 ];
@@ -435,17 +465,65 @@ const GROQ_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "log_habit_progress",
+      description:
+        "Log quantitative progress for a numeric/duration habit by incrementing or setting its current value. Use this INSTEAD of log_habit when the user reports partial progress (e.g., '500ml of water', '30 mins of meditation'). ALWAYS inspect the habit's unit and target from context BEFORE calling, and convert the user's amount to the habit's base unit.",
+      parameters: {
+        type: "object",
+        properties: {
+          habitId: {
+            type: "string",
+            description: "Optional exact ID of the habit.",
+          },
+          habitName: {
+            type: "string",
+            description: "The name of the habit (e.g., 'Drink Water').",
+          },
+          amount: {
+            type: "number",
+            description:
+              "The amount in the habit's BASE unit after unit conversion (e.g., 0.5 for 500ml when unit is L, 0.5 for 30min when unit is hours).",
+          },
+          mode: {
+            type: "string",
+            enum: ["increment", "set"],
+            description:
+              "'increment': add amount to current value. 'set': set current value directly.",
+          },
+        },
+        required: ["amount", "mode"],
+      },
+    },
+  },
 ];
 
 /**
  * Builds the system prompt injecting current application context (habits, goals, date, analytics).
+ * Includes holistic coaching context: local time, completion rate, quantitative habit state,
+ * unit conversion rules, and chain-of-thought reasoning instructions.
  */
 function buildSystemPrompt(body: AiRequestBody): string {
+  const localHour = body.context?.localHour ?? new Date().getHours();
+  const todayCompletionRate = body.context?.todayCompletionRate ?? 0;
+
+  // Describe time of day for coaching context
+  const timeOfDayLabel =
+    localHour >= 5 && localHour < 12
+      ? "Morning"
+      : localHour >= 12 && localHour < 17
+        ? "Afternoon"
+        : localHour >= 17 && localHour < 21
+          ? "Evening"
+          : "Night";
+
   const habitsContext = body.context?.habits
     ? body.context.habits
         .map(
           (h) =>
-            `- [ID: "${h.id || ""}"] ${h.name} (${h.schedule}, ${h.isCompletedToday ? "completed today" : "pending today"}, streak: ${h.streak ?? 0}${h.icon ? `, icon: ${h.icon}` : ""}${h.goalId ? `, linkedGoalId: ${h.goalId}` : ""})`,
+            `- [ID: "${h.id || ""}"] ${h.name} (${h.schedule}, ${h.isCompletedToday ? "completed today" : "pending today"}, target: ${h.target} ${h.unit || ""}${h.currentValue !== undefined ? `, currentValue: ${h.currentValue}` : ""}, streak: ${h.streak ?? 0}${h.icon ? `, icon: ${h.icon}` : ""}${h.goalId ? `, linkedGoalId: ${h.goalId}` : ""})`,
         )
         .join("\n")
     : "No habits tracked yet.";
@@ -486,14 +564,44 @@ Cadence is an offline-first, minimalist habit tracker designed to help users bui
 You seamlessly support both English and Arabic. When the user speaks Arabic, reply in Arabic. When the user speaks English, reply in English.
 Keep your responses minimalist, warm, actionable, and free of fluff.
 
+CURRENT TIME CONTEXT:
+- Local Time: ${timeOfDayLabel} (hour: ${localHour})
+- Today's Overall Completion Rate: ${Math.round(todayCompletionRate * 100)}% of habits done
+
 COACHING PHILOSOPHY & PROACTIVE AGENT BEHAVIOR:
-When the user asks you to manage their habits, or if you notice a bad pattern, propose changes using your tools. You are a habit coach.
-Be proactive, analytical, and opinionated:
-- Do NOT be a passive chatbot that only answers when directly instructed. Proactively diagnose problems, spot patterns, celebrate winning streaks, and identify struggling routines.
-- Call \`get_analytics\` whenever you need deeper metrics on consistency, streaks, or completion rates to offer evidence-backed coaching.
+You are an observant, empathetic coach who is AWARE of the current time of day and the user's current completion rate.
+- Good morning (5–11): Energetically greet them, recap what's pending today.
+- Afternoon slump (12–16): Nudge them on pending habits, check if they need momentum.
+- Evening wind-down (17–20): Celebrate completed habits, gently prompt remaining ones.
+- Late night (21+): Be gentle — acknowledge fatigue, suggest what can still realistically be done and what can be frozen/skipped.
+- If the user feels overwhelmed or the completion rate is below 40%, PROACTIVELY suggest freezing low-priority habits or doing partial completions rather than pushing for perfection.
+- When you notice a struggling streak (0 completions in 3+ days), proactively diagnose the root cause and suggest a schedule adjustment.
+- Spot patterns, celebrate winning streaks, and identify struggling routines.
+- Call \`get_analytics\` whenever you need deeper metrics on consistency, streaks, or completion rates.
 - HUMAN-IN-THE-LOOP APPROVAL WORKFLOW:
-  Cadence enforces a strict Human-in-the-Loop workflow. When you call ANY mutation tool (create_habit, delete_habit, create_bad_habit, delete_bad_habit, create_goal, delete_goal, log_habit), the mutation is NOT executed immediately. Instead, a rich UI card with "Approve & Apply" and "Cancel" buttons is shown to the user in chat.
+  Cadence enforces a strict Human-in-the-Loop workflow. When you call ANY mutation tool (create_habit, delete_habit, create_bad_habit, delete_bad_habit, create_goal, delete_goal, log_habit, log_habit_progress), the mutation is NOT executed immediately. A rich UI card with approval buttons is shown to the user.
   Because the user must explicitly approve mutations, feel completely free to be proactive! If a habit has a 0% completion rate or is causing burnout, recommend deleting or modifying it. If a user achieves a goal, propose setting a new target or cleaning up.
+
+DEEP REASONING MODE (Chain-of-Thought):
+For ANY complex request — especially unit conversions, analytics interpretation, or habit coaching advice — you MUST think step-by-step BEFORE formulating your answer or tool arguments.
+Wrap your internal reasoning inside <think>...</think> tags at the very start of your response.
+Only the final, clean answer comes after the </think> closing tag.
+Example format:
+<think>
+1. The user says "500ml". The habit "Drink Water" has unit "L" and target 3.
+2. Convert: 500ml ÷ 1000 = 0.5L.
+3. Current value is 1.0L. After increment: 1.0 + 0.5 = 1.5L (still below 3L target).
+4. I should call log_habit_progress with amount: 0.5, mode: "increment".
+</think>
+Okay, I've logged 0.5L of water for you! You're now at 1.5 / 3L. Keep it up!
+
+CRITICAL UNIT CONVERSION RULE:
+ALWAYS inspect the target habit's \`unit\` and \`target\` in the context BEFORE calling \`log_habit_progress\`.
+- If the habit is tracked in Liters ('L', target: 3) and the user says 'I drank 500ml', you MUST convert 500ml → 0.5L and pass amount: 0.5.
+- If the habit unit is 'hours' and the user says '30 minutes', convert: 30 ÷ 60 = 0.5, pass amount: 0.5.
+- If the habit unit is 'km' and the user says '500m', convert: 500 ÷ 1000 = 0.5, pass amount: 0.5.
+- Always normalize the user's input to match the habit's base unit before calling the tool.
+- For boolean habits with no unit, use \`log_habit\` with status 'done' or 'skipped' instead.
 
 CURRENT USER CONTEXT:
 Habits:
@@ -513,12 +621,10 @@ If the user wants to start doing something positive (e.g., read, workout, study)
 
 AVAILABLE ACTIONS (FUNCTION CALLS):
 1. create_habit: Propose creating a new positive habit routine.
-   - When creating a habit, ALWAYS select a highly relevant PascalCase icon name from \`lucide-react\` (e.g., 'Dumbbell', 'Droplet', 'BookOpen', 'Briefcase', 'Heart', 'Sun').
-   - Intelligently link habits to existing goals by providing \`goalId\` if applicable.
    - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", req), color (string, opt), icon (string, opt), goalId (string, opt).
-2. delete_habit: Propose deleting an existing habit that the user wants to remove or that is obsolete/stale.
+2. delete_habit: Propose deleting an existing habit.
    - Args: habitId (string, opt), habitName (string, opt).
-3. create_bad_habit: Propose creating a quit tracker entry to stop or reduce a vice or unwanted behavior.
+3. create_bad_habit: Propose creating a quit tracker entry.
    - Args: name (string, req), triggerCategory (string, opt), limit (number, opt).
 4. delete_bad_habit: Propose deleting a quit tracker / bad habit.
    - Args: badHabitId (string, opt), badHabitName (string, opt).
@@ -526,12 +632,14 @@ AVAILABLE ACTIONS (FUNCTION CALLS):
    - Args: name (string, req), targetValue (number, req), unit (string, opt).
 6. delete_goal: Propose deleting an existing goal.
    - Args: goalId (string, opt), goalName (string, opt).
-7. log_habit: Propose marking a habit as completed ('done') or skipped ('skipped') for today.
+7. log_habit: Mark a boolean habit as 'done' or 'skipped' for today.
    - Args: habitName (string, req), status ("done" | "skipped", req).
-8. get_analytics: Retrieve deep streaks, completion rates, and consistency statistics for smart advice.
+8. log_habit_progress: Log partial/quantitative progress for a numeric habit. Use INSTEAD of log_habit for numeric habits.
+   - Args: habitId (string, opt), habitName (string, opt), amount (number, req — already converted to base unit), mode ("increment" | "set", req).
+9. get_analytics: Retrieve deep streaks, completion rates, and consistency statistics.
    - Args: habitName (string, opt), timeRangeDays (number, opt).
-9. get_app_summary: Retrieve an overview summary of current habits and goals.
-   - Args: query (string, opt).
+10. get_app_summary: Retrieve an overview summary of current habits and goals.
+    - Args: query (string, opt).
 
 When you execute or propose a tool call, accompany it with a short, encouraging, and helpful explanation of your rationale.`;
 }
@@ -734,6 +842,7 @@ async function callGroq(
             messages,
             tools: GROQ_TOOLS,
             tool_choice: "auto",
+            temperature: 0.2,
           }),
         });
 
@@ -762,9 +871,11 @@ async function callGroq(
           throw new Error(`Groq [${model}] returned empty response choice`);
         }
 
-        let text = choice.message.content || "";
-        // Strip any internal reasoning tags if present
-        text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+        const rawContent = choice.message.content || "";
+        // Extract chain-of-thought reasoning from <think>...</think> tags before stripping
+        const thinkMatch = /<think>([\s\S]*?)<\/think>/i.exec(rawContent);
+        const reasoning = thinkMatch ? thinkMatch[1]!.trim() : undefined;
+        let text = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
         const toolCalls: ToolCallPayload[] = [];
         if (choice.message.tool_calls) {
@@ -790,6 +901,7 @@ async function callGroq(
           text,
           toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
           providerUsed: "groq",
+          ...(reasoning !== undefined ? { reasoning } : {}),
         };
       } catch (err: unknown) {
         lastError = err;

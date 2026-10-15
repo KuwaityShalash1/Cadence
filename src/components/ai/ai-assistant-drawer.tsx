@@ -13,6 +13,11 @@ import {
   X,
   XCircle,
   ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  Brain,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOnlineStatus } from "@/hooks/use-online-status";
@@ -95,6 +100,407 @@ export function AiAssistantTrigger({ className }: { className?: string }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Adaptive pacing delay thresholds (ms)
+// ---------------------------------------------------------------------------
+const SIMPLE_REPLY_MIN_MS = 600;
+const COMPLEX_TOOL_MIN_MS = 1400;
+
+/** Detects if the user's message implies a complex analytical or tool request. */
+function isComplexRequest(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  return (
+    lowerText.includes("analyz") ||
+    lowerText.includes("حلل") ||
+    lowerText.includes("تحليل") ||
+    lowerText.includes("ml") ||
+    lowerText.includes("liter") ||
+    lowerText.includes("minute") ||
+    lowerText.includes("دقيق") ||
+    lowerText.includes("km") ||
+    lowerText.includes("progress") ||
+    lowerText.includes("تقدم") ||
+    lowerText.includes("delete") ||
+    lowerText.includes("احذف") ||
+    lowerText.includes("create") ||
+    lowerText.includes("أضف") ||
+    lowerText.includes("add")
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Reasoning Disclosure Panel
+// ---------------------------------------------------------------------------
+function ReasoningPanel({
+  reasoning,
+  language,
+}: {
+  reasoning: string;
+  language: "ar" | "en";
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium text-primary/80 hover:bg-primary/10 transition-colors"
+      >
+        <Brain className="h-3 w-3 shrink-0" />
+        <span className="flex-1 text-start">
+          {language === "ar" ? "عرض خطوات التفكير" : "View Reasoning"}
+        </span>
+        {isOpen ? (
+          <ChevronDown className="h-3 w-3 shrink-0" />
+        ) : (
+          <ChevronRight className="h-3 w-3 shrink-0" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="px-2.5 pb-2.5 pt-1 border-t border-primary/15">
+          <pre className="whitespace-pre-wrap text-[10px] text-muted-foreground font-mono leading-relaxed">
+            {reasoning}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Unified Batch Approval Card
+// ---------------------------------------------------------------------------
+interface BatchApprovalCardProps {
+  messageId: string;
+  pendingActions: PendingAction[];
+  language: "ar" | "en";
+  isLoading: boolean;
+  onApproveSelected: (messageId: string, selectedIds: string[]) => Promise<void>;
+  onRejectAll: (messageId: string) => void;
+}
+
+function BatchApprovalCard({
+  messageId,
+  pendingActions,
+  language,
+  isLoading,
+  onApproveSelected,
+  onRejectAll,
+}: BatchApprovalCardProps) {
+  const isAr = language === "ar";
+
+  // All pending items; approved/cancelled items are shown as resolved
+  const pendingItems = pendingActions.filter((a) => a.status === "pending");
+  const resolvedItems = pendingActions.filter((a) => a.status !== "pending");
+  const allResolved = pendingItems.length === 0;
+
+  // Checkbox state per action ID (default: checked)
+  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const a of pendingActions) {
+      initial[a.id] = a.checked !== false; // defaults to true
+    }
+    return initial;
+  });
+
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+  const [isApproving, setIsApproving] = useState(false);
+
+  const selectedCount = pendingItems.filter((a) => checked[a.id]).length;
+
+  const toggleCheck = (id: string) => {
+    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const toggleAllCheck = () => {
+    const allChecked = pendingItems.every((a) => checked[a.id]);
+    const newState: Record<string, boolean> = { ...checked };
+    for (const a of pendingItems) {
+      newState[a.id] = !allChecked;
+    }
+    setChecked(newState);
+  };
+
+  const handleApproveSelected = async () => {
+    const selectedIds = pendingItems.filter((a) => checked[a.id]).map((a) => a.id);
+    if (selectedIds.length === 0) return;
+    setIsApproving(true);
+    try {
+      await onApproveSelected(messageId, selectedIds);
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const toggleDetails = (id: string) => {
+    setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  if (allResolved && resolvedItems.length > 0) {
+    // Compact summary view after all actions are resolved
+    return (
+      <div className="mt-2.5 pt-2 border-t border-border/50 space-y-1.5">
+        {resolvedItems.map((action) => {
+          const isApproved = action.status === "approved";
+          const displayDescription =
+            isAr ? action.descriptionAr || action.description : action.description;
+          return (
+            <div
+              key={action.id}
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px]",
+                isApproved
+                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                  : "bg-muted/50 border border-border/50 text-muted-foreground line-through",
+              )}
+            >
+              {isApproved ? (
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 shrink-0" />
+              )}
+              <span>{displayDescription}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2.5 pt-2 border-t border-border/50">
+      {/* Card header */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className="flex h-5 w-5 items-center justify-center rounded bg-amber-500/15 border border-amber-500/30">
+          <Sparkles className="h-3 w-3 text-amber-500" />
+        </div>
+        <span className="text-[11px] font-semibold text-foreground">
+          {isAr ? "التعديلات المقترحة" : "Proposed Changes"}
+        </span>
+        <span className="ms-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+          {isAr ? `يتطلب موافقة` : `Requires Approval`}
+        </span>
+      </div>
+
+      {/* Select all row */}
+      {pendingItems.length > 1 && (
+        <button
+          type="button"
+          onClick={toggleAllCheck}
+          className="flex items-center gap-1.5 w-full px-1 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors mb-1.5"
+        >
+          {pendingItems.every((a) => checked[a.id]) ? (
+            <CheckSquare className="h-3.5 w-3.5 text-primary shrink-0" />
+          ) : (
+            <Square className="h-3.5 w-3.5 shrink-0" />
+          )}
+          <span>{isAr ? "تحديد الكل" : "Select all"}</span>
+        </button>
+      )}
+
+      {/* Pending action list */}
+      <div className="space-y-1.5">
+        {pendingItems.map((action) => {
+          const isDeletion = action.toolCall.name.startsWith("delete_");
+          const displayDescription =
+            isAr ? action.descriptionAr || action.description : action.description;
+          const isExpanded = expandedDetails[action.id];
+          const isChecked = checked[action.id] ?? true;
+
+          return (
+            <div
+              key={action.id}
+              className={cn(
+                "rounded-xl border transition-all",
+                isChecked
+                  ? isDeletion
+                    ? "bg-destructive/5 border-destructive/30"
+                    : "bg-background/90 border-primary/30 shadow-xs"
+                  : "bg-muted/30 border-border/50 opacity-60",
+              )}
+            >
+              <div className="flex items-start gap-2 px-2.5 py-2">
+                {/* Checkbox */}
+                <button
+                  type="button"
+                  onClick={() => toggleCheck(action.id)}
+                  className="mt-0.5 shrink-0 transition-colors"
+                  aria-label={isChecked ? (isAr ? "إلغاء التحديد" : "Uncheck") : (isAr ? "تحديد" : "Check")}
+                >
+                  {isChecked ? (
+                    <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                  ) : (
+                    <Square className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </button>
+
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={cn(
+                      "text-[11px] font-medium",
+                      isDeletion ? "text-destructive" : "text-foreground/90",
+                    )}
+                  >
+                    {displayDescription}
+                  </p>
+                  {isDeletion && (
+                    <p className="text-[10px] text-destructive/70 mt-0.5">
+                      {isAr
+                        ? "تنبيه: هذا الإجراء دائم."
+                        : "Warning: This action is permanent."}
+                    </p>
+                  )}
+                </div>
+
+                {/* Details toggle */}
+                <button
+                  type="button"
+                  onClick={() => toggleDetails(action.id)}
+                  className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={isExpanded ? "Collapse details" : "Expand details"}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+
+              {/* Expandable raw parameters */}
+              {isExpanded && (
+                <div className="px-2.5 pb-2 border-t border-border/40">
+                  <pre className="mt-1.5 text-[10px] font-mono text-muted-foreground bg-muted/40 rounded p-1.5 overflow-x-auto">
+                    {JSON.stringify(action.toolCall.args, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Show already-resolved items compactly if mixed state */}
+      {resolvedItems.length > 0 && (
+        <div className="mt-1.5 space-y-1">
+          {resolvedItems.map((action) => {
+            const isApproved = action.status === "approved";
+            const displayDescription =
+              isAr ? action.descriptionAr || action.description : action.description;
+            return (
+              <div
+                key={action.id}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-2.5 py-1 text-[10px]",
+                  isApproved
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-muted-foreground line-through",
+                )}
+              >
+                {isApproved ? (
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
+                ) : (
+                  <XCircle className="h-3 w-3 shrink-0" />
+                )}
+                <span>{displayDescription}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Master action buttons */}
+      {pendingItems.length > 0 && (
+        <div className="mt-3 pt-2.5 border-t border-border/40 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleApproveSelected()}
+            disabled={isLoading || isApproving || selectedCount === 0}
+            className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] shadow-xs transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {isApproving ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Check className="h-3 w-3" />
+            )}
+            <span>
+              {isAr
+                ? `موافقة وتطبيق المحدد (${selectedCount})`
+                : `Approve & Apply Selected (${selectedCount})`}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onRejectAll(messageId)}
+            disabled={isLoading || isApproving}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border/80 bg-background hover:bg-muted text-muted-foreground hover:text-foreground text-[11px] transition-all active:scale-95 disabled:opacity-50"
+          >
+            <X className="h-3 w-3" />
+            <span>{isAr ? "إلغاء الكل" : "Reject All"}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Loading indicator with adaptive message
+// ---------------------------------------------------------------------------
+function LoadingIndicator({
+  isComplex,
+  language,
+}: {
+  isComplex: boolean;
+  language: "ar" | "en";
+}) {
+  const [dots, setDots] = useState(".");
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDots((prev) => (prev.length >= 3 ? "." : prev + "."));
+    }, 500);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex items-start gap-2">
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary border border-primary/20">
+        <Bot className="h-3.5 w-3.5" />
+      </div>
+      <div className="rounded-2xl rounded-es-sm bg-card border border-border/80 px-3.5 py-2.5 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+          <span>
+            {isComplex
+              ? language === "ar"
+                ? `جاري تحليل العادات وحساب التغييرات${dots}`
+                : `Analyzing habits & calculating changes${dots}`
+              : language === "ar"
+                ? `جاري التفكير${dots}`
+                : `Thinking${dots}`}
+          </span>
+        </div>
+        {isComplex && (
+          <div className="mt-1.5 flex gap-1">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-1 flex-1 rounded-full bg-primary/30 animate-pulse"
+                style={{ animationDelay: `${i * 150}ms` }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Drawer
+// ---------------------------------------------------------------------------
 export function AiAssistantDrawer() {
   const { habits, goals, habitLogs, badHabits, ...actions } = useApp();
   const { language, isRtl } = useTranslation();
@@ -103,11 +509,12 @@ export function AiAssistantDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isComplexLoading, setIsComplexLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (typeof window === "undefined") return [];
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) return JSON.parse(saved) as ChatMessage[];
     } catch {
       // Ignore parse errors from stale localStorage
     }
@@ -169,17 +576,20 @@ export function AiAssistantDrawer() {
   }, []);
 
   /**
-   * Human-in-the-Loop: User explicitly approves and applies a proposed mutation action.
+   * Human-in-the-Loop: Batch approve selected pending actions.
    */
-  const handleApproveAction = async (messageId: string, actionId: string) => {
+  const handleApproveSelected = async (messageId: string, selectedActionIds: string[]) => {
     const targetMsg = messages.find((m) => m.id === messageId);
-    if (!targetMsg || !targetMsg.pendingActions) return;
+    if (!targetMsg?.pendingActions) return;
 
-    const action = targetMsg.pendingActions.find((a) => a.id === actionId);
-    if (!action || action.status !== "pending") return;
+    const actionsToExecute = targetMsg.pendingActions.filter(
+      (a) => selectedActionIds.includes(a.id) && a.status === "pending",
+    );
+    if (actionsToExecute.length === 0) return;
 
     try {
-      const results = await executeAiToolCalls([action.toolCall], {
+      const toolCalls = actionsToExecute.map((a) => a.toolCall);
+      const results = await executeAiToolCalls(toolCalls, {
         actions,
         habits,
         goals,
@@ -188,87 +598,76 @@ export function AiAssistantDrawer() {
         language: language === "ar" ? "ar" : "en",
       });
 
-      const execResult = results[0];
-
-      if (execResult?.success) {
-        toast.success(execResult.summary);
-      } else if (execResult) {
-        toast.error(execResult.summary);
+      // Show toast for each result
+      for (const res of results) {
+        if (res.success) {
+          toast.success(res.summary);
+        } else {
+          toast.error(res.summary);
+        }
       }
 
-      // Update action in state
+      // Update action statuses and attach execution results
       setMessages((prev) =>
         prev.map((m) => {
           if (m.id !== messageId || !m.pendingActions) return m;
-          return {
-            ...m,
-            pendingActions: m.pendingActions.map((a) =>
-              a.id === actionId
-                ? {
-                    ...a,
-                    status: "approved" as const,
-                    executionResult: execResult,
-                  }
-                : a,
-            ),
-          };
+          const updatedActions = m.pendingActions.map((a) => {
+            if (!selectedActionIds.includes(a.id) || a.status !== "pending") return a;
+            const execResult = results.find((r) => r.toolName === a.toolCall.name);
+            return {
+              ...a,
+              status: "approved" as const,
+              executionResult: execResult,
+            };
+          });
+          return { ...m, pendingActions: updatedActions };
         }),
       );
 
-      // Add a system confirmation message to chat history
-      const displayDesc =
-        language === "ar" ? action.descriptionAr || action.description : action.description;
+      // Add a batch confirmation system message
+      const appliedCount = results.filter((r) => r.success).length;
       const confirmMsg: ChatMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         role: "system",
         content:
           language === "ar"
-            ? `تم تأكيد وتطبيق الإجراء: ${displayDesc}`
-            : `Confirmed & applied action: ${displayDesc}`,
+            ? `تم تطبيق ${appliedCount} من ${actionsToExecute.length} إجراء بنجاح.`
+            : `Applied ${appliedCount} of ${actionsToExecute.length} action(s) successfully.`,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, confirmMsg]);
     } catch (err) {
-      console.error("[Approval Execution Error]:", err);
+      console.error("[Batch Approval Execution Error]:", err);
       toast.error(
-        language === "ar" ? "فشل في تطبيق الإجراء المقترح" : "Failed to apply proposed action",
+        language === "ar" ? "فشل في تطبيق الإجراءات المقترحة" : "Failed to apply proposed actions",
       );
     }
   };
 
   /**
-   * Human-in-the-Loop: User cancels a proposed mutation action.
+   * Human-in-the-Loop: Reject all pending actions for a message.
    */
-  const handleCancelAction = (messageId: string, actionId: string) => {
-    const targetMsg = messages.find((m) => m.id === messageId);
-    if (!targetMsg || !targetMsg.pendingActions) return;
-
-    const action = targetMsg.pendingActions.find((a) => a.id === actionId);
-    if (!action || action.status !== "pending") return;
-
+  const handleRejectAll = (messageId: string) => {
     setMessages((prev) =>
       prev.map((m) => {
         if (m.id !== messageId || !m.pendingActions) return m;
         return {
           ...m,
           pendingActions: m.pendingActions.map((a) =>
-            a.id === actionId ? { ...a, status: "cancelled" as const } : a,
+            a.status === "pending" ? { ...a, status: "cancelled" as const } : a,
           ),
         };
       }),
     );
-
-    const displayDesc =
-      language === "ar" ? action.descriptionAr || action.description : action.description;
-    toast.info(language === "ar" ? "تم إلغاء الإجراء." : "Action cancelled.");
+    toast.info(language === "ar" ? "تم إلغاء جميع التعديلات المقترحة." : "All proposed actions cancelled.");
 
     const cancelMsg: ChatMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       role: "system",
       content:
         language === "ar"
-          ? `تم إلغاء الإجراء المقترح: ${displayDesc}`
-          : `Cancelled proposed action: ${displayDesc}`,
+          ? "تم إلغاء جميع التعديلات المقترحة."
+          : "All proposed changes were cancelled.",
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, cancelMsg]);
@@ -296,7 +695,14 @@ export function AiAssistantDrawer() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+
+    const complex = isComplexRequest(text);
     setIsLoading(true);
+    setIsComplexLoading(complex);
+
+    // Adaptive pacing: record the start time so we can enforce a minimum "thinking" duration
+    const requestStartTime = Date.now();
+    const minDelayMs = complex ? COMPLEX_TOOL_MIN_MS : SIMPLE_REPLY_MIN_MS;
 
     try {
       // Build comprehensive context of habits, goals, and analytics
@@ -305,6 +711,14 @@ export function AiAssistantDrawer() {
       const activeHabits = habits.filter((h) => !h.archived);
       const overallConsistency = consistencyScore(activeHabits, logMap, 30);
       const startDate30d = addDays(today, -30);
+
+      // Compute today's completion rate
+      const completedToday = activeHabits.filter((h) => {
+        const log = habitLogs.find((l) => l.habitId === h.id && l.date === today);
+        return log?.status === "complete" || (log && log.value >= log.target);
+      }).length;
+      const todayCompletionRate =
+        activeHabits.length > 0 ? completedToday / activeHabits.length : 0;
 
       const habitPerformance = activeHabits.map((h) => {
         const stats = habitStats(h, logMap, startDate30d, today);
@@ -321,6 +735,8 @@ export function AiAssistantDrawer() {
 
       const appContext: AiAppContext = {
         language: language === "ar" ? "ar" : "en",
+        localHour: new Date().getHours(),
+        todayCompletionRate,
         habits: activeHabits.map((h) => {
           const logId = `${h.id}:${today}`;
           const log = habitLogs.find((l) => l.id === logId);
@@ -339,6 +755,7 @@ export function AiAssistantDrawer() {
             unit: h.unit,
             schedule: scheduleStr,
             isCompletedToday: Boolean(isCompletedToday),
+            currentValue: log?.value,
             streak: streaks(h, logMap).current,
             icon: h.icon,
             goalId: h.goalId,
@@ -372,15 +789,24 @@ export function AiAssistantDrawer() {
         context: appContext,
       };
 
-      const response = await fetch("/api/ai", {
+      // Fire the API request
+      const fetchPromise = fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
 
+      // Enforce minimum pacing delay in parallel with the network request
+      const [response] = await Promise.all([
+        fetchPromise,
+        new Promise<void>((resolve) =>
+          setTimeout(resolve, Math.max(0, minDelayMs - (Date.now() - requestStartTime))),
+        ),
+      ]);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error || `Server responded with status ${response.status}`);
+        throw new Error((errorData as { error?: string } | null)?.error ?? `Server responded with status ${response.status}`);
       }
 
       const data = (await response.json()) as AiResponsePayload;
@@ -408,13 +834,14 @@ export function AiAssistantDrawer() {
         }
       }
 
-      // Propose mutation actions for Human-in-the-Loop review
+      // Propose mutation actions for Human-in-the-Loop review (all checked by default)
       const pendingActions: PendingAction[] = mutationCalls.map((tc) => ({
         id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         toolCall: tc,
         status: "pending",
         description: describeAction(tc, "en", { habits, goals, badHabits }),
         descriptionAr: describeAction(tc, "ar", { habits, goals, badHabits }),
+        checked: true,
       }));
 
       const assistantMessage: ChatMessage = {
@@ -432,6 +859,7 @@ export function AiAssistantDrawer() {
         toolCalls: data.toolCalls,
         executionResults,
         pendingActions: pendingActions.length > 0 ? pendingActions : undefined,
+        reasoning: data.reasoning,
         providerUsed: data.providerUsed,
         timestamp: Date.now(),
       };
@@ -454,6 +882,7 @@ export function AiAssistantDrawer() {
       setMessages((prev) => [...prev, errorAssistantMessage]);
     } finally {
       setIsLoading(false);
+      setIsComplexLoading(false);
     }
   };
 
@@ -610,120 +1039,24 @@ export function AiAssistantDrawer() {
                     >
                       <p className="whitespace-pre-wrap">{msg.content}</p>
 
-                      {/* Human-in-the-Loop Pending & Approved Action Cards */}
+                      {/* Chain-of-Thought Reasoning Panel */}
+                      {msg.reasoning && (
+                        <ReasoningPanel
+                          reasoning={msg.reasoning}
+                          language={language === "ar" ? "ar" : "en"}
+                        />
+                      )}
+
+                      {/* Unified Batch Approval Card */}
                       {msg.pendingActions && msg.pendingActions.length > 0 && (
-                        <div className="mt-2.5 pt-2 border-t border-border/50 space-y-2">
-                          {msg.pendingActions.map((action) => {
-                            const isPending = action.status === "pending";
-                            const isApproved = action.status === "approved";
-                            const isCancelled = action.status === "cancelled";
-                            const isDeletion = action.toolCall.name.startsWith("delete_");
-                            const displayDescription =
-                              language === "ar"
-                                ? action.descriptionAr || action.description
-                                : action.description;
-
-                            return (
-                              <div
-                                key={action.id}
-                                className={cn(
-                                  "rounded-xl border p-2.5 transition-all text-start",
-                                  isPending && "bg-background/90 border-primary/40 shadow-xs",
-                                  isApproved &&
-                                    "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100",
-                                  isCancelled &&
-                                    "bg-muted/40 border-border/50 text-muted-foreground opacity-75",
-                                )}
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5">
-                                    {isPending ? (
-                                      <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-                                    ) : isApproved ? (
-                                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                    ) : (
-                                      <XCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                    )}
-                                    <span className="text-[11px] font-semibold text-foreground">
-                                      {isPending
-                                        ? language === "ar"
-                                          ? "إجراء مقترح"
-                                          : "Proposed Action"
-                                        : isApproved
-                                          ? language === "ar"
-                                            ? "تم التطبيق ✓"
-                                            : "Applied ✓"
-                                          : language === "ar"
-                                            ? "ملغي"
-                                            : "Cancelled"}
-                                    </span>
-                                  </div>
-
-                                  {isPending && (
-                                    <span
-                                      className={cn(
-                                        "text-[9px] font-medium px-1.5 py-0.5 rounded-full border",
-                                        isDeletion
-                                          ? "bg-destructive/10 text-destructive border-destructive/20"
-                                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-                                      )}
-                                    >
-                                      {language === "ar" ? "يتطلب موافقة" : "Requires Approval"}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <p
-                                  className={cn(
-                                    "text-xs mt-1.5 font-medium text-foreground/90",
-                                    isCancelled && "line-through text-muted-foreground",
-                                  )}
-                                >
-                                  {displayDescription}
-                                </p>
-
-                                {isPending && isDeletion && (
-                                  <p className="text-[10px] text-destructive/90 mt-1">
-                                    {language === "ar"
-                                      ? "تنبيه: سيتم حذف هذا العنصر بعد تأكيدك."
-                                      : "Warning: This item will be permanently removed upon approval."}
-                                  </p>
-                                )}
-
-                                {isApproved && action.executionResult && (
-                                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
-                                    {action.executionResult.summary}
-                                  </p>
-                                )}
-
-                                {isPending && (
-                                  <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => void handleApproveAction(msg.id, action.id)}
-                                      disabled={isLoading}
-                                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] shadow-xs transition-all active:scale-95 disabled:opacity-50"
-                                    >
-                                      <Check className="h-3 w-3" />
-                                      <span>
-                                        {language === "ar" ? "موافقة وتطبيق" : "Approve & Apply"}
-                                      </span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCancelAction(msg.id, action.id)}
-                                      disabled={isLoading}
-                                      className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted text-muted-foreground hover:text-foreground text-[11px] transition-all active:scale-95 disabled:opacity-50"
-                                    >
-                                      <X className="h-3 w-3" />
-                                      <span>{language === "ar" ? "إلغاء" : "Cancel"}</span>
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <BatchApprovalCard
+                          messageId={msg.id}
+                          pendingActions={msg.pendingActions}
+                          language={language === "ar" ? "ar" : "en"}
+                          isLoading={isLoading}
+                          onApproveSelected={(msgId, ids) => handleApproveSelected(msgId, ids)}
+                          onRejectAll={handleRejectAll}
+                        />
                       )}
 
                       {/* Safe Read-Only Tool Execution Cards */}
@@ -753,7 +1086,7 @@ export function AiAssistantDrawer() {
                       {msg.role === "assistant" && msg.providerUsed && (
                         <div className="mt-1.5 flex items-center justify-end">
                           <span className="text-[9px] font-mono tracking-tight text-muted-foreground/75">
-                            {msg.providerUsed === "gemini" ? "✨ Gemini" : "⚡ Groq (fallback)"}
+                            {msg.providerUsed === "gemini" ? "✨ Gemini" : "⚡ Groq"}
                           </span>
                         </div>
                       )}
@@ -770,20 +1103,12 @@ export function AiAssistantDrawer() {
             })
           )}
 
+          {/* Adaptive Loading Indicator */}
           {isLoading && (
-            <div className="flex items-start gap-2">
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary border border-primary/20">
-                <Bot className="h-3.5 w-3.5" />
-              </div>
-              <div className="rounded-2xl rounded-es-sm bg-card border border-border/80 px-3.5 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                <span>
-                  {language === "ar"
-                    ? "جاري التفكير ومعالجة الطلب..."
-                    : "Thinking and processing..."}
-                </span>
-              </div>
-            </div>
+            <LoadingIndicator
+              isComplex={isComplexLoading}
+              language={language === "ar" ? "ar" : "en"}
+            />
           )}
 
           <div ref={messagesEndRef} />

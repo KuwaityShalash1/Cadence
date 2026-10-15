@@ -22,6 +22,8 @@ export interface PendingAction {
   description: string;
   descriptionAr?: string | undefined;
   executionResult?: ToolExecutionResult | undefined;
+  /** Whether this action is checked in the batch approval UI (default: true). */
+  checked?: boolean | undefined;
 }
 
 export interface ChatMessage {
@@ -32,6 +34,8 @@ export interface ChatMessage {
   executionResults?: ToolExecutionResult[] | undefined;
   pendingActions?: PendingAction[] | undefined;
   providerUsed?: AiProvider | undefined;
+  /** Chain-of-thought reasoning extracted from <think>...</think> tags. */
+  reasoning?: string | undefined;
   timestamp: number;
 }
 
@@ -43,6 +47,8 @@ export interface AiHabitContext {
   unit: string;
   schedule: string;
   isCompletedToday?: boolean | undefined;
+  /** Current logged value for today (for quantitative habits). */
+  currentValue?: number | undefined;
   streak?: number | undefined;
   icon?: string | undefined;
   goalId?: string | undefined;
@@ -84,6 +90,10 @@ export interface AiAppContext {
   badHabits?: AiBadHabitContext[] | undefined;
   analytics?: AiAnalyticsContext | undefined;
   language?: "en" | "ar" | undefined;
+  /** User's current local hour (0-23) for coaching context. */
+  localHour?: number | undefined;
+  /** Overall completion rate today (0–1) across all habits. */
+  todayCompletionRate?: number | undefined;
 }
 
 export interface AiRequestBody {
@@ -98,6 +108,8 @@ export interface AiResponsePayload {
   text: string;
   toolCalls?: ToolCallPayload[] | undefined;
   providerUsed: AiProvider;
+  /** Chain-of-thought reasoning stripped from the AI response (if present). */
+  reasoning?: string | undefined;
 }
 
 export interface CreateHabitArgs {
@@ -138,6 +150,17 @@ export interface DeleteGoalArgs {
 export interface LogHabitArgs {
   habitName: string;
   status: "done" | "skipped";
+}
+
+/** Args for the log_habit_progress quantitative tool. */
+export interface LogHabitProgressArgs {
+  /** Habit ID or name to log progress for. */
+  habitId?: string | undefined;
+  habitName?: string | undefined;
+  /** Amount to log (in the habit's base unit, after conversion). */
+  amount: number;
+  /** 'increment': add amount to current value; 'set': set current value directly. */
+  mode: "increment" | "set";
 }
 
 export interface GetAppSummaryArgs {

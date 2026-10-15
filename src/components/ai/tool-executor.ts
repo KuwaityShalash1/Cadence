@@ -107,6 +107,26 @@ export function describeAction(
       : `Log Habit: Mark "${habitName}" as ${statusLabel}`;
   }
 
+  if (name === "log_habit_progress") {
+    const rawName = String(args["habitName"] || args["habitId"] || "Habit");
+    // Try to resolve habit name from context if only ID was given
+    const resolvedHabit = context?.habits?.find(
+      (h) => h.id === String(args["habitId"] || "") || h.name.toLowerCase() === rawName.toLowerCase(),
+    );
+    const displayName = resolvedHabit?.name || rawName;
+    const amount = Number(args["amount"] ?? 0);
+    const mode = String(args["mode"] || "increment");
+    const unit = resolvedHabit?.unit || "";
+    if (mode === "set") {
+      return isAr
+        ? `تعيين قيمة "${displayName}" إلى ${amount} ${unit}`
+        : `Set "${displayName}" value to ${amount} ${unit}`;
+    }
+    return isAr
+      ? `إضافة ${amount} ${unit} إلى "${displayName}"`
+      : `Add ${amount} ${unit} to "${displayName}"`;
+  }
+
   return isAr ? `تنفيذ الإجراء: ${name}` : `Execute Action: ${name}`;
 }
 
@@ -487,6 +507,91 @@ export async function executeAiToolCalls(
             success: false,
           });
         }
+      } else if (tc.name === "log_habit_progress") {
+        const habitId = tc.args["habitId"] ? String(tc.args["habitId"]).trim() : "";
+        const habitName = tc.args["habitName"] ? String(tc.args["habitName"]).trim() : "";
+        const amount = Number(tc.args["amount"] ?? 0);
+        const mode = String(tc.args["mode"] || "increment") as "increment" | "set";
+
+        if (!habitId && !habitName) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr
+              ? "فشل: يجب تحديد اسم العادة أو معرفها"
+              : "Failed: habitId or habitName is required",
+            success: false,
+          });
+          continue;
+        }
+
+        if (isNaN(amount)) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr ? "فشل: القيمة غير صالحة" : "Failed: invalid amount",
+            success: false,
+          });
+          continue;
+        }
+
+        // Resolve the habit from the context
+        const needle = (habitName || habitId).trim().toLowerCase();
+        const targetHabit =
+          context.habits.find((h) => h.id === habitId) ??
+          context.habits.find((h) => h.name.trim().toLowerCase() === needle) ??
+          context.habits.find(
+            (h) =>
+              h.name.toLowerCase().includes(needle) ||
+              needle.includes(h.name.toLowerCase()),
+          );
+
+        if (!targetHabit) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr
+              ? `لم يتم العثور على عادة باسم "${habitName || habitId}"`
+              : `Could not find habit "${habitName || habitId}"`,
+            success: false,
+          });
+          continue;
+        }
+
+        const today = todayKey();
+        // Get the existing log value for this habit today
+        const existingLog = (context.habitLogs || []).find(
+          (l) => l.habitId === targetHabit.id && l.date === today,
+        );
+        const prevValue = existingLog?.value ?? 0;
+
+        if (mode === "set") {
+          context.actions.setHabitValue(targetHabit.id, today, amount);
+        } else {
+          // increment mode
+          context.actions.incrementHabit(targetHabit.id, today, amount);
+        }
+
+        const newValue = mode === "set" ? amount : prevValue + amount;
+        const unit = targetHabit.unit || "";
+        const targetVal = targetHabit.target || 1;
+        const isNowComplete = newValue >= targetVal;
+
+        const summary = isAr
+          ? `تم تسجيل التقدم لـ "${targetHabit.name}": ${newValue.toFixed(2).replace(/\.?0+$/, "")} / ${targetVal} ${unit}${isNowComplete ? " ✓ مكتمل!" : ""}`
+          : `Logged progress for "${targetHabit.name}": ${newValue.toFixed(2).replace(/\.?0+$/, "")} / ${targetVal} ${unit}${isNowComplete ? " ✓ Complete!" : ""}`;
+
+        results.push({
+          toolName: tc.name,
+          summary,
+          success: true,
+          data: {
+            habitId: targetHabit.id,
+            habitName: targetHabit.name,
+            prevValue,
+            newValue,
+            targetValue: targetVal,
+            unit,
+            isComplete: isNowComplete,
+          },
+        });
       } else if (tc.name === "get_analytics") {
         const habitNameQuery = tc.args["habitName"]
           ? String(tc.args["habitName"]).trim().toLowerCase()
