@@ -48,8 +48,16 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const url = new URL(request.url);
-      if (url.pathname === "/api/ai") {
+      const rawPath =
+        request.headers.get("x-matched-path") ||
+        request.headers.get("x-invoke-path") ||
+        request.headers.get("x-forwarded-uri") ||
+        request.headers.get("x-forwarded-path") ||
+        new URL(request.url).pathname;
+
+      const pathname = rawPath.split("?")[0].replace(/\/+$/, "") || "/";
+
+      if (pathname === "/api/ai" || pathname.endsWith("/api/ai")) {
         return await handleAiRequest(request);
       }
 
