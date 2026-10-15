@@ -55,7 +55,7 @@ export default {
         request.headers.get("x-forwarded-path") ||
         new URL(request.url).pathname;
 
-      const pathname = rawPath.split("?")[0].replace(/\/+$/, "") || "/";
+      const pathname = (rawPath.split("?")[0] ?? "").replace(/\/+$/, "") || "/";
 
       if (pathname === "/api/ai" || pathname.endsWith("/api/ai")) {
         return await handleAiRequest(request);

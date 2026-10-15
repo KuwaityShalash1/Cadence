@@ -6,6 +6,8 @@ declare global {
     interface ProcessEnv {
       GEMINI_API_KEY?: string;
       GROQ_API_KEY?: string;
+      AI_EXECUTION_STRATEGY?: string;
+      AI_PROVIDER?: string;
     }
   }
 }
@@ -131,6 +133,78 @@ const GEMINI_TOOLS = [
             query: {
               type: "STRING",
               description: "Aspect to summarize: e.g. 'today_habits', 'goals_progress', or 'all'.",
+            },
+          },
+        },
+      },
+      {
+        name: "delete_habit",
+        description:
+          "Permanently delete or remove an existing habit by name or ID. Propose this when the user asks to remove/delete a habit, or when recommending dropping a dead, obsolete, or unsustainable habit.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            habitId: {
+              type: "STRING",
+              description: "Optional exact ID of the habit to delete.",
+            },
+            habitName: {
+              type: "STRING",
+              description: "The name or title of the habit to delete (e.g., 'Drink 2L Water').",
+            },
+          },
+        },
+      },
+      {
+        name: "delete_bad_habit",
+        description:
+          "Permanently delete or remove an existing bad habit / quit tracker by name or ID.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            badHabitId: {
+              type: "STRING",
+              description: "Optional exact ID of the bad habit/quit tracker to delete.",
+            },
+            badHabitName: {
+              type: "STRING",
+              description: "The name or title of the bad habit to delete (e.g., 'Smoking').",
+            },
+          },
+        },
+      },
+      {
+        name: "delete_goal",
+        description: "Permanently delete or remove an existing target goal by name or ID.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            goalId: {
+              type: "STRING",
+              description: "Optional exact ID of the goal to delete.",
+            },
+            goalName: {
+              type: "STRING",
+              description: "The name or title of the goal to delete (e.g., 'Read 12 Books').",
+            },
+          },
+        },
+      },
+      {
+        name: "get_analytics",
+        description:
+          "Retrieve deep habit analytics, consistency scores, current streaks, best streaks, and 30-day completion rates to give smart habit coaching advice and spot patterns.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            habitName: {
+              type: "STRING",
+              description:
+                "Optional specific habit name to retrieve detailed metrics for. Leave empty to analyze all habits.",
+            },
+            timeRangeDays: {
+              type: "NUMBER",
+              description: "Time range in days for analytics calculation (defaults to 30).",
             },
           },
         },
@@ -277,10 +351,94 @@ const GROQ_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "delete_habit",
+      description:
+        "Permanently delete or remove an existing habit by name or ID. Propose this when the user asks to remove/delete a habit, or when recommending dropping a dead, obsolete, or unsustainable habit.",
+      parameters: {
+        type: "object",
+        properties: {
+          habitId: {
+            type: "string",
+            description: "Optional exact ID of the habit to delete.",
+          },
+          habitName: {
+            type: "string",
+            description: "The name or title of the habit to delete (e.g., 'Drink 2L Water').",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_bad_habit",
+      description:
+        "Permanently delete or remove an existing bad habit / quit tracker by name or ID from Cadence.",
+      parameters: {
+        type: "object",
+        properties: {
+          badHabitId: {
+            type: "string",
+            description: "Optional exact ID of the bad habit/quit tracker to delete.",
+          },
+          badHabitName: {
+            type: "string",
+            description: "The name or title of the bad habit to delete (e.g., 'Smoking').",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_goal",
+      description: "Permanently delete or remove an existing target goal by name or ID.",
+      parameters: {
+        type: "object",
+        properties: {
+          goalId: {
+            type: "string",
+            description: "Optional exact ID of the goal to delete.",
+          },
+          goalName: {
+            type: "string",
+            description: "The name or title of the goal to delete (e.g., 'Read 12 Books').",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_analytics",
+      description:
+        "Retrieve deep habit analytics, consistency scores, current streaks, best streaks, and 30-day completion rates to give smart habit coaching advice and spot patterns.",
+      parameters: {
+        type: "object",
+        properties: {
+          habitName: {
+            type: "string",
+            description:
+              "Optional specific habit name to retrieve detailed metrics for. Leave empty to analyze all habits.",
+          },
+          timeRangeDays: {
+            type: "number",
+            description: "Time range in days for analytics calculation (defaults to 30).",
+          },
+        },
+      },
+    },
+  },
 ];
 
 /**
- * Builds the system prompt injecting current application context (habits, goals, date).
+ * Builds the system prompt injecting current application context (habits, goals, date, analytics).
  */
 function buildSystemPrompt(body: AiRequestBody): string {
   const habitsContext = body.context?.habits
@@ -311,11 +469,31 @@ function buildSystemPrompt(body: AiRequestBody): string {
           .join("\n")
       : "No quit trackers recorded yet.";
 
-  return `You are Cadence AI Assistant, a concise, intelligent, and resilient companion for the Cadence habit tracker app.
+  const analyticsContext = body.context?.analytics?.habitPerformance
+    ? [
+        `Overall Consistency Score: ${Math.round((body.context.analytics.overallConsistencyScore ?? 0) * 100)}%`,
+        "Habit Performance Breakdown (last 30 days):",
+        ...body.context.analytics.habitPerformance.map(
+          (p) =>
+            `- "${p.name}": Streak ${p.currentStreak}d (Best: ${p.bestStreak}d), 30-day Completion Rate: ${Math.round(p.completionRate30d * 100)}%, Total Completed: ${p.totalCompletions}`,
+        ),
+      ].join("\n")
+    : "Call the `get_analytics` tool to retrieve live streaks, completion rates, and historical data.";
+
+  return `You are Cadence AI Assistant, a highly intelligent, proactive habit coach and personal growth strategist for the Cadence habit tracker app.
 Cadence is an offline-first, minimalist habit tracker designed to help users build routines, track goals, and stay consistent effortlessly. It also includes a dedicated Quit Tracker section for breaking unwanted vices and negative behaviors.
 
 You seamlessly support both English and Arabic. When the user speaks Arabic, reply in Arabic. When the user speaks English, reply in English.
 Keep your responses minimalist, warm, actionable, and free of fluff.
+
+COACHING PHILOSOPHY & PROACTIVE AGENT BEHAVIOR:
+When the user asks you to manage their habits, or if you notice a bad pattern, propose changes using your tools. You are a habit coach.
+Be proactive, analytical, and opinionated:
+- Do NOT be a passive chatbot that only answers when directly instructed. Proactively diagnose problems, spot patterns, celebrate winning streaks, and identify struggling routines.
+- Call \`get_analytics\` whenever you need deeper metrics on consistency, streaks, or completion rates to offer evidence-backed coaching.
+- HUMAN-IN-THE-LOOP APPROVAL WORKFLOW:
+  Cadence enforces a strict Human-in-the-Loop workflow. When you call ANY mutation tool (create_habit, delete_habit, create_bad_habit, delete_bad_habit, create_goal, delete_goal, log_habit), the mutation is NOT executed immediately. Instead, a rich UI card with "Approve & Apply" and "Cancel" buttons is shown to the user in chat.
+  Because the user must explicitly approve mutations, feel completely free to be proactive! If a habit has a 0% completion rate or is causing burnout, recommend deleting or modifying it. If a user achieves a goal, propose setting a new target or cleaning up.
 
 CURRENT USER CONTEXT:
 Habits:
@@ -327,32 +505,35 @@ ${goalsContext}
 Quit Trackers (Bad Habits):
 ${badHabitsContext}
 
+Analytics & Consistency:
+${analyticsContext}
+
 IMPORTANT HABIT VS QUIT TRACKER RULE:
 If the user wants to start doing something positive (e.g., read, workout, study), use the \`create_habit\` tool. However, if the user wants to STOP, QUIT, REDUCE, or BREAK a negative behavior (e.g., smoking, gossiping, biting nails, doomscrolling), you MUST use the \`create_bad_habit\` tool instead.
 
 AVAILABLE ACTIONS (FUNCTION CALLS):
-1. create_habit: Call when the user wants to build or start a POSITIVE routine or habit (e.g., 'Drink 2L Water', 'Morning Meditation', 'Workout').
-   - Do NOT use this tool if the user wants to stop, quit, or reduce a bad behavior or vice. For any negative habit, use \`create_bad_habit\` instead.
-   - When creating a habit, ALWAYS select a highly relevant icon name from the \`lucide-react\` icon library (e.g., 'Dumbbell' for workouts, 'Droplet' for water, 'BookOpen' for reading, 'Briefcase' for work). Return the exact PascalCase component name as a string.
-   - Intelligently link habits to existing goals: If the user asks to link the habit to a specific goal, or if it makes logical sense based on the goals in context or the \`get_app_summary\` context, provide the matching goal's ID in the \`goalId\` argument.
-   - Args:
-     * name (string, required): Title or name of the habit.
-     * schedule ("everyday" | "weekdays" | "weekends", required): Frequency schedule.
-     * color (string, optional): Color theme token ('emerald', 'teal', 'violet', 'amber', 'rose').
-     * icon (string, optional): PascalCase component name from \`lucide-react\` (e.g., 'Dumbbell', 'Droplet', 'BookOpen', 'Briefcase').
-     * goalId (string, optional): ID of an existing goal to link this habit to.
-2. create_bad_habit: Call when the user wants to STOP, QUIT, REDUCE, or BREAK a negative behavior or bad habit (e.g., smoking, gossiping, biting nails, doomscrolling, junk food). This logs the entry in Cadence's dedicated Quit Tracker section rather than the standard positive habits list.
-   - Args:
-     * name (string, required): Title or name of the bad habit to stop or quit (e.g., 'Stop Gossiping', 'Quit Smoking', 'Reduce Doomscrolling').
-     * triggerCategory (string, optional): Optional primary trigger category (e.g., 'stress', 'boredom', 'social', 'digital', 'custom').
-     * limit (number, optional): Optional daily numerical limit for moderation or gradual reduction. Omit for complete cessation (cold turkey).
-3. create_goal: Call when the user wants to set a new goal with a target number.
-   Args: name (string), targetValue (number), unit (optional string).
-4. log_habit: Call when the user says they completed or skipped a habit today.
-   Args: habitName (string), status ("done" | "skipped").
-5. get_app_summary: Call when the user asks for an overview of their habits, quit trackers, or goals, or when you need to inspect existing goals and habits to make intelligent linking decisions.
+1. create_habit: Propose creating a new positive habit routine.
+   - When creating a habit, ALWAYS select a highly relevant PascalCase icon name from \`lucide-react\` (e.g., 'Dumbbell', 'Droplet', 'BookOpen', 'Briefcase', 'Heart', 'Sun').
+   - Intelligently link habits to existing goals by providing \`goalId\` if applicable.
+   - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", req), color (string, opt), icon (string, opt), goalId (string, opt).
+2. delete_habit: Propose deleting an existing habit that the user wants to remove or that is obsolete/stale.
+   - Args: habitId (string, opt), habitName (string, opt).
+3. create_bad_habit: Propose creating a quit tracker entry to stop or reduce a vice or unwanted behavior.
+   - Args: name (string, req), triggerCategory (string, opt), limit (number, opt).
+4. delete_bad_habit: Propose deleting a quit tracker / bad habit.
+   - Args: badHabitId (string, opt), badHabitName (string, opt).
+5. create_goal: Propose creating a target milestone goal.
+   - Args: name (string, req), targetValue (number, req), unit (string, opt).
+6. delete_goal: Propose deleting an existing goal.
+   - Args: goalId (string, opt), goalName (string, opt).
+7. log_habit: Propose marking a habit as completed ('done') or skipped ('skipped') for today.
+   - Args: habitName (string, req), status ("done" | "skipped", req).
+8. get_analytics: Retrieve deep streaks, completion rates, and consistency statistics for smart advice.
+   - Args: habitName (string, opt), timeRangeDays (number, opt).
+9. get_app_summary: Retrieve an overview summary of current habits and goals.
+   - Args: query (string, opt).
 
-When you execute a tool call, accompany it with a short, helpful explanation of what you are doing.`;
+When you execute or propose a tool call, accompany it with a short, encouraging, and helpful explanation of your rationale.`;
 }
 
 /**
@@ -678,8 +859,8 @@ export async function handleAiRequest(request: Request): Promise<Response> {
     const groqApiKey = cleanApiKey(process.env.GROQ_API_KEY);
 
     const strategy = (
-      process.env.AI_EXECUTION_STRATEGY ||
-      process.env.AI_PROVIDER ||
+      process.env["AI_EXECUTION_STRATEGY"] ||
+      process.env["AI_PROVIDER"] ||
       "parallel"
     ).toLowerCase();
 

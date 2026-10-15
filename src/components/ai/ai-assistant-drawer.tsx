@@ -4,21 +4,32 @@ import {
   Send,
   Bot,
   User,
+  Check,
   CheckCircle2,
   AlertCircle,
   Trash2,
   WifiOff,
   Loader2,
   X,
+  XCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useTranslation } from "@/i18n/context";
-import { todayKey } from "@/services/dates";
+import { addDays, todayKey } from "@/services/dates";
+import { buildLogMap, consistencyScore, habitStats, streaks } from "@/services/stats";
 import { useApp } from "@/stores/app-store";
-import type { AiAppContext, AiRequestBody, AiResponsePayload, ChatMessage } from "@/types/ai";
+import type {
+  AiAppContext,
+  AiRequestBody,
+  AiResponsePayload,
+  ChatMessage,
+  PendingAction,
+} from "@/types/ai";
+import { isMutationTool } from "@/types/ai";
 import { cn } from "@/lib/utils";
-import { executeAiToolCalls } from "./tool-executor";
+import { describeAction, executeAiToolCalls } from "./tool-executor";
 import {
   Sheet,
   SheetContent,
@@ -157,6 +168,112 @@ export function AiAssistantDrawer() {
     }
   }, []);
 
+  /**
+   * Human-in-the-Loop: User explicitly approves and applies a proposed mutation action.
+   */
+  const handleApproveAction = async (messageId: string, actionId: string) => {
+    const targetMsg = messages.find((m) => m.id === messageId);
+    if (!targetMsg || !targetMsg.pendingActions) return;
+
+    const action = targetMsg.pendingActions.find((a) => a.id === actionId);
+    if (!action || action.status !== "pending") return;
+
+    try {
+      const results = await executeAiToolCalls([action.toolCall], {
+        actions,
+        habits,
+        goals,
+        badHabits,
+        habitLogs,
+        language: language === "ar" ? "ar" : "en",
+      });
+
+      const execResult = results[0];
+
+      if (execResult?.success) {
+        toast.success(execResult.summary);
+      } else if (execResult) {
+        toast.error(execResult.summary);
+      }
+
+      // Update action in state
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId || !m.pendingActions) return m;
+          return {
+            ...m,
+            pendingActions: m.pendingActions.map((a) =>
+              a.id === actionId
+                ? {
+                    ...a,
+                    status: "approved" as const,
+                    executionResult: execResult,
+                  }
+                : a,
+            ),
+          };
+        }),
+      );
+
+      // Add a system confirmation message to chat history
+      const displayDesc =
+        language === "ar" ? action.descriptionAr || action.description : action.description;
+      const confirmMsg: ChatMessage = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        role: "system",
+        content:
+          language === "ar"
+            ? `تم تأكيد وتطبيق الإجراء: ${displayDesc}`
+            : `Confirmed & applied action: ${displayDesc}`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, confirmMsg]);
+    } catch (err) {
+      console.error("[Approval Execution Error]:", err);
+      toast.error(
+        language === "ar" ? "فشل في تطبيق الإجراء المقترح" : "Failed to apply proposed action",
+      );
+    }
+  };
+
+  /**
+   * Human-in-the-Loop: User cancels a proposed mutation action.
+   */
+  const handleCancelAction = (messageId: string, actionId: string) => {
+    const targetMsg = messages.find((m) => m.id === messageId);
+    if (!targetMsg || !targetMsg.pendingActions) return;
+
+    const action = targetMsg.pendingActions.find((a) => a.id === actionId);
+    if (!action || action.status !== "pending") return;
+
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId || !m.pendingActions) return m;
+        return {
+          ...m,
+          pendingActions: m.pendingActions.map((a) =>
+            a.id === actionId ? { ...a, status: "cancelled" as const } : a,
+          ),
+        };
+      }),
+    );
+
+    const displayDesc =
+      language === "ar" ? action.descriptionAr || action.description : action.description;
+    toast.info(language === "ar" ? "تم إلغاء الإجراء." : "Action cancelled.");
+
+    const cancelMsg: ChatMessage = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      role: "system",
+      content:
+        language === "ar"
+          ? `تم إلغاء الإجراء المقترح: ${displayDesc}`
+          : `Cancelled proposed action: ${displayDesc}`,
+      timestamp: Date.now(),
+    };
+    setMessages((prev) => [...prev, cancelMsg]);
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend ?? input).trim();
     if (!text || isLoading) return;
@@ -182,34 +299,51 @@ export function AiAssistantDrawer() {
     setIsLoading(true);
 
     try {
-      // Build lightweight context of habits & goals
+      // Build comprehensive context of habits, goals, and analytics
       const today = todayKey();
+      const logMap = buildLogMap(habitLogs);
+      const activeHabits = habits.filter((h) => !h.archived);
+      const overallConsistency = consistencyScore(activeHabits, logMap, 30);
+      const startDate30d = addDays(today, -30);
+
+      const habitPerformance = activeHabits.map((h) => {
+        const stats = habitStats(h, logMap, startDate30d, today);
+        const streakInfo = streaks(h, logMap);
+        return {
+          id: h.id,
+          name: h.name,
+          currentStreak: streakInfo.current,
+          bestStreak: streakInfo.best,
+          completionRate30d: stats.completionRate,
+          totalCompletions: stats.totalCompletions,
+        };
+      });
+
       const appContext: AiAppContext = {
         language: language === "ar" ? "ar" : "en",
-        habits: habits
-          .filter((h) => !h.archived)
-          .map((h) => {
-            const logId = `${h.id}:${today}`;
-            const log = habitLogs.find((l) => l.id === logId);
-            const isCompletedToday = log?.status === "complete" || (log && log.value >= log.target);
+        habits: activeHabits.map((h) => {
+          const logId = `${h.id}:${today}`;
+          const log = habitLogs.find((l) => l.id === logId);
+          const isCompletedToday = log?.status === "complete" || (log && log.value >= log.target);
 
-            let scheduleStr = "daily";
-            if (h.schedule.type === "weekdays") {
-              scheduleStr = h.schedule.days.length === 5 ? "weekdays" : "custom days";
-            }
+          let scheduleStr = "daily";
+          if (h.schedule.type === "weekdays") {
+            scheduleStr = h.schedule.days.length === 5 ? "weekdays" : "custom days";
+          }
 
-            return {
-              id: h.id,
-              name: h.name,
-              type: h.type,
-              target: h.target,
-              unit: h.unit,
-              schedule: scheduleStr,
-              isCompletedToday: Boolean(isCompletedToday),
-              icon: h.icon,
-              goalId: h.goalId,
-            };
-          }),
+          return {
+            id: h.id,
+            name: h.name,
+            type: h.type,
+            target: h.target,
+            unit: h.unit,
+            schedule: scheduleStr,
+            isCompletedToday: Boolean(isCompletedToday),
+            streak: streaks(h, logMap).current,
+            icon: h.icon,
+            goalId: h.goalId,
+          };
+        }),
         goals: goals.map((g) => ({
           id: g.id,
           name: g.name,
@@ -224,6 +358,10 @@ export function AiAssistantDrawer() {
           limitValue: bh.limitValue,
           daysClean: Math.floor(Math.max(0, Date.now() - bh.quitDate) / (1000 * 60 * 60 * 24)),
         })),
+        analytics: {
+          overallConsistencyScore: overallConsistency,
+          habitPerformance,
+        },
       };
 
       const requestBody: AiRequestBody = {
@@ -247,34 +385,53 @@ export function AiAssistantDrawer() {
 
       const data = (await response.json()) as AiResponsePayload;
 
-      // Execute tool calls on client if returned
+      // Distinguish tool types: Safe (read-only) vs. Mutations requiring explicit user approval
+      const safeCalls = (data.toolCalls || []).filter((tc) => !isMutationTool(tc.name));
+      const mutationCalls = (data.toolCalls || []).filter((tc) => isMutationTool(tc.name));
+
+      // Execute safe read-only tools automatically behind the scenes
       let executionResults;
-      if (data.toolCalls && data.toolCalls.length > 0) {
-        executionResults = await executeAiToolCalls(data.toolCalls, {
+      if (safeCalls.length > 0) {
+        executionResults = await executeAiToolCalls(safeCalls, {
           actions,
           habits,
           goals,
           badHabits,
+          habitLogs,
           language: language === "ar" ? "ar" : "en",
         });
 
-        // Trigger single toast summary for executed tools
         for (const res of executionResults) {
-          if (res.success) {
-            toast.success(res.summary);
-          } else {
-            toast.error(res.summary);
+          if (res.toolName === "get_analytics") {
+            toast.info(res.summary);
           }
         }
       }
+
+      // Propose mutation actions for Human-in-the-Loop review
+      const pendingActions: PendingAction[] = mutationCalls.map((tc) => ({
+        id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        toolCall: tc,
+        status: "pending",
+        description: describeAction(tc, "en", { habits, goals, badHabits }),
+        descriptionAr: describeAction(tc, "ar", { habits, goals, badHabits }),
+      }));
 
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         role: "assistant",
         content:
-          data.text || (language === "ar" ? "تم تنفيذ الإجراء المطلوب." : "Action executed."),
+          data.text ||
+          (pendingActions.length > 0
+            ? language === "ar"
+              ? "لقد اقترحت بعض التغييرات. يرجى مراجعتها وتأكيدها أدناه:"
+              : "I have proposed some changes. Please review and approve them below:"
+            : language === "ar"
+              ? "تم تنفيذ الإجراء المطلوب."
+              : "Action executed."),
         toolCalls: data.toolCalls,
         executionResults,
+        pendingActions: pendingActions.length > 0 ? pendingActions : undefined,
         providerUsed: data.providerUsed,
         timestamp: Date.now(),
       };
@@ -311,15 +468,15 @@ export function AiAssistantDrawer() {
     language === "ar"
       ? [
           "أضف عادة: قراءة 20 دقيقة كل يوم",
-          "أنشئ هدف: قراءة 12 كتاب",
-          "ما هي عاداتي المقررة لليوم؟",
-          "سجل عادة قراءة 20 دقيقة كمنجزة",
+          "كيف هو معدل استمراريتي هذا الشهر؟",
+          "احذف عادة قراءة 20 دقيقة",
+          "حلل عاداتي واقترح تحسينات مناسبة",
         ]
       : [
           "Add habit: Read 20 mins everyday",
-          "Create goal: Read 12 books",
-          "What habits do I have today?",
-          "Log habit Read 20 mins as done",
+          "How is my consistency this month?",
+          "Delete habit Read 20 mins",
+          "Analyze my habits and suggest improvements",
         ];
 
   return (
@@ -342,13 +499,13 @@ export function AiAssistantDrawer() {
               <SheetTitle className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-1.5">
                 {language === "ar" ? "مساعد كادنس" : "Cadence AI"}
                 <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground px-1.5 py-0.5 rounded bg-muted/60 border border-border/40">
-                  Beta
+                  Agent
                 </span>
               </SheetTitle>
               <SheetDescription className="text-xs text-muted-foreground">
                 {language === "ar"
-                  ? "إدارة العادات والأهداف بالذكاء الاصطناعي"
-                  : "Manage habits & goals with AI"}
+                  ? "مدرب عادات ذكي مع موافقة مباشرة على التعديلات"
+                  : "Smart habit coach with Human-in-the-Loop approval"}
               </SheetDescription>
             </div>
           </div>
@@ -388,12 +545,14 @@ export function AiAssistantDrawer() {
               </div>
               <div className="space-y-1 max-w-xs">
                 <h3 className="text-sm font-semibold text-foreground">
-                  {language === "ar" ? "كيف يمكنني مساعدتك اليوم؟" : "How can I help you today?"}
+                  {language === "ar"
+                    ? "مرحباً! أنا مدرب العادات الذكي"
+                    : "Hello! I am your AI Habit Coach"}
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {language === "ar"
-                    ? "يمكنك إنشاء عادات جديدة، متابعة أهدافك، أو تسجيل إنجازاتك اليومية مباشرة باللغة العربية أو الإنجليزية."
-                    : "Create habits, set goals, or log your daily achievements directly using natural language."}
+                    ? "يمكنني تحليل أدائك، اقتراح تعديلات أو حذف عادات، وإنشاء أهداف جديدة. لن يتم تطبيق أي تعديل دون موافقتك الصريحة."
+                    : "I can analyze your streaks, recommend dropping or scaling habits, and track goals. No changes are applied without your approval."}
                 </p>
               </div>
 
@@ -417,68 +576,198 @@ export function AiAssistantDrawer() {
               </div>
             </div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
-              >
-                <div className="flex items-start gap-2 max-w-[85%]">
-                  {msg.role === "assistant" && (
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary border border-primary/20 mt-0.5">
-                      <Bot className="h-3.5 w-3.5" />
+            messages.map((msg) => {
+              // System Messages (confirmation or cancellation pills)
+              if (msg.role === "system") {
+                return (
+                  <div key={msg.id} className="flex w-full justify-center my-1.5 px-4">
+                    <div className="flex items-center gap-1.5 rounded-full bg-muted/60 border border-border/60 px-3 py-1 text-[11px] text-muted-foreground shadow-xs">
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span>{msg.content}</span>
                     </div>
-                  )}
+                  </div>
+                );
+              }
 
-                  <div
-                    className={`rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-ee-sm"
-                        : "bg-card border border-border/80 text-foreground rounded-es-sm"
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-
-                    {/* Tool Execution Cards */}
-                    {msg.executionResults && msg.executionResults.length > 0 && (
-                      <div className="mt-2.5 pt-2 border-t border-border/50 space-y-1.5">
-                        {msg.executionResults.map((res, i) => (
-                          <div
-                            key={i}
-                            className={`flex items-start gap-1.5 rounded-md px-2 py-1.5 text-[11px] ${
-                              res.success
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                : "bg-destructive/10 text-destructive border border-destructive/20"
-                            }`}
-                          >
-                            {res.success ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            ) : (
-                              <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            )}
-                            <span>{res.summary}</span>
-                          </div>
-                        ))}
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
+                >
+                  <div className="flex items-start gap-2 max-w-[85%]">
+                    {msg.role === "assistant" && (
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary border border-primary/20 mt-0.5">
+                        <Bot className="h-3.5 w-3.5" />
                       </div>
                     )}
 
-                    {/* Provider badge */}
-                    {msg.role === "assistant" && msg.providerUsed && (
-                      <div className="mt-1.5 flex items-center justify-end">
-                        <span className="text-[9px] font-mono tracking-tight text-muted-foreground/75">
-                          {msg.providerUsed === "gemini" ? "✨ Gemini" : "⚡ Groq (fallback)"}
-                        </span>
+                    <div
+                      className={`rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-ee-sm"
+                          : "bg-card border border-border/80 text-foreground rounded-es-sm"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+
+                      {/* Human-in-the-Loop Pending & Approved Action Cards */}
+                      {msg.pendingActions && msg.pendingActions.length > 0 && (
+                        <div className="mt-2.5 pt-2 border-t border-border/50 space-y-2">
+                          {msg.pendingActions.map((action) => {
+                            const isPending = action.status === "pending";
+                            const isApproved = action.status === "approved";
+                            const isCancelled = action.status === "cancelled";
+                            const isDeletion = action.toolCall.name.startsWith("delete_");
+                            const displayDescription =
+                              language === "ar"
+                                ? action.descriptionAr || action.description
+                                : action.description;
+
+                            return (
+                              <div
+                                key={action.id}
+                                className={cn(
+                                  "rounded-xl border p-2.5 transition-all text-start",
+                                  isPending && "bg-background/90 border-primary/40 shadow-xs",
+                                  isApproved &&
+                                    "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100",
+                                  isCancelled &&
+                                    "bg-muted/40 border-border/50 text-muted-foreground opacity-75",
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5">
+                                    {isPending ? (
+                                      <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+                                    ) : isApproved ? (
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                    ) : (
+                                      <XCircle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    )}
+                                    <span className="text-[11px] font-semibold text-foreground">
+                                      {isPending
+                                        ? language === "ar"
+                                          ? "إجراء مقترح"
+                                          : "Proposed Action"
+                                        : isApproved
+                                          ? language === "ar"
+                                            ? "تم التطبيق ✓"
+                                            : "Applied ✓"
+                                          : language === "ar"
+                                            ? "ملغي"
+                                            : "Cancelled"}
+                                    </span>
+                                  </div>
+
+                                  {isPending && (
+                                    <span
+                                      className={cn(
+                                        "text-[9px] font-medium px-1.5 py-0.5 rounded-full border",
+                                        isDeletion
+                                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+                                      )}
+                                    >
+                                      {language === "ar" ? "يتطلب موافقة" : "Requires Approval"}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p
+                                  className={cn(
+                                    "text-xs mt-1.5 font-medium text-foreground/90",
+                                    isCancelled && "line-through text-muted-foreground",
+                                  )}
+                                >
+                                  {displayDescription}
+                                </p>
+
+                                {isPending && isDeletion && (
+                                  <p className="text-[10px] text-destructive/90 mt-1">
+                                    {language === "ar"
+                                      ? "تنبيه: سيتم حذف هذا العنصر بعد تأكيدك."
+                                      : "Warning: This item will be permanently removed upon approval."}
+                                  </p>
+                                )}
+
+                                {isApproved && action.executionResult && (
+                                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+                                    {action.executionResult.summary}
+                                  </p>
+                                )}
+
+                                {isPending && (
+                                  <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => void handleApproveAction(msg.id, action.id)}
+                                      disabled={isLoading}
+                                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[11px] shadow-xs transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                      <Check className="h-3 w-3" />
+                                      <span>
+                                        {language === "ar" ? "موافقة وتطبيق" : "Approve & Apply"}
+                                      </span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelAction(msg.id, action.id)}
+                                      disabled={isLoading}
+                                      className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted text-muted-foreground hover:text-foreground text-[11px] transition-all active:scale-95 disabled:opacity-50"
+                                    >
+                                      <X className="h-3 w-3" />
+                                      <span>{language === "ar" ? "إلغاء" : "Cancel"}</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Safe Read-Only Tool Execution Cards */}
+                      {msg.executionResults && msg.executionResults.length > 0 && (
+                        <div className="mt-2.5 pt-2 border-t border-border/50 space-y-1.5">
+                          {msg.executionResults.map((res, i) => (
+                            <div
+                              key={i}
+                              className={`flex items-start gap-1.5 rounded-md px-2 py-1.5 text-[11px] ${
+                                res.success
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                  : "bg-destructive/10 text-destructive border border-destructive/20"
+                              }`}
+                            >
+                              {res.success ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                              )}
+                              <span>{res.summary}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Provider badge */}
+                      {msg.role === "assistant" && msg.providerUsed && (
+                        <div className="mt-1.5 flex items-center justify-end">
+                          <span className="text-[9px] font-mono tracking-tight text-muted-foreground/75">
+                            {msg.providerUsed === "gemini" ? "✨ Gemini" : "⚡ Groq (fallback)"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {msg.role === "user" && (
+                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border mt-0.5">
+                        <User className="h-3.5 w-3.5" />
                       </div>
                     )}
                   </div>
-
-                  {msg.role === "user" && (
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground border border-border mt-0.5">
-                      <User className="h-3.5 w-3.5" />
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
 
           {isLoading && (
@@ -522,8 +811,8 @@ export function AiAssistantDrawer() {
                     ? "غير متاح دون اتصال..."
                     : "Unavailable offline..."
                   : language === "ar"
-                    ? "اسأل أي شيء أو اطلب إضافة عادة..."
-                    : "Ask or command (e.g. 'Add habit: Read 20 mins')..."
+                    ? "اسأل أي شيء، اطلب تحليلاً، أو اقترح تغيير عادة..."
+                    : "Ask advice, request analytics, or manage habits..."
               }
               className="flex-1 resize-none max-h-28 min-h-[40px] rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             />
