@@ -419,3 +419,17 @@
   box-shadow: 0 0 24px rgba(168, 85, 247, 0.35), 0 0 12px rgba(6, 182, 212, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+/* ---------------------------------------------------------------------------
+ * Mobile input auto-zoom prevention:
+ * Enforces 16px font size on inputs, textareas, and selects on mobile viewports
+ * (<=768px) to prevent iOS Safari & Android Chrome auto-zoom on focus.
+ * ------------------------------------------------------------------------- */
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+

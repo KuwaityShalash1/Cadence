@@ -40,3 +40,13 @@ aside.w-16 span:not([data-badge]) {
   width: 0 !important;
   opacity: 0 !important;
 }
+
+/* ===== Mobile Input Auto-Zoom Prevention ===== */
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+

@@ -1210,7 +1210,7 @@ export function AiAssistantDrawer() {
                     ? "اسأل أي شيء، اطلب تحليلاً، أو اقترح تغيير عادة..."
                     : "Ask advice, request analytics, or manage habits..."
               }
-              className="flex-1 resize-none max-h-28 min-h-[40px] rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 resize-none max-h-28 min-h-[40px] rounded-xl border border-border bg-background px-3 py-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             />
 
             <button
