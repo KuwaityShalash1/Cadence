@@ -1,6 +1,7 @@
 import { hasLucideIcon, resolveIconName } from "@/components/icon-map";
 import { addDays, todayKey } from "@/services/dates";
 import { buildLogMap, consistencyScore, habitStats, streaks } from "@/services/stats";
+import { saveAiMemory, removeAiMemory } from "@/services/ai-memory";
 import type { AppActions, Goal, Habit, Routine } from "@/stores/app-store";
 import { uid } from "@/stores/app-store";
 import type { BadHabit, HabitLog, RoutineStep, Schedule } from "@/types";
@@ -60,7 +61,8 @@ export function describeAction(
       : Array.isArray(args["steps"])
         ? args["steps"].length
         : 0;
-    const stepsSuffix = habitCount > 0 ? (isAr ? ` (${habitCount} خطوات)` : ` (${habitCount} steps)`) : "";
+    const stepsSuffix =
+      habitCount > 0 ? (isAr ? ` (${habitCount} خطوات)` : ` (${habitCount} steps)`) : "";
     return isAr
       ? `إنشاء روتين: "${routineName}"${stepsSuffix}`
       : `Create Routine: "${routineName}"${stepsSuffix}`;
@@ -147,7 +149,8 @@ export function describeAction(
     const rawName = String(args["habitName"] || args["habitId"] || "Habit");
     // Try to resolve habit name from context if only ID was given
     const resolvedHabit = context?.habits?.find(
-      (h) => h.id === String(args["habitId"] || "") || h.name.toLowerCase() === rawName.toLowerCase(),
+      (h) =>
+        h.id === String(args["habitId"] || "") || h.name.toLowerCase() === rawName.toLowerCase(),
     );
     const displayName = resolvedHabit?.name || rawName;
     const amount = Number(args["amount"] ?? 0);
@@ -163,21 +166,212 @@ export function describeAction(
       : `Add ${amount} ${unit} to "${displayName}"`;
   }
 
+  if (name === "update_habit") {
+    const habitName = String(args["habitName"] || "").trim();
+    const habitId = String(args["habitId"] || "").trim();
+    const existing = context?.habits?.find(
+      (h) =>
+        (habitId && h.id === habitId) ||
+        (habitName && h.name.toLowerCase() === habitName.toLowerCase()),
+    );
+    const displayName = existing?.name || habitName || (isAr ? "عادة" : "Habit");
+
+    const diffs: string[] = [];
+    if (args["targetValue"] !== undefined || args["target"] !== undefined) {
+      const oldVal = existing ? `${existing.target} ${existing.unit || ""}`.trim() : "";
+      const newUnit = args["unit"] !== undefined ? String(args["unit"]) : existing?.unit || "";
+      const newVal = `${Number(args["targetValue"] ?? args["target"])} ${newUnit}`.trim();
+      diffs.push(
+        isAr ? `الهدف ${oldVal || "?"} ⬅️ ${newVal}` : `Target ${oldVal || "?"} ➡️ ${newVal}`,
+      );
+    } else if (args["unit"] !== undefined && existing && args["unit"] !== existing.unit) {
+      diffs.push(
+        isAr
+          ? `الوحدة ${existing.unit} ⬅️ ${args["unit"]}`
+          : `Unit ${existing.unit} ➡️ ${args["unit"]}`,
+      );
+    }
+
+    if (args["name"] && existing && String(args["name"]).trim() !== existing.name) {
+      diffs.push(
+        isAr
+          ? `الاسم "${existing.name}" ⬅️ "${args["name"]}"`
+          : `Name "${existing.name}" ➡️ "${args["name"]}"`,
+      );
+    }
+
+    if (args["schedule"]) {
+      const scheduleMap: Record<string, { ar: string; en: string }> = {
+        everyday: { ar: "يومياً", en: "Everyday" },
+        weekdays: { ar: "أيام العمل", en: "Weekdays" },
+        weekends: { ar: "عطلة نهاية الأسبوع", en: "Weekends" },
+      };
+      const oldSchedKey = existing?.schedule.type === "weekdays" ? "weekdays" : "everyday";
+      const newSchedKey = String(args["schedule"]).toLowerCase();
+      const oldLabel = isAr
+        ? (scheduleMap[oldSchedKey]?.ar ?? oldSchedKey)
+        : (scheduleMap[oldSchedKey]?.en ?? oldSchedKey);
+      const newLabel = isAr
+        ? (scheduleMap[newSchedKey]?.ar ?? newSchedKey)
+        : (scheduleMap[newSchedKey]?.en ?? newSchedKey);
+      diffs.push(
+        isAr ? `الجدول ${oldLabel} ⬅️ ${newLabel}` : `Schedule ${oldLabel} ➡️ ${newLabel}`,
+      );
+    }
+
+    if (args["color"] && existing && args["color"] !== existing.color) {
+      diffs.push(isAr ? `اللون ⬅️ ${args["color"]}` : `Color ➡️ ${args["color"]}`);
+    }
+
+    if (args["icon"] && existing && args["icon"] !== existing.icon) {
+      diffs.push(isAr ? `الأيقونة ⬅️ ${args["icon"]}` : `Icon ➡️ ${args["icon"]}`);
+    }
+
+    const diffContent = diffs.length > 0 ? `: ${diffs.join(" ، ")}` : "";
+    return isAr
+      ? `تعديل العادة "${displayName}"${diffContent}`
+      : `Update Habit "${displayName}"${diffContent}`;
+  }
+
+  if (name === "update_bad_habit") {
+    const badHabitName = String(args["badHabitName"] || "").trim();
+    const badHabitId = String(args["badHabitId"] || "").trim();
+    const existing = context?.badHabits?.find(
+      (b) =>
+        (badHabitId && b.id === badHabitId) ||
+        (badHabitName && b.title.toLowerCase() === badHabitName.toLowerCase()),
+    );
+    const displayName = existing?.title || badHabitName || (isAr ? "متتبع إقلاع" : "Quit Tracker");
+
+    const diffs: string[] = [];
+    if (args["limit"] !== undefined) {
+      const oldLimit =
+        existing?.limitValue !== undefined ? String(existing.limitValue) : isAr ? "بدون" : "none";
+      diffs.push(
+        isAr
+          ? `الحد اليومي ${oldLimit} ⬅️ ${args["limit"]}`
+          : `Daily limit ${oldLimit} ➡️ ${args["limit"]}`,
+      );
+    }
+    if (args["name"] && existing && String(args["name"]).trim() !== existing.title) {
+      diffs.push(
+        isAr
+          ? `الاسم "${existing.title}" ⬅️ "${args["name"]}"`
+          : `Name "${existing.title}" ➡️ "${args["name"]}"`,
+      );
+    }
+    if (
+      args["triggerCategory"] &&
+      existing &&
+      args["triggerCategory"] !== existing.triggerCategory
+    ) {
+      diffs.push(
+        isAr
+          ? `المحفز ${existing.triggerCategory || "عام"} ⬅️ ${args["triggerCategory"]}`
+          : `Trigger ${existing.triggerCategory || "general"} ➡️ ${args["triggerCategory"]}`,
+      );
+    }
+
+    const diffContent = diffs.length > 0 ? `: ${diffs.join(" ، ")}` : "";
+    return isAr
+      ? `تعديل متتبع الإقلاع "${displayName}"${diffContent}`
+      : `Update Quit Tracker "${displayName}"${diffContent}`;
+  }
+
+  if (name === "update_goal") {
+    const goalName = String(args["goalName"] || "").trim();
+    const goalId = String(args["goalId"] || "").trim();
+    const existing = context?.goals?.find(
+      (g) =>
+        (goalId && g.id === goalId) ||
+        (goalName && g.name.toLowerCase() === goalName.toLowerCase()),
+    );
+    const displayName = existing?.name || goalName || (isAr ? "هدف" : "Goal");
+
+    const diffs: string[] = [];
+    if (args["targetValue"] !== undefined) {
+      const oldVal = existing ? `${existing.targetValue} ${existing.unit || ""}`.trim() : "";
+      const newUnit = args["unit"] !== undefined ? String(args["unit"]) : existing?.unit || "";
+      const newVal = `${Number(args["targetValue"])} ${newUnit}`.trim();
+      diffs.push(
+        isAr ? `المستهدف ${oldVal || "?"} ⬅️ ${newVal}` : `Target ${oldVal || "?"} ➡️ ${newVal}`,
+      );
+    }
+    if (args["name"] && existing && String(args["name"]).trim() !== existing.name) {
+      diffs.push(
+        isAr
+          ? `الاسم "${existing.name}" ⬅️ "${args["name"]}"`
+          : `Name "${existing.name}" ➡️ "${args["name"]}"`,
+      );
+    }
+
+    const diffContent = diffs.length > 0 ? `: ${diffs.join(" ، ")}` : "";
+    return isAr
+      ? `تعديل الهدف "${displayName}"${diffContent}`
+      : `Update Goal "${displayName}"${diffContent}`;
+  }
+
+  if (name === "update_routine") {
+    const routineName = String(args["routineName"] || "").trim();
+    const routineId = String(args["routineId"] || "").trim();
+    const existing = context?.routines?.find(
+      (r) =>
+        (routineId && r.id === routineId) ||
+        (routineName && r.name.toLowerCase() === routineName.toLowerCase()),
+    );
+    const displayName = existing?.name || routineName || (isAr ? "روتين" : "Routine");
+
+    const diffs: string[] = [];
+    if (args["name"] && existing && String(args["name"]).trim() !== existing.name) {
+      diffs.push(
+        isAr
+          ? `الاسم "${existing.name}" ⬅️ "${args["name"]}"`
+          : `Name "${existing.name}" ➡️ "${args["name"]}"`,
+      );
+    }
+    if (Array.isArray(args["steps"])) {
+      diffs.push(
+        isAr ? `الخطوات: ${args["steps"].length} خطوات` : `Steps: ${args["steps"].length} steps`,
+      );
+    }
+
+    const diffContent = diffs.length > 0 ? `: ${diffs.join(" ، ")}` : "";
+    return isAr
+      ? `تعديل الروتين "${displayName}"${diffContent}`
+      : `Update Routine "${displayName}"${diffContent}`;
+  }
+
+  if (name === "save_user_memory") {
+    const fact = String(args["fact"] || "");
+    return isAr ? `🧠 تذكر المساعد: ${fact}` : `🧠 Assistant remembered: ${fact}`;
+  }
+
+  if (name === "manage_user_memory") {
+    const fact = String(args["fact"] || "");
+    const action = String(args["action"] || "add").toLowerCase();
+    if (action === "remove") {
+      return isAr ? `🧠 نسي المساعد: ${fact}` : `🧠 Assistant forgot: ${fact}`;
+    }
+    return isAr ? `🧠 تذكر المساعد: ${fact}` : `🧠 Assistant remembered: ${fact}`;
+  }
+
   return isAr ? `تنفيذ الإجراء: ${name}` : `Execute Action: ${name}`;
 }
 
 /**
  * Assigns an execution phase priority so dependencies execute in safe order
- * (e.g., clear_all_data -> deletions -> habit creations -> routine creations -> logging).
+ * (e.g. memories -> clear_all_data -> deletions -> updates -> habit creations -> routine creations -> logging).
  */
 function getToolExecutionPriority(toolName: string): number {
+  if (toolName === "save_user_memory" || toolName === "manage_user_memory") return 0;
   if (toolName === "clear_all_data") return 1;
   if (toolName.startsWith("delete_")) return 2;
-  if (toolName === "create_goal") return 3;
-  if (toolName === "create_habit" || toolName === "create_bad_habit") return 4;
-  if (toolName === "create_routine") return 5;
-  if (toolName.startsWith("log_")) return 6;
-  return 7;
+  if (toolName.startsWith("update_")) return 3;
+  if (toolName === "create_goal") return 4;
+  if (toolName === "create_habit" || toolName === "create_bad_habit") return 5;
+  if (toolName === "create_routine") return 6;
+  if (toolName.startsWith("log_")) return 7;
+  return 8;
 }
 
 /**
@@ -353,9 +547,17 @@ export async function executeAiToolCalls(
           lowerName.includes("bed")
         ) {
           resolvedIcon = "Moon";
-        } else if (lowerName.includes("work") || lowerName.includes("study") || lowerName.includes("عمل")) {
+        } else if (
+          lowerName.includes("work") ||
+          lowerName.includes("study") ||
+          lowerName.includes("عمل")
+        ) {
           resolvedIcon = "Briefcase";
-        } else if (lowerName.includes("gym") || lowerName.includes("workout") || lowerName.includes("تمرين")) {
+        } else if (
+          lowerName.includes("gym") ||
+          lowerName.includes("workout") ||
+          lowerName.includes("تمرين")
+        ) {
           resolvedIcon = "Dumbbell";
         }
 
@@ -374,7 +576,9 @@ export async function executeAiToolCalls(
             context.habits.find((h) => h.id === query) ||
             createdHabitsByName.get(q) ||
             context.habits.find((h) => h.name.trim().toLowerCase() === q) ||
-            context.habits.find((h) => h.name.toLowerCase().includes(q) || q.includes(h.name.toLowerCase()))
+            context.habits.find(
+              (h) => h.name.toLowerCase().includes(q) || q.includes(h.name.toLowerCase()),
+            )
           );
         };
 
@@ -822,9 +1026,7 @@ export async function executeAiToolCalls(
           context.habits.find((h) => h.id === habitId) ??
           context.habits.find((h) => h.name.trim().toLowerCase() === needle) ??
           context.habits.find(
-            (h) =>
-              h.name.toLowerCase().includes(needle) ||
-              needle.includes(h.name.toLowerCase()),
+            (h) => h.name.toLowerCase().includes(needle) || needle.includes(h.name.toLowerCase()),
           );
 
         if (!targetHabit) {
@@ -1003,6 +1205,302 @@ export async function executeAiToolCalls(
             })),
           },
         });
+      } else if (tc.name === "update_habit") {
+        const habitId = tc.args["habitId"] ? String(tc.args["habitId"]).trim() : "";
+        const habitName = tc.args["habitName"] ? String(tc.args["habitName"]).trim() : "";
+        const newName = tc.args["name"] ? String(tc.args["name"]).trim() : undefined;
+        const scheduleRaw = tc.args["schedule"]
+          ? String(tc.args["schedule"]).toLowerCase().trim()
+          : undefined;
+        const targetValue =
+          tc.args["targetValue"] !== undefined
+            ? Number(tc.args["targetValue"])
+            : tc.args["target"] !== undefined
+              ? Number(tc.args["target"])
+              : undefined;
+        const unit = tc.args["unit"] !== undefined ? String(tc.args["unit"]).trim() : undefined;
+        const color = tc.args["color"] ? String(tc.args["color"]).trim() : undefined;
+        const iconRaw = tc.args["icon"] ? String(tc.args["icon"]).trim() : undefined;
+
+        const targetHabit = context.habits.find((h) => {
+          if (habitId && h.id === habitId) return true;
+          if (habitName && h.name.toLowerCase() === habitName.toLowerCase()) return true;
+          if (newName && h.name.toLowerCase() === newName.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!targetHabit) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr
+              ? `فشل: لم يتم العثور على العادة المراد تعديلها (${habitName || habitId || "غير محدد"})`
+              : `Failed: Habit to update not found (${habitName || habitId || "unspecified"})`,
+            success: false,
+          });
+          continue;
+        }
+
+        let newSchedule: Schedule = targetHabit.schedule;
+        if (scheduleRaw === "everyday" || scheduleRaw === "daily") {
+          newSchedule = { type: "daily" };
+        } else if (scheduleRaw === "weekdays") {
+          newSchedule = { type: "weekdays", days: [1, 2, 3, 4, 5] };
+        } else if (scheduleRaw === "weekends") {
+          newSchedule = { type: "weekdays", days: [0, 6] };
+        }
+
+        let resolvedIcon = targetHabit.icon;
+        if (iconRaw) {
+          const resolved = resolveIconName(iconRaw);
+          if (hasLucideIcon(resolved)) {
+            resolvedIcon = resolved;
+          }
+        }
+
+        const updatedHabit: Habit = {
+          ...targetHabit,
+          name: newName || targetHabit.name,
+          schedule: newSchedule,
+          target:
+            targetValue !== undefined && !isNaN(targetValue) ? targetValue : targetHabit.target,
+          unit: unit !== undefined ? unit : targetHabit.unit,
+          color: color || targetHabit.color,
+          icon: resolvedIcon,
+        };
+
+        context.actions.updateHabit(updatedHabit);
+
+        const summary = describeAction(tc, context.language, { habits: context.habits });
+        results.push({
+          toolName: tc.name,
+          summary: isAr
+            ? `تم تعديل العادة بنجاح: ${summary}`
+            : `Updated habit successfully: ${summary}`,
+          success: true,
+          data: updatedHabit,
+        });
+      } else if (tc.name === "update_bad_habit") {
+        const badHabitId = tc.args["badHabitId"] ? String(tc.args["badHabitId"]).trim() : "";
+        const badHabitName = tc.args["badHabitName"] ? String(tc.args["badHabitName"]).trim() : "";
+        const newName = tc.args["name"] ? String(tc.args["name"]).trim() : undefined;
+        const triggerCategory = tc.args["triggerCategory"]
+          ? String(tc.args["triggerCategory"]).trim()
+          : undefined;
+        const limit = tc.args["limit"] !== undefined ? Number(tc.args["limit"]) : undefined;
+        const color = tc.args["color"] ? String(tc.args["color"]).trim() : undefined;
+        const iconRaw = tc.args["icon"] ? String(tc.args["icon"]).trim() : undefined;
+
+        const targetBadHabit = (context.badHabits || []).find((b) => {
+          if (badHabitId && b.id === badHabitId) return true;
+          if (badHabitName && b.title.toLowerCase() === badHabitName.toLowerCase()) return true;
+          if (newName && b.title.toLowerCase() === newName.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!targetBadHabit) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr
+              ? `فشل: لم يتم العثور على متتبع الإقلاع المراد تعديله (${badHabitName || badHabitId || "غير محدد"})`
+              : `Failed: Quit tracker to update not found (${badHabitName || badHabitId || "unspecified"})`,
+            success: false,
+          });
+          continue;
+        }
+
+        let resolvedIcon = targetBadHabit.icon;
+        if (iconRaw) {
+          const resolved = resolveIconName(iconRaw);
+          if (hasLucideIcon(resolved)) {
+            resolvedIcon = resolved;
+          }
+        }
+
+        const updatedBadHabit: BadHabit = {
+          ...targetBadHabit,
+          title: newName || targetBadHabit.title,
+          triggerCategory:
+            triggerCategory !== undefined ? triggerCategory : targetBadHabit.triggerCategory,
+          limitValue: limit !== undefined && !isNaN(limit) ? limit : targetBadHabit.limitValue,
+          strategy: limit !== undefined && !isNaN(limit) ? "limit" : targetBadHabit.strategy,
+          color: color || targetBadHabit.color,
+          icon: resolvedIcon,
+        };
+
+        context.actions.upsertBadHabit(updatedBadHabit);
+
+        const summary = describeAction(tc, context.language, { badHabits: context.badHabits });
+        results.push({
+          toolName: tc.name,
+          summary: isAr
+            ? `تم تعديل متتبع الإقلاع بنجاح: ${summary}`
+            : `Updated quit tracker successfully: ${summary}`,
+          success: true,
+          data: updatedBadHabit,
+        });
+      } else if (tc.name === "update_goal") {
+        const goalId = tc.args["goalId"] ? String(tc.args["goalId"]).trim() : "";
+        const goalName = tc.args["goalName"] ? String(tc.args["goalName"]).trim() : "";
+        const newName = tc.args["name"] ? String(tc.args["name"]).trim() : undefined;
+        const targetValue =
+          tc.args["targetValue"] !== undefined ? Number(tc.args["targetValue"]) : undefined;
+        const unit = tc.args["unit"] !== undefined ? String(tc.args["unit"]).trim() : undefined;
+        const color = tc.args["color"] ? String(tc.args["color"]).trim() : undefined;
+        const iconRaw = tc.args["icon"] ? String(tc.args["icon"]).trim() : undefined;
+
+        const targetGoal = context.goals.find((g) => {
+          if (goalId && g.id === goalId) return true;
+          if (goalName && g.name.toLowerCase() === goalName.toLowerCase()) return true;
+          if (newName && g.name.toLowerCase() === newName.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!targetGoal) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr
+              ? `فشل: لم يتم العثور على الهدف المراد تعديله (${goalName || goalId || "غير محدد"})`
+              : `Failed: Goal to update not found (${goalName || goalId || "unspecified"})`,
+            success: false,
+          });
+          continue;
+        }
+
+        let resolvedIcon = targetGoal.icon;
+        if (iconRaw) {
+          const resolved = resolveIconName(iconRaw);
+          if (hasLucideIcon(resolved)) {
+            resolvedIcon = resolved;
+          }
+        }
+
+        const updatedGoal: Goal = {
+          ...targetGoal,
+          name: newName || targetGoal.name,
+          targetValue:
+            targetValue !== undefined && !isNaN(targetValue) ? targetValue : targetGoal.targetValue,
+          unit: unit !== undefined ? unit : targetGoal.unit,
+          color: color || targetGoal.color,
+          icon: resolvedIcon,
+        };
+
+        context.actions.upsertGoal(updatedGoal);
+
+        const summary = describeAction(tc, context.language, { goals: context.goals });
+        results.push({
+          toolName: tc.name,
+          summary: isAr
+            ? `تم تعديل الهدف بنجاح: ${summary}`
+            : `Updated goal successfully: ${summary}`,
+          success: true,
+          data: updatedGoal,
+        });
+      } else if (tc.name === "update_routine") {
+        const routineId = tc.args["routineId"] ? String(tc.args["routineId"]).trim() : "";
+        const routineName = tc.args["routineName"] ? String(tc.args["routineName"]).trim() : "";
+        const newName = tc.args["name"] ? String(tc.args["name"]).trim() : undefined;
+        const scheduleRaw = tc.args["schedule"]
+          ? String(tc.args["schedule"]).toLowerCase().trim()
+          : undefined;
+        const color = tc.args["color"] ? String(tc.args["color"]).trim() : undefined;
+        const iconRaw = tc.args["icon"] ? String(tc.args["icon"]).trim() : undefined;
+
+        const targetRoutine = (context.routines || []).find((r) => {
+          if (routineId && r.id === routineId) return true;
+          if (routineName && r.name.toLowerCase() === routineName.toLowerCase()) return true;
+          if (newName && r.name.toLowerCase() === newName.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!targetRoutine) {
+          results.push({
+            toolName: tc.name,
+            summary: isAr
+              ? `فشل: لم يتم العثور على الروتين المراد تعديله (${routineName || routineId || "غير محدد"})`
+              : `Failed: Routine to update not found (${routineName || routineId || "unspecified"})`,
+            success: false,
+          });
+          continue;
+        }
+
+        let newSchedule: Schedule = targetRoutine.schedule;
+        if (scheduleRaw === "everyday" || scheduleRaw === "daily") {
+          newSchedule = { type: "daily" };
+        } else if (scheduleRaw === "weekdays") {
+          newSchedule = { type: "weekdays", days: [1, 2, 3, 4, 5] };
+        } else if (scheduleRaw === "weekends") {
+          newSchedule = { type: "weekdays", days: [0, 6] };
+        }
+
+        let resolvedIcon = targetRoutine.icon;
+        if (iconRaw) {
+          const resolved = resolveIconName(iconRaw);
+          if (hasLucideIcon(resolved)) {
+            resolvedIcon = resolved;
+          }
+        }
+
+        let nextSteps = targetRoutine.steps;
+        if (Array.isArray(tc.args["steps"])) {
+          const rawSteps = tc.args["steps"] as Array<{ title?: string; habitName?: string }>;
+          nextSteps = rawSteps.map((s) => {
+            const stepTitle = String(s.title || "Step").trim();
+            const linkedHabit = s.habitName
+              ? context.habits.find(
+                  (h) => h.name.toLowerCase() === String(s.habitName).toLowerCase(),
+                )
+              : undefined;
+            return {
+              id: uid(),
+              title: stepTitle,
+              habitId: linkedHabit?.id,
+            };
+          });
+        }
+
+        const updatedRoutine: Routine = {
+          ...targetRoutine,
+          name: newName || targetRoutine.name,
+          schedule: newSchedule,
+          color: color || targetRoutine.color,
+          icon: resolvedIcon,
+          steps: nextSteps,
+        };
+
+        context.actions.upsertRoutine(updatedRoutine);
+
+        const summary = describeAction(tc, context.language, { routines: context.routines });
+        results.push({
+          toolName: tc.name,
+          summary: isAr
+            ? `تم تعديل الروتين بنجاح: ${summary}`
+            : `Updated routine successfully: ${summary}`,
+          success: true,
+          data: updatedRoutine,
+        });
+      } else if (tc.name === "save_user_memory" || tc.name === "manage_user_memory") {
+        const fact = String(tc.args["fact"] || "").trim();
+        const action = String(tc.args["action"] || "add")
+          .toLowerCase()
+          .trim();
+
+        if (action === "remove") {
+          removeAiMemory(fact);
+          results.push({
+            toolName: tc.name,
+            summary: isAr ? `🧠 نسي المساعد: ${fact}` : `🧠 Assistant forgot: ${fact}`,
+            success: true,
+            data: { fact, action: "remove" },
+          });
+        } else {
+          saveAiMemory(fact);
+          results.push({
+            toolName: tc.name,
+            summary: isAr ? `🧠 تذكر المساعد: ${fact}` : `🧠 Assistant remembered: ${fact}`,
+            success: true,
+            data: { fact, action: "add" },
+          });
+        }
       }
     } catch (err) {
       console.error("[Client Tool Executor Error]:", err);

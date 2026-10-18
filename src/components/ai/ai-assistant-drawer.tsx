@@ -18,12 +18,15 @@ import {
   Brain,
   CheckSquare,
   Square,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { useTranslation } from "@/i18n/context";
 import { addDays, todayKey } from "@/services/dates";
 import { buildLogMap, consistencyScore, habitStats, streaks } from "@/services/stats";
+import { loadAiMemories, AI_MEMORIES_UPDATED_EVENT } from "@/services/ai-memory";
 import { useApp } from "@/stores/app-store";
 import type {
   AiAppContext,
@@ -129,15 +132,172 @@ function isComplexRequest(text: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Web Speech API Types
+// ---------------------------------------------------------------------------
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+      isFinal: boolean;
+    };
+    length: number;
+  };
+}
+
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance;
+
+function getSpeechRecognitionClass(): SpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  const win = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return win.SpeechRecognition || win.webkitSpeechRecognition || null;
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic Context-Aware Quick Chips
+// ---------------------------------------------------------------------------
+interface QuickChip {
+  id: string;
+  label: string;
+  prompt: string;
+}
+
+function getDynamicQuickChips(
+  language: "ar" | "en",
+  localHour: number,
+  habits: Habit[],
+  habitLogs: HabitLog[],
+): QuickChip[] {
+  const isAr = language === "ar";
+  const today = todayKey();
+  const active = habits.filter((h) => !h.archived);
+
+  // Compute completed and pending counts today
+  const completedToday = active.filter((h) => {
+    const logId = `${h.id}:${today}`;
+    const log = habitLogs.find((l) => l.id === logId);
+    return log?.status === "complete" || (log && log.value >= log.target);
+  });
+  const completedCount = completedToday.length;
+  const pendingCount = active.length - completedCount;
+
+  // Compute 7-day completion rates to spot struggling habits
+  const last7Days: string[] = [];
+  for (let i = 6; i >= 0; i--) {
+    last7Days.push(addDays(today, -i));
+  }
+
+  const strugglingHabits = active.filter((h) => {
+    let done = 0;
+    for (const d of last7Days) {
+      const log = habitLogs.find((l) => l.habitId === h.id && l.date === d);
+      if (log?.status === "complete" || (log && log.value >= log.target)) done++;
+    }
+    return done / 7 < 0.4;
+  });
+
+  const chips: QuickChip[] = [];
+
+  // 1. Time of Day Chip
+  if (localHour >= 5 && localHour < 12) {
+    chips.push({
+      id: "time-morning",
+      label: isAr ? "خطة الصباح ☀️" : "Morning Plan ☀️",
+      prompt: isAr
+        ? "صباح الخير، إيه خطتي لليوم وما العادات اللي محتاج أبدأ بيها؟"
+        : "Good morning! What is my habit plan for today and where should I start?",
+    });
+  } else if (localHour >= 12 && localHour < 17) {
+    chips.push({
+      id: "time-afternoon",
+      label: isAr ? "دفعة بعد الظهر ⚡" : "Afternoon Boost ⚡",
+      prompt: isAr
+        ? "محتاج دفعة طاقة بعد الظهر، إيه العادات المتبقية اللي أقدر أنجزها بسرعة؟"
+        : "Give me an afternoon momentum check. What habits can I knock out quickly?",
+    });
+  } else {
+    chips.push({
+      id: "time-evening",
+      label: isAr ? "قفّل يومي وسجل الباقي 🌙" : "Close out my day 🌙",
+      prompt: isAr
+        ? "عايز أقفل يومي، راجع معايا اللي أنجزته وساعدني أسجل الباقي"
+        : "Let's review today's habits and close out everything I completed.",
+    });
+  }
+
+  // 2. App State Chip (Rescue Plan vs. Closing Out)
+  if (active.length > 0 && completedCount === 0 && localHour >= 13) {
+    chips.push({
+      id: "state-rescue",
+      label: isAr ? "خطة إنقاذ اليوم ⚡" : "Today's Rescue Plan ⚡",
+      prompt: isAr
+        ? "مخلصتش أي عادة النهاردة وحاسس بتكاسل، اعملي خطة إنقاذ سريعة وواقعية لليوم"
+        : "I haven't completed any habits yet today. Give me a realistic emergency rescue plan!",
+    });
+  } else if (completedCount > 0 && pendingCount > 0) {
+    chips.push({
+      id: "state-pending",
+      label: isAr ? `متبقي (${pendingCount}) عادات 🎯` : `${pendingCount} Habit(s) Left 🎯`,
+      prompt: isAr
+        ? "إيه العادات المتبقية عليّ النهاردة عشان أصل لـ 100%؟"
+        : "What habits do I still have pending to reach 100% completion today?",
+    });
+  }
+
+  // 3. Struggling Habit (Two-Minute Rule) or Analytics Chip
+  if (strugglingHabits.length > 0) {
+    const struggling = strugglingHabits[0];
+    chips.push({
+      id: "habit-twomin",
+      label: isAr ? `بسّط عادة "${struggling.name}" 🤏` : `Scale down "${struggling.name}" 🤏`,
+      prompt: isAr
+        ? `أنا مستصعب عادة "${struggling.name}" ومعدلي فيها ضعيف، اقترح تبسيطها بقاعدة الدقيقتين`
+        : `I'm struggling with "${struggling.name}". Apply the Two-Minute Rule to scale it down in-place.`,
+    });
+  } else {
+    chips.push({
+      id: "analytics-weakspots",
+      label: isAr ? "حلل نقاط ضعفي الأسبوع ده 📊" : "Analyze weak spots 📊",
+      prompt: isAr
+        ? "حلل أدائي الأسبوع ده وقولي نقاط الضعف اللي محتاجة تحسين"
+        : "Analyze my performance this week and identify my weak spots.",
+    });
+  }
+
+  // 4. Daily Brain Dump Chip
+  chips.push({
+    id: "brain-dump",
+    label: isAr ? "سجل إنجازات اليوم كلها 🎙️" : "Daily Brain Dump 🎙️",
+    prompt: isAr
+      ? "عايز أسجل كل إنجازاتي لليوم دفعة واحدة:"
+      : "I want to log everything I achieved today in one go:",
+  });
+
+  return chips;
+}
+
+// ---------------------------------------------------------------------------
 // Reasoning Disclosure Panel
 // ---------------------------------------------------------------------------
-function ReasoningPanel({
-  reasoning,
-  language,
-}: {
-  reasoning: string;
-  language: "ar" | "en";
-}) {
+function ReasoningPanel({ reasoning, language }: { reasoning: string; language: "ar" | "en" }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -243,8 +403,9 @@ function BatchApprovalCard({
       <div className="mt-2.5 pt-2 border-t border-border/50 space-y-1.5">
         {resolvedItems.map((action) => {
           const isApproved = action.status === "approved";
-          const displayDescription =
-            isAr ? action.descriptionAr || action.description : action.description;
+          const displayDescription = isAr
+            ? action.descriptionAr || action.description
+            : action.description;
           return (
             <div
               key={action.id}
@@ -303,8 +464,10 @@ function BatchApprovalCard({
       <div className="space-y-1.5">
         {pendingItems.map((action) => {
           const isDeletion = action.toolCall.name.startsWith("delete_");
-          const displayDescription =
-            isAr ? action.descriptionAr || action.description : action.description;
+          const isUpdate = action.toolCall.name.startsWith("update_");
+          const displayDescription = isAr
+            ? action.descriptionAr || action.description
+            : action.description;
           const isExpanded = expandedDetails[action.id];
           const isChecked = checked[action.id] ?? true;
 
@@ -316,7 +479,9 @@ function BatchApprovalCard({
                 isChecked
                   ? isDeletion
                     ? "bg-destructive/5 border-destructive/30"
-                    : "bg-background/90 border-primary/30 shadow-xs"
+                    : isUpdate
+                      ? "bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/30 shadow-xs"
+                      : "bg-background/90 border-primary/30 shadow-xs"
                   : "bg-muted/30 border-border/50 opacity-60",
               )}
             >
@@ -326,10 +491,21 @@ function BatchApprovalCard({
                   type="button"
                   onClick={() => toggleCheck(action.id)}
                   className="mt-0.5 shrink-0 transition-colors"
-                  aria-label={isChecked ? (isAr ? "إلغاء التحديد" : "Uncheck") : (isAr ? "تحديد" : "Check")}
+                  aria-label={
+                    isChecked ? (isAr ? "إلغاء التحديد" : "Uncheck") : isAr ? "تحديد" : "Check"
+                  }
                 >
                   {isChecked ? (
-                    <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                    <CheckSquare
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        isDeletion
+                          ? "text-destructive"
+                          : isUpdate
+                            ? "text-blue-500"
+                            : "text-primary",
+                      )}
+                    />
                   ) : (
                     <Square className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
@@ -338,18 +514,30 @@ function BatchApprovalCard({
                 <div className="flex-1 min-w-0">
                   <p
                     className={cn(
-                      "text-[11px] font-medium",
-                      isDeletion ? "text-destructive" : "text-foreground/90",
+                      "text-[11px] font-medium leading-relaxed",
+                      isDeletion
+                        ? "text-destructive"
+                        : isUpdate
+                          ? "text-blue-700 dark:text-blue-300 font-semibold"
+                          : "text-foreground/90",
                     )}
                   >
                     {displayDescription}
                   </p>
                   {isDeletion && (
                     <p className="text-[10px] text-destructive/70 mt-0.5">
-                      {isAr
-                        ? "تنبيه: هذا الإجراء دائم."
-                        : "Warning: This action is permanent."}
+                      {isAr ? "تنبيه: هذا الإجراء دائم." : "Warning: This action is permanent."}
                     </p>
+                  )}
+                  {isUpdate && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="px-1.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/25 text-[9px] font-medium text-blue-600 dark:text-blue-300">
+                        {isAr ? "تعديل موضعي ⚡" : "In-Place Update ⚡"}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground">
+                        {isAr ? "يحافظ على السلاسل والسجلات 100%" : "Preserves 100% streaks & logs"}
+                      </span>
+                    </div>
                   )}
                 </div>
 
@@ -386,8 +574,9 @@ function BatchApprovalCard({
         <div className="mt-1.5 space-y-1">
           {resolvedItems.map((action) => {
             const isApproved = action.status === "approved";
-            const displayDescription =
-              isAr ? action.descriptionAr || action.description : action.description;
+            const displayDescription = isAr
+              ? action.descriptionAr || action.description
+              : action.description;
             return (
               <div
                 key={action.id}
@@ -448,13 +637,7 @@ function BatchApprovalCard({
 // ---------------------------------------------------------------------------
 // Loading indicator with adaptive message
 // ---------------------------------------------------------------------------
-function LoadingIndicator({
-  isComplex,
-  language,
-}: {
-  isComplex: boolean;
-  language: "ar" | "en";
-}) {
+function LoadingIndicator({ isComplex, language }: { isComplex: boolean; language: "ar" | "en" }) {
   const [dots, setDots] = useState(".");
 
   useEffect(() => {
@@ -527,6 +710,112 @@ export function AiAssistantDrawer() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Persistent long-term AI memories
+  const [aiMemories, setAiMemories] = useState<string[]>(() => loadAiMemories());
+
+  useEffect(() => {
+    const handleMemoryUpdate = (e: Event) => {
+      const custom = e as CustomEvent<string[]>;
+      if (custom.detail) {
+        setAiMemories(custom.detail);
+      } else {
+        setAiMemories(loadAiMemories());
+      }
+    };
+    window.addEventListener(AI_MEMORIES_UPDATED_EVENT, handleMemoryUpdate);
+    return () => {
+      window.removeEventListener(AI_MEMORIES_UPDATED_EVENT, handleMemoryUpdate);
+    };
+  }, []);
+
+  // Web Speech API Voice Recognition
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+
+  const toggleListening = useCallback(() => {
+    const SpeechClass = getSpeechRecognitionClass();
+    if (!SpeechClass) {
+      toast.error(
+        language === "ar"
+          ? "خاصية الإملاء الصوتي غير مدعومة في هذا المتصفح."
+          : "Voice recognition is not supported in this browser.",
+      );
+      return;
+    }
+
+    if (isListening) {
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechClass();
+      recognition.lang = language === "ar" ? "ar-EG" : "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          setInput((prev) => {
+            const prefix = prev && !prev.endsWith(" ") ? `${prev} ` : prev;
+            return `${prefix}${transcript}`;
+          });
+        }
+      };
+
+      recognition.onerror = (err) => {
+        console.warn("[Voice Recognition Error]:", err);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("[Voice Recognition Start Error]:", err);
+      setIsListening(false);
+      toast.error(
+        language === "ar"
+          ? "تعذر تشغيل الميكروفون. يرجى التحقق من أذونات المتصفح."
+          : "Could not access microphone. Please check browser permissions.",
+      );
+    }
+  }, [isListening, language]);
+
+  // Clean up voice listening when closing drawer
+  useEffect(() => {
+    if (!isOpen && isListening) {
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Ignore
+      }
+      setIsListening(false);
+    }
+  }, [isOpen, isListening]);
+
+  // Dynamic Context-Aware Quick Action Chips
+  const currentHour = new Date().getHours();
+  const quickChips = React.useMemo(() => {
+    return getDynamicQuickChips(language === "ar" ? "ar" : "en", currentHour, habits, habitLogs);
+  }, [language, currentHour, habits, habitLogs]);
 
   // Sync message history to localStorage
   useEffect(() => {
@@ -665,7 +954,9 @@ export function AiAssistantDrawer() {
         };
       }),
     );
-    toast.info(language === "ar" ? "تم إلغاء جميع التعديلات المقترحة." : "All proposed actions cancelled.");
+    toast.info(
+      language === "ar" ? "تم إلغاء جميع التعديلات المقترحة." : "All proposed actions cancelled.",
+    );
 
     const cancelMsg: ChatMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -733,6 +1024,12 @@ export function AiAssistantDrawer() {
       const todayCompletionRate =
         activeHabits.length > 0 ? completedToday / activeHabits.length : 0;
 
+      // Compute 7-day window for behavioral digest
+      const last7Days: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        last7Days.push(addDays(today, -i));
+      }
+
       const habitPerformance = activeHabits.map((h) => {
         const stats = habitStats(h, logMap, startDate30d, today);
         const streakInfo = streaks(h, logMap);
@@ -750,6 +1047,7 @@ export function AiAssistantDrawer() {
         language: language === "ar" ? "ar" : "en",
         localHour: new Date().getHours(),
         todayCompletionRate,
+        aiMemories,
         habits: activeHabits.map((h) => {
           const logId = `${h.id}:${today}`;
           const log = liveLogs.find((l) => l.id === logId);
@@ -759,6 +1057,16 @@ export function AiAssistantDrawer() {
           if (h.schedule.type === "weekdays") {
             scheduleStr = h.schedule.days.length === 5 ? "weekdays" : "custom days";
           }
+
+          // Count completed days in the last 7 days
+          let last7DaysCompleted = 0;
+          for (const dateKey of last7Days) {
+            const dLog = liveLogs.find((l) => l.habitId === h.id && l.date === dateKey);
+            if (dLog?.status === "complete" || (dLog && dLog.value >= dLog.target)) {
+              last7DaysCompleted++;
+            }
+          }
+          const completionRate7d = last7DaysCompleted / 7;
 
           return {
             id: h.id,
@@ -770,6 +1078,8 @@ export function AiAssistantDrawer() {
             isCompletedToday: Boolean(isCompletedToday),
             currentValue: log?.value,
             streak: streaks(h, logMap).current,
+            last7DaysCompleted,
+            completionRate7d,
             icon: h.icon,
             goalId: h.goalId,
           };
@@ -791,13 +1101,20 @@ export function AiAssistantDrawer() {
           currentValue: g.currentValue,
           unit: g.unit || "",
         })),
-        badHabits: liveBadHabits.map((bh) => ({
-          id: bh.id,
-          name: bh.title,
-          strategy: bh.strategy ?? "cold-turkey",
-          limitValue: bh.limitValue,
-          daysClean: Math.floor(Math.max(0, Date.now() - bh.quitDate) / (1000 * 60 * 60 * 24)),
-        })),
+        badHabits: liveBadHabits.map((bh) => {
+          const recentTriggers = (bh.history || [])
+            .slice(-3)
+            .map((r) => r.triggerCategory || r.detailedReason)
+            .filter(Boolean) as string[];
+          return {
+            id: bh.id,
+            name: bh.title,
+            strategy: bh.strategy ?? "cold-turkey",
+            limitValue: bh.limitValue,
+            daysClean: Math.floor(Math.max(0, Date.now() - bh.quitDate) / (1000 * 60 * 60 * 24)),
+            recentTriggers,
+          };
+        }),
         analytics: {
           overallConsistencyScore: overallConsistency,
           habitPerformance,
@@ -829,7 +1146,10 @@ export function AiAssistantDrawer() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error((errorData as { error?: string } | null)?.error ?? `Server responded with status ${response.status}`);
+        throw new Error(
+          (errorData as { error?: string } | null)?.error ??
+            `Server responded with status ${response.status}`,
+        );
       }
 
       const data = (await response.json()) as AiResponsePayload;
@@ -854,41 +1174,60 @@ export function AiAssistantDrawer() {
         for (const res of executionResults) {
           if (res.toolName === "get_analytics") {
             toast.info(res.summary);
+          } else if (res.toolName === "save_user_memory" || res.toolName === "manage_user_memory") {
+            setAiMemories(loadAiMemories());
           }
         }
       }
 
-      // Filter out delete actions targeting items that are already absent from the store
+      // Filter out delete and update actions targeting items that are already absent from the store
       const validMutationCalls = mutationCalls.filter((tc) => {
-        if (tc.name === "delete_habit") {
+        if (tc.name === "delete_habit" || tc.name === "update_habit") {
           const habitId = String(tc.args?.["habitId"] || "").trim();
-          const habitName = String(tc.args?.["habitName"] || "").trim().toLowerCase();
+          const habitName = String(tc.args?.["habitName"] || "")
+            .trim()
+            .toLowerCase();
+          if (!habitId && !habitName) return true;
           const exists = liveHabits.some(
-            (h) => (habitId && h.id === habitId) || (habitName && h.name.trim().toLowerCase() === habitName),
+            (h) =>
+              (habitId && h.id === habitId) ||
+              (habitName && h.name.trim().toLowerCase() === habitName),
           );
           return exists;
         }
-        if (tc.name === "delete_bad_habit") {
+        if (tc.name === "delete_bad_habit" || tc.name === "update_bad_habit") {
           const bhId = String(tc.args?.["badHabitId"] || "").trim();
-          const bhName = String(tc.args?.["badHabitName"] || "").trim().toLowerCase();
+          const bhName = String(tc.args?.["badHabitName"] || "")
+            .trim()
+            .toLowerCase();
+          if (!bhId && !bhName) return true;
           const exists = liveBadHabits.some(
             (b) => (bhId && b.id === bhId) || (bhName && b.title.trim().toLowerCase() === bhName),
           );
           return exists;
         }
-        if (tc.name === "delete_goal") {
+        if (tc.name === "delete_goal" || tc.name === "update_goal") {
           const goalId = String(tc.args?.["goalId"] || "").trim();
-          const goalName = String(tc.args?.["goalName"] || "").trim().toLowerCase();
+          const goalName = String(tc.args?.["goalName"] || "")
+            .trim()
+            .toLowerCase();
+          if (!goalId && !goalName) return true;
           const exists = liveGoals.some(
-            (g) => (goalId && g.id === goalId) || (goalName && g.name.trim().toLowerCase() === goalName),
+            (g) =>
+              (goalId && g.id === goalId) || (goalName && g.name.trim().toLowerCase() === goalName),
           );
           return exists;
         }
-        if (tc.name === "delete_routine") {
+        if (tc.name === "delete_routine" || tc.name === "update_routine") {
           const routineId = String(tc.args?.["routineId"] || "").trim();
-          const routineName = String(tc.args?.["routineName"] || "").trim().toLowerCase();
+          const routineName = String(tc.args?.["routineName"] || "")
+            .trim()
+            .toLowerCase();
+          if (!routineId && !routineName) return true;
           const exists = liveRoutines.some(
-            (r) => (routineId && r.id === routineId) || (routineName && r.name.trim().toLowerCase() === routineName),
+            (r) =>
+              (routineId && r.id === routineId) ||
+              (routineName && r.name.trim().toLowerCase() === routineName),
           );
           return exists;
         }
@@ -1056,20 +1395,22 @@ export function AiAssistantDrawer() {
                 </p>
               </div>
 
-              {/* Suggestion Chips */}
+              {/* Dynamic Context-Aware Quick Chips */}
               <div className="w-full pt-4 space-y-2">
                 <p className="text-[11px] font-medium text-muted-foreground text-start">
-                  {language === "ar" ? "اقتراحات سريعة:" : "Quick suggestions:"}
+                  {language === "ar"
+                    ? "اقتراحات سياقية ذكية لليوم:"
+                    : "Context-aware suggestions for today:"}
                 </p>
                 <div className="flex flex-col gap-1.5">
-                  {suggestions.map((suggestion, idx) => (
+                  {quickChips.map((chip) => (
                     <button
-                      key={idx}
-                      onClick={() => void handleSendMessage(suggestion)}
+                      key={chip.id}
+                      onClick={() => void handleSendMessage(chip.prompt)}
                       disabled={!isOnline || isLoading}
-                      className="w-full text-start text-xs rounded-lg border border-border/70 bg-card/60 px-3 py-2 text-foreground/90 hover:bg-card hover:border-primary/40 hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                      className="w-full text-start text-xs rounded-xl border border-border/70 bg-card/60 px-3 py-2 text-foreground/90 hover:bg-card hover:border-primary/40 hover:text-foreground transition-all disabled:opacity-50 disabled:pointer-events-none active:scale-[0.99]"
                     >
-                      ✨ {suggestion}
+                      ✨ {chip.label}
                     </button>
                   ))}
                 </div>
@@ -1130,26 +1471,43 @@ export function AiAssistantDrawer() {
                         />
                       )}
 
-                      {/* Safe Read-Only Tool Execution Cards */}
+                      {/* Safe Read-Only Tool Execution Cards & Memory Badges */}
                       {msg.executionResults && msg.executionResults.length > 0 && (
                         <div className="mt-2.5 pt-2 border-t border-border/50 space-y-1.5">
-                          {msg.executionResults.map((res, i) => (
-                            <div
-                              key={i}
-                              className={`flex items-start gap-1.5 rounded-md px-2 py-1.5 text-[11px] ${
-                                res.success
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                  : "bg-destructive/10 text-destructive border border-destructive/20"
-                              }`}
-                            >
-                              {res.success ? (
-                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                              ) : (
-                                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                              )}
-                              <span>{res.summary}</span>
-                            </div>
-                          ))}
+                          {msg.executionResults.map((res, i) => {
+                            const isMemoryTool =
+                              res.toolName === "save_user_memory" ||
+                              res.toolName === "manage_user_memory";
+
+                            if (isMemoryTool) {
+                              return (
+                                <div
+                                  key={i}
+                                  className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/25 px-2.5 py-1 text-[11px] font-medium text-primary shadow-2xs"
+                                >
+                                  <span>{res.summary}</span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div
+                                key={i}
+                                className={`flex items-start gap-1.5 rounded-md px-2 py-1.5 text-[11px] ${
+                                  res.success
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                    : "bg-destructive/10 text-destructive border border-destructive/20"
+                                }`}
+                              >
+                                {res.success ? (
+                                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                ) : (
+                                  <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                )}
+                                <span>{res.summary}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -1185,6 +1543,23 @@ export function AiAssistantDrawer() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Dynamic Context-Aware Quick Action Chips Bar */}
+        {isOnline && quickChips.length > 0 && (
+          <div className="border-t border-border/50 px-3 py-2 bg-muted/20 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {quickChips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => void handleSendMessage(chip.prompt)}
+                disabled={isLoading}
+                className="shrink-0 rounded-full border border-border/80 bg-background/90 hover:bg-primary/10 hover:border-primary/40 px-2.5 py-1 text-[11px] font-medium text-foreground/90 transition-all shadow-2xs active:scale-95 disabled:opacity-50"
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Input Footer */}
         <div className="border-t border-border/70 p-3 bg-card/40">
           <form
@@ -1206,12 +1581,56 @@ export function AiAssistantDrawer() {
                   ? language === "ar"
                     ? "غير متاح دون اتصال..."
                     : "Unavailable offline..."
-                  : language === "ar"
-                    ? "اسأل أي شيء، اطلب تحليلاً، أو اقترح تغيير عادة..."
-                    : "Ask advice, request analytics, or manage habits..."
+                  : isListening
+                    ? language === "ar"
+                      ? "جاري الاستماع... تحدث الآن..."
+                      : "Listening... speak now..."
+                    : language === "ar"
+                      ? "اسأل أي شيء، اطلب تحليلاً، أو اقترح تغيير عادة..."
+                      : "Ask advice, request analytics, or manage habits..."
               }
-              className="flex-1 resize-none max-h-28 min-h-[40px] rounded-xl border border-border bg-background px-3 py-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className={cn(
+                "flex-1 resize-none max-h-28 min-h-[40px] rounded-xl border border-border bg-background px-3 py-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed",
+                isListening && "border-red-500/50 ring-1 ring-red-500/30",
+              )}
             />
+
+            {/* Voice Input Button */}
+            <button
+              type="button"
+              onClick={toggleListening}
+              disabled={!isOnline || isLoading}
+              aria-label={
+                isListening
+                  ? language === "ar"
+                    ? "إيقاف التسجيل الصوتي"
+                    : "Stop voice recording"
+                  : language === "ar"
+                    ? "تسجيل صوتي (Brain Dump)"
+                    : "Voice input (Brain Dump)"
+              }
+              title={
+                language === "ar"
+                  ? isListening
+                    ? "جاري الاستماع... اضغط للإيقاف"
+                    : "تحدث بصوتك (سجل يومك)"
+                  : isListening
+                    ? "Listening... Click to stop"
+                    : "Voice input (Narrate your day)"
+              }
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none",
+                isListening
+                  ? "bg-red-500/15 border-red-500 text-red-600 dark:text-red-400 animate-pulse ring-2 ring-red-500/40"
+                  : "border-border/80 bg-background hover:bg-muted text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {isListening ? (
+                <Mic className="h-4 w-4 animate-bounce text-red-500" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </button>
 
             <button
               type="submit"

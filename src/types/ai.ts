@@ -52,6 +52,10 @@ export interface AiHabitContext {
   streak?: number | undefined;
   icon?: string | undefined;
   goalId?: string | undefined;
+  /** Number of days completed in the last 7 days (0-7). */
+  last7DaysCompleted?: number | undefined;
+  /** 7-day completion rate (0-1). */
+  completionRate7d?: number | undefined;
 }
 
 export interface AiGoalContext {
@@ -68,6 +72,9 @@ export interface AiBadHabitContext {
   strategy?: string | undefined;
   limitValue?: number | undefined;
   daysClean?: number | undefined;
+  /** Recent relapse triggers or reasons (up to last 3). */
+  recentTriggers?: string[] | undefined;
+  lastRelapseDate?: string | undefined;
 }
 
 export interface AiRoutineStepContext {
@@ -103,6 +110,8 @@ export interface AiAppContext {
   badHabits?: AiBadHabitContext[] | undefined;
   routines?: AiRoutineContext[] | undefined;
   analytics?: AiAnalyticsContext | undefined;
+  /** Persistent facts and preferences remembered about the user. */
+  aiMemories?: string[] | undefined;
   language?: "en" | "ar" | undefined;
   /** User's current local hour (0-23) for coaching context. */
   localHour?: number | undefined;
@@ -211,10 +220,67 @@ export interface GetAnalyticsArgs {
   timeRangeDays?: number | undefined;
 }
 
+export interface UpdateHabitArgs {
+  habitId?: string | undefined;
+  habitName?: string | undefined;
+  name?: string | undefined;
+  schedule?: "everyday" | "weekdays" | "weekends" | undefined;
+  targetValue?: number | undefined;
+  unit?: string | undefined;
+  color?: string | undefined;
+  icon?: string | undefined;
+}
+
+export interface UpdateBadHabitArgs {
+  badHabitId?: string | undefined;
+  badHabitName?: string | undefined;
+  name?: string | undefined;
+  triggerCategory?: string | undefined;
+  limit?: number | undefined;
+  color?: string | undefined;
+  icon?: string | undefined;
+}
+
+export interface UpdateGoalArgs {
+  goalId?: string | undefined;
+  goalName?: string | undefined;
+  name?: string | undefined;
+  targetValue?: number | undefined;
+  unit?: string | undefined;
+  color?: string | undefined;
+  icon?: string | undefined;
+}
+
+export interface UpdateRoutineArgs {
+  routineId?: string | undefined;
+  routineName?: string | undefined;
+  name?: string | undefined;
+  schedule?: "everyday" | "weekdays" | "weekends" | undefined;
+  color?: string | undefined;
+  icon?: string | undefined;
+  habitNames?: string[] | undefined;
+  steps?: Array<{ title: string; habitName?: string }> | undefined;
+}
+
+export interface ManageUserMemoryArgs {
+  action?: "add" | "remove" | undefined;
+  fact: string;
+}
+
+export interface SaveUserMemoryArgs {
+  fact: string;
+}
+
 /**
- * Tools that do not alter state and can be safely executed automatically.
+ * Tools that do not alter state or are safe background utilities (like memory)
+ * and can be executed automatically without blocking the user for approval.
  */
-export const SAFE_READ_ONLY_TOOLS = ["get_app_summary", "get_analytics"] as const;
+export const SAFE_READ_ONLY_TOOLS = [
+  "get_app_summary",
+  "get_analytics",
+  "save_user_memory",
+  "manage_user_memory",
+] as const;
 export type SafeReadOnlyTool = (typeof SAFE_READ_ONLY_TOOLS)[number];
 
 export function isMutationTool(toolName: string): boolean {

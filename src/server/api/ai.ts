@@ -271,7 +271,10 @@ const GEMINI_TOOLS = [
                 type: "OBJECT",
                 properties: {
                   title: { type: "STRING", description: "Title of the step." },
-                  habitName: { type: "STRING", description: "Optional habit name linked to this step." },
+                  habitName: {
+                    type: "STRING",
+                    description: "Optional habit name linked to this step.",
+                  },
                 },
                 required: ["title"],
               },
@@ -311,7 +314,8 @@ const GEMINI_TOOLS = [
                 type: "STRING",
                 enum: ["habits", "bad_habits", "goals", "routines", "all"],
               },
-              description: "Sections to wipe: 'habits', 'bad_habits', 'goals', 'routines', or 'all'.",
+              description:
+                "Sections to wipe: 'habits', 'bad_habits', 'goals', 'routines', or 'all'.",
             },
           },
           required: ["sections"],
@@ -331,7 +335,8 @@ const GEMINI_TOOLS = [
                 properties: {
                   actionType: {
                     type: "STRING",
-                    description: "Name of the tool to execute (e.g. 'create_habit', 'create_routine', 'delete_habit').",
+                    description:
+                      "Name of the tool to execute (e.g. 'create_habit', 'create_routine', 'delete_habit').",
                   },
                   payload: {
                     type: "OBJECT",
@@ -344,6 +349,423 @@ const GEMINI_TOOLS = [
             },
           },
           required: ["operations"],
+        },
+      },
+      {
+        name: "update_habit",
+        description:
+          "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            habitId: {
+              type: "STRING",
+              description: "Optional exact ID of the habit to update.",
+            },
+            habitName: {
+              type: "STRING",
+              description: "The name of the habit to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New title or name for the habit.",
+            },
+            schedule: {
+              type: "STRING",
+              enum: ["everyday", "weekdays", "weekends"],
+              description: "New schedule recurrence frequency.",
+            },
+            targetValue: {
+              type: "NUMBER",
+              description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
+            },
+            unit: {
+              type: "STRING",
+              description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token for the habit.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon PascalCase name.",
+            },
+          },
+        },
+      },
+      {
+        name: "update_bad_habit",
+        description:
+          "Update an existing bad habit / quit tracker in-place (name/title, triggerCategory, daily limit, color, icon) by ID or name without deleting, preserving historical logs.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            badHabitId: {
+              type: "STRING",
+              description: "Optional exact ID of the bad habit to update.",
+            },
+            badHabitName: {
+              type: "STRING",
+              description: "The name of the bad habit to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New title for the bad habit.",
+            },
+            triggerCategory: {
+              type: "STRING",
+              description: "Updated primary trigger category.",
+            },
+            limit: {
+              type: "NUMBER",
+              description: "Updated daily limit for moderation/reduction.",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon name.",
+            },
+          },
+        },
+      },
+      {
+        name: "update_goal",
+        description:
+          "Update an existing target goal in-place (name, targetValue, unit, color, icon) by ID or name, preserving historical progress.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            goalId: {
+              type: "STRING",
+              description: "Optional exact ID of the goal to update.",
+            },
+            goalName: {
+              type: "STRING",
+              description: "The name of the goal to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New name for the goal.",
+            },
+            targetValue: {
+              type: "NUMBER",
+              description: "New target value.",
+            },
+            unit: {
+              type: "STRING",
+              description: "New unit of measurement.",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon name.",
+            },
+          },
+        },
+      },
+      {
+        name: "update_routine",
+        description:
+          "Update an existing routine in-place (name, schedule, steps, habit associations) by ID or name.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            routineId: {
+              type: "STRING",
+              description: "Optional exact ID of the routine to update.",
+            },
+            routineName: {
+              type: "STRING",
+              description: "The name of the routine to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New routine name.",
+            },
+            schedule: {
+              type: "STRING",
+              enum: ["everyday", "weekdays", "weekends"],
+              description: "New recurrence schedule.",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon name.",
+            },
+            habitNames: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "List of habit names to link as steps.",
+            },
+            steps: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING", description: "Title of the step." },
+                  habitName: {
+                    type: "STRING",
+                    description: "Optional habit name linked to this step.",
+                  },
+                },
+                required: ["title"],
+              },
+              description: "Updated detailed steps.",
+            },
+          },
+        },
+      },
+      {
+        name: "save_user_memory",
+        description:
+          "Safely store a concise personal fact about the user (e.g. study schedule, wake-up time, fitness preferences, personal struggles, constraints) into persistent memory. Executes automatically in the background.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            fact: {
+              type: "STRING",
+              description:
+                "Concise personal fact to remember (e.g., 'Wakes up at 6:00 AM', 'Prefers calisthenics workouts', 'Studying for exam in evenings').",
+            },
+          },
+          required: ["fact"],
+        },
+      },
+      {
+        name: "manage_user_memory",
+        description:
+          "Manage persistent user memories: add a new fact or remove an obsolete fact. Executes automatically in the background.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            action: {
+              type: "STRING",
+              enum: ["add", "remove"],
+              description: "Whether to add or remove the fact.",
+            },
+            fact: {
+              type: "STRING",
+              description: "The personal fact to add or remove.",
+            },
+          },
+          required: ["fact"],
+        },
+      },
+      {
+        name: "update_habit",
+        description:
+          "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            habitId: {
+              type: "STRING",
+              description: "Optional exact ID of the habit to update.",
+            },
+            habitName: {
+              type: "STRING",
+              description: "The name of the habit to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New title or name for the habit.",
+            },
+            schedule: {
+              type: "STRING",
+              enum: ["everyday", "weekdays", "weekends"],
+              description: "New schedule recurrence frequency.",
+            },
+            targetValue: {
+              type: "NUMBER",
+              description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
+            },
+            unit: {
+              type: "STRING",
+              description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token for the habit.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon PascalCase name.",
+            },
+          },
+        },
+      },
+      {
+        name: "update_bad_habit",
+        description:
+          "Update an existing bad habit / quit tracker in-place (name/title, triggerCategory, daily limit, color, icon) by ID or name without deleting, preserving historical logs.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            badHabitId: {
+              type: "STRING",
+              description: "Optional exact ID of the bad habit to update.",
+            },
+            badHabitName: {
+              type: "STRING",
+              description: "The name of the bad habit to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New title for the bad habit.",
+            },
+            triggerCategory: {
+              type: "STRING",
+              description: "Updated primary trigger category.",
+            },
+            limit: {
+              type: "NUMBER",
+              description: "Updated daily limit for moderation/reduction.",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon name.",
+            },
+          },
+        },
+      },
+      {
+        name: "update_goal",
+        description:
+          "Update an existing target goal in-place (name, targetValue, unit, color, icon) by ID or name, preserving historical progress.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            goalId: {
+              type: "STRING",
+              description: "Optional exact ID of the goal to update.",
+            },
+            goalName: {
+              type: "STRING",
+              description: "The name of the goal to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New name for the goal.",
+            },
+            targetValue: {
+              type: "NUMBER",
+              description: "New target value.",
+            },
+            unit: {
+              type: "STRING",
+              description: "New unit of measurement.",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon name.",
+            },
+          },
+        },
+      },
+      {
+        name: "update_routine",
+        description:
+          "Update an existing routine in-place (name, schedule, steps, habit associations) by ID or name.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            routineId: {
+              type: "STRING",
+              description: "Optional exact ID of the routine to update.",
+            },
+            routineName: {
+              type: "STRING",
+              description: "The name of the routine to update if ID is unknown.",
+            },
+            name: {
+              type: "STRING",
+              description: "New routine name.",
+            },
+            schedule: {
+              type: "STRING",
+              enum: ["everyday", "weekdays", "weekends"],
+              description: "New recurrence schedule.",
+            },
+            color: {
+              type: "STRING",
+              description: "New color token.",
+            },
+            icon: {
+              type: "STRING",
+              description: "New Lucide icon name.",
+            },
+            habitNames: {
+              type: "ARRAY",
+              items: { type: "STRING" },
+              description: "List of habit names to link as steps.",
+            },
+            steps: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING", description: "Title of the step." },
+                  habitName: { type: "STRING", description: "Optional habit name linked to this step." },
+                },
+                required: ["title"],
+              },
+              description: "Updated detailed steps.",
+            },
+          },
+        },
+      },
+      {
+        name: "save_user_memory",
+        description:
+          "Safely store a concise personal fact about the user (e.g. study schedule, wake-up time, fitness preferences, personal struggles, constraints) into persistent memory. Executes automatically in the background.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            fact: {
+              type: "STRING",
+              description:
+                "Concise personal fact to remember (e.g., 'Wakes up at 6:00 AM', 'Prefers calisthenics workouts', 'Studying for exam in evenings').",
+            },
+          },
+          required: ["fact"],
+        },
+      },
+      {
+        name: "manage_user_memory",
+        description:
+          "Manage persistent user memories: add a new fact or remove an obsolete fact. Executes automatically in the background.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            action: {
+              type: "STRING",
+              enum: ["add", "remove"],
+              description: "Whether to add or remove the fact.",
+            },
+            fact: {
+              type: "STRING",
+              description: "The personal fact to add or remove.",
+            },
+          },
+          required: ["fact"],
         },
       },
     ],
@@ -639,7 +1061,10 @@ const GROQ_TOOLS = [
               type: "object",
               properties: {
                 title: { type: "string", description: "Title of the step." },
-                habitName: { type: "string", description: "Optional habit name linked to this step." },
+                habitName: {
+                  type: "string",
+                  description: "Optional habit name linked to this step.",
+                },
               },
               required: ["title"],
             },
@@ -708,7 +1133,8 @@ const GROQ_TOOLS = [
               properties: {
                 actionType: {
                   type: "string",
-                  description: "Name of the tool to execute (e.g. 'create_habit', 'create_routine', 'delete_habit').",
+                  description:
+                    "Name of the tool to execute (e.g. 'create_habit', 'create_routine', 'delete_habit').",
                 },
                 payload: {
                   type: "object",
@@ -721,6 +1147,459 @@ const GROQ_TOOLS = [
           },
         },
         required: ["operations"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_habit",
+      description:
+        "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
+      parameters: {
+        type: "object",
+        properties: {
+          habitId: {
+            type: "string",
+            description: "Optional exact ID of the habit to update.",
+          },
+          habitName: {
+            type: "string",
+            description: "The name of the habit to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New title or name for the habit.",
+          },
+          schedule: {
+            type: "string",
+            enum: ["everyday", "weekdays", "weekends"],
+            description: "New schedule recurrence frequency.",
+          },
+          targetValue: {
+            type: "number",
+            description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
+          },
+          unit: {
+            type: "string",
+            description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
+          },
+          color: {
+            type: "string",
+            description: "New color token for the habit.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon PascalCase name.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_bad_habit",
+      description:
+        "Update an existing bad habit / quit tracker in-place (name/title, triggerCategory, daily limit, color, icon) by ID or name without deleting, preserving historical logs.",
+      parameters: {
+        type: "object",
+        properties: {
+          badHabitId: {
+            type: "string",
+            description: "Optional exact ID of the bad habit to update.",
+          },
+          badHabitName: {
+            type: "string",
+            description: "The name of the bad habit to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New title for the bad habit.",
+          },
+          triggerCategory: {
+            type: "string",
+            description: "Updated primary trigger category.",
+          },
+          limit: {
+            type: "number",
+            description: "Updated daily limit for moderation/reduction.",
+          },
+          color: {
+            type: "string",
+            description: "New color token.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon name.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_goal",
+      description:
+        "Update an existing target goal in-place (name, targetValue, unit, color, icon) by ID or name, preserving historical progress.",
+      parameters: {
+        type: "object",
+        properties: {
+          goalId: {
+            type: "string",
+            description: "Optional exact ID of the goal to update.",
+          },
+          goalName: {
+            type: "string",
+            description: "The name of the goal to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New name for the goal.",
+          },
+          targetValue: {
+            type: "number",
+            description: "New target value.",
+          },
+          unit: {
+            type: "string",
+            description: "New unit of measurement.",
+          },
+          color: {
+            type: "string",
+            description: "New color token.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon name.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_routine",
+      description:
+        "Update an existing routine in-place (name, schedule, steps, habit associations) by ID or name.",
+      parameters: {
+        type: "object",
+        properties: {
+          routineId: {
+            type: "string",
+            description: "Optional exact ID of the routine to update.",
+          },
+          routineName: {
+            type: "string",
+            description: "The name of the routine to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New routine name.",
+          },
+          schedule: {
+            type: "string",
+            enum: ["everyday", "weekdays", "weekends"],
+            description: "New recurrence schedule.",
+          },
+          color: {
+            type: "string",
+            description: "New color token.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon name.",
+          },
+          habitNames: {
+            type: "array",
+            items: { type: "string" },
+            description: "List of habit names to link as steps.",
+          },
+          steps: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Title of the step." },
+                habitName: {
+                  type: "string",
+                  description: "Optional habit name linked to this step.",
+                },
+              },
+              required: ["title"],
+            },
+            description: "Updated detailed steps.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_user_memory",
+      description:
+        "Safely store a concise personal fact about the user (e.g. study schedule, wake-up time, fitness preferences, personal struggles, constraints) into persistent memory. Executes automatically in the background.",
+      parameters: {
+        type: "object",
+        properties: {
+          fact: {
+            type: "string",
+            description:
+              "Concise personal fact to remember (e.g., 'Wakes up at 6:00 AM', 'Prefers calisthenics workouts', 'Studying for exam in evenings').",
+          },
+        },
+        required: ["fact"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "manage_user_memory",
+      description:
+        "Manage persistent user memories: add a new fact or remove an obsolete fact. Executes automatically in the background.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["add", "remove"],
+            description: "Whether to add or remove the fact.",
+          },
+          fact: {
+            type: "string",
+            description: "The personal fact to add or remove.",
+          },
+        },
+        required: ["fact"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_habit",
+      description:
+        "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
+      parameters: {
+        type: "object",
+        properties: {
+          habitId: {
+            type: "string",
+            description: "Optional exact ID of the habit to update.",
+          },
+          habitName: {
+            type: "string",
+            description: "The name of the habit to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New title or name for the habit.",
+          },
+          schedule: {
+            type: "string",
+            enum: ["everyday", "weekdays", "weekends"],
+            description: "New schedule recurrence frequency.",
+          },
+          targetValue: {
+            type: "number",
+            description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
+          },
+          unit: {
+            type: "string",
+            description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
+          },
+          color: {
+            type: "string",
+            description: "New color token for the habit.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon PascalCase name.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_bad_habit",
+      description:
+        "Update an existing bad habit / quit tracker in-place (name/title, triggerCategory, daily limit, color, icon) by ID or name without deleting, preserving historical logs.",
+      parameters: {
+        type: "object",
+        properties: {
+          badHabitId: {
+            type: "string",
+            description: "Optional exact ID of the bad habit to update.",
+          },
+          badHabitName: {
+            type: "string",
+            description: "The name of the bad habit to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New title for the bad habit.",
+          },
+          triggerCategory: {
+            type: "string",
+            description: "Updated primary trigger category.",
+          },
+          limit: {
+            type: "number",
+            description: "Updated daily limit for moderation/reduction.",
+          },
+          color: {
+            type: "string",
+            description: "New color token.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon name.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_goal",
+      description:
+        "Update an existing target goal in-place (name, targetValue, unit, color, icon) by ID or name, preserving historical progress.",
+      parameters: {
+        type: "object",
+        properties: {
+          goalId: {
+            type: "string",
+            description: "Optional exact ID of the goal to update.",
+          },
+          goalName: {
+            type: "string",
+            description: "The name of the goal to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New name for the goal.",
+          },
+          targetValue: {
+            type: "number",
+            description: "New target value.",
+          },
+          unit: {
+            type: "string",
+            description: "New unit of measurement.",
+          },
+          color: {
+            type: "string",
+            description: "New color token.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon name.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_routine",
+      description:
+        "Update an existing routine in-place (name, schedule, steps, habit associations) by ID or name.",
+      parameters: {
+        type: "object",
+        properties: {
+          routineId: {
+            type: "string",
+            description: "Optional exact ID of the routine to update.",
+          },
+          routineName: {
+            type: "string",
+            description: "The name of the routine to update if ID is unknown.",
+          },
+          name: {
+            type: "string",
+            description: "New routine name.",
+          },
+          schedule: {
+            type: "string",
+            enum: ["everyday", "weekdays", "weekends"],
+            description: "New recurrence schedule.",
+          },
+          color: {
+            type: "string",
+            description: "New color token.",
+          },
+          icon: {
+            type: "string",
+            description: "New Lucide icon name.",
+          },
+          habitNames: {
+            type: "array",
+            items: { type: "string" },
+            description: "List of habit names to link as steps.",
+          },
+          steps: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Title of the step." },
+                habitName: { type: "string", description: "Optional habit name linked to this step." },
+              },
+              required: ["title"],
+            },
+            description: "Updated detailed steps.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "save_user_memory",
+      description:
+        "Safely store a concise personal fact about the user (e.g. study schedule, wake-up time, fitness preferences, personal struggles, constraints) into persistent memory. Executes automatically in the background.",
+      parameters: {
+        type: "object",
+        properties: {
+          fact: {
+            type: "string",
+            description:
+              "Concise personal fact to remember (e.g., 'Wakes up at 6:00 AM', 'Prefers calisthenics workouts', 'Studying for exam in evenings').",
+          },
+        },
+        required: ["fact"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "manage_user_memory",
+      description:
+        "Manage persistent user memories: add a new fact or remove an obsolete fact. Executes automatically in the background.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["add", "remove"],
+            description: "Whether to add or remove the fact.",
+          },
+          fact: {
+            type: "string",
+            description: "The personal fact to add or remove.",
+          },
+        },
+        required: ["fact"],
       },
     },
   },
@@ -749,7 +1628,7 @@ function buildSystemPrompt(body: AiRequestBody): string {
     ? body.context.habits
         .map(
           (h) =>
-            `- [ID: "${h.id || ""}"] ${h.name} (${h.schedule}, ${h.isCompletedToday ? "completed today" : "pending today"}, target: ${h.target} ${h.unit || ""}${h.currentValue !== undefined ? `, currentValue: ${h.currentValue}` : ""}, streak: ${h.streak ?? 0}${h.icon ? `, icon: ${h.icon}` : ""}${h.goalId ? `, linkedGoalId: ${h.goalId}` : ""})`,
+            `- [ID: "${h.id || ""}"] ${h.name} (${h.schedule}, ${h.isCompletedToday ? "completed today" : "pending today"}, target: ${h.target} ${h.unit || ""}${h.currentValue !== undefined ? `, currentValue: ${h.currentValue}` : ""}, streak: ${h.streak ?? 0}d${h.last7DaysCompleted !== undefined ? `, 7-day completion: ${h.last7DaysCompleted}/7 (${Math.round((h.completionRate7d ?? 0) * 100)}%)` : ""}${h.icon ? `, icon: ${h.icon}` : ""}${h.goalId ? `, linkedGoalId: ${h.goalId}` : ""})`,
         )
         .join("\n")
     : "No habits tracked yet.";
@@ -778,10 +1657,15 @@ function buildSystemPrompt(body: AiRequestBody): string {
       ? body.context.badHabits
           .map(
             (bh) =>
-              `- [ID: "${bh.id || ""}"] "${bh.name}" (${bh.strategy === "limit" ? `limit: ${bh.limitValue ?? "custom"}` : "cold-turkey (abstinence)"}, ${bh.daysClean ?? 0} days clean)`,
+              `- [ID: "${bh.id || ""}"] "${bh.name}" (${bh.strategy === "limit" ? `limit: ${bh.limitValue ?? "custom"}` : "cold-turkey (abstinence)"}, ${bh.daysClean ?? 0} days clean${bh.recentTriggers && bh.recentTriggers.length > 0 ? `, recent relapse triggers: [${bh.recentTriggers.join(", ")}]` : ""})`,
           )
           .join("\n")
       : "No quit trackers recorded yet.";
+
+  const userMemoriesContext =
+    body.context?.aiMemories && body.context.aiMemories.length > 0
+      ? body.context.aiMemories.map((m) => `- ${m}`).join("\n")
+      : "No personal memories recorded yet.";
 
   const analyticsContext = body.context?.analytics?.habitPerformance
     ? [
@@ -806,10 +1690,10 @@ CURRENT TIME CONTEXT:
 
 OPERATIONAL LAWS (MUST BE STRICTLY OBEYED AT ALL TIMES):
 1. LAW 1 — ZERO TEXT CONFIRMATION BEFORE TOOL CALLS:
-   Your tool calls DO NOT mutate the database immediately; they render an interactive 'Approval Card' with Approve/Reject buttons in the user's UI. Therefore, NEVER ask "Are you sure?" or "Reply yes to start" or "Should I proceed?" in text before emitting tool calls! Whenever the user asks to delete items, add habits, create routines, clear data, or agrees to build a plan, emit ALL corresponding tool calls IMMEDIATELY in the exact same turn.
+   Your tool calls DO NOT mutate the database immediately; they render an interactive 'Approval Card' with Approve/Reject buttons in the user's UI. Therefore, NEVER ask "Are you sure?" or "Reply yes to start" or "Should I proceed?" in text before emitting tool calls! Whenever the user asks to delete items, update items, add habits, create routines, clear data, or agrees to build a plan, emit ALL corresponding tool calls IMMEDIATELY in the exact same turn.
 
 2. LAW 2 — COMPLETE PLAN EXECUTION (NO DRIP-FEEDING):
-   If you propose a plan with multiple items (e.g. 5 habits, 1 quit tracker, and 2 routines), you MUST emit ALL tool calls in that exact same response (either as parallel tool calls or grouped inside \`batch_operations\`). NEVER emit just 1 tool call and leave the rest as plain text! When asked to create or delete multiple things, handle EVERY requested item in this single turn.
+   If you propose a plan with multiple items (e.g. 5 habits, 1 quit tracker, and 2 routines), you MUST emit ALL tool calls in that exact same response (either as parallel tool calls or grouped inside \`batch_operations\`). NEVER emit just 1 tool call and leave the rest as plain text! When asked to create, update, or delete multiple things, handle EVERY requested item in this single turn.
 
 3. LAW 3 — LIVE CONTEXT IS ABSOLUTE TRUTH:
    The \`CURRENT USER CONTEXT\` block below reflects the real-time database state. Never attempt to delete or modify an item that is no longer listed in \`CURRENT USER CONTEXT\`, even if it was mentioned earlier in the chat history. If an item is already absent from the context, acknowledge it is already gone and do not re-emit deletion tool calls.
@@ -817,29 +1701,49 @@ OPERATIONAL LAWS (MUST BE STRICTLY OBEYED AT ALL TIMES):
 4. LAW 4 — SMART SEMANTIC TYPO CORRECTION:
    Users often type quickly with keyboard typos (especially in Arabic, e.g. "قراة" -> "قراءة", "رياصة" -> "رياضة", "شرب ما" -> "شرب الماء", "smokng" -> "Quit Smoking"). NEVER copy raw user typos into habit, goal, routine, or quit-tracker names. Always understand the intended meaning and write a clean, grammatically correct, motivating title in the proper language.
 
+5. LAW 5 — IN-PLACE MUTATION OVER RE-CREATION (PRESERVE STREAKS!):
+   When modifying an existing habit, goal, routine, or quit tracker, ALWAYS use \`update_habit\`, \`update_bad_habit\`, \`update_goal\`, or \`update_routine\`. NEVER delete and recreate an item to change its target, unit, name, or schedule! In-place updates preserve 100% of the user's historical completion logs, consistency score, and active streaks.
+
 COACHING PHILOSOPHY & PROACTIVE AGENT BEHAVIOR:
-You are an observant, empathetic coach who is AWARE of the current time of day and the user's current completion rate.
+You are an observant, empathetic coach who is AWARE of the current time of day, the user's completion rate, and their 7-day momentum:
 - Good morning (5–11): Energetically greet them, recap what's pending today.
 - Afternoon slump (12–16): Nudge them on pending habits, check if they need momentum.
 - Evening wind-down (17–20): Celebrate completed habits, gently prompt remaining ones.
 - Late night (21+): Be gentle — acknowledge fatigue, suggest what can still realistically be done and what can be frozen/skipped.
-- If the user feels overwhelmed or the completion rate is below 40%, PROACTIVELY suggest freezing low-priority habits or doing partial completions rather than pushing for perfection.
-- When you notice a struggling streak (0 completions in 3+ days), proactively diagnose the root cause and suggest a schedule adjustment.
 - Spot patterns, celebrate winning streaks, and identify struggling routines.
 - Call \`get_analytics\` whenever you need deeper metrics on consistency, streaks, or completion rates.
+
+THE TWO-MINUTE RULE & HABIT DOWNSCALING COACHING:
+When a user is struggling with a habit (<40% completion rate over the last 7 days) or mentions feeling tired, busy, overwhelmed, or having low energy:
+1. NEVER allow all-or-nothing thinking! Do not let them quit or skip completely.
+2. Proactively apply James Clear's "Two-Minute Rule": Suggest scaling the habit down in-place using \`update_habit\` (e.g., scale "Read 30 mins" down to "Read 5 mins", or "Run 5km" down to "Walk 10 mins", or "Drink 3L" to "Drink 1.5L").
+3. Alternatively, suggest logging a micro-step partial completion via \`log_habit_progress\` (e.g., logging 2 pushups or 250ml water) instead of skipping entirely.
+4. Emphasize that "Maintaining the streak and habit identity matters far more than intensity. Scaling down is winning; skipping loses momentum."
+
+PERSISTENT USER MEMORY:
+You possess permanent memory across sessions to remember personal facts about the user.
+Known User Memories:
+${userMemoriesContext}
+
+- When the user shares personal details, daily routines, wake-up times, sleep habits, fitness preferences, work schedule, or struggles (e.g., "I wake up at 6am", "I work 9 to 5", "I hate cardio", "I study for my exam after dinner"):
+  Emit \`save_user_memory\` (or \`manage_user_memory\`) with a concise fact (e.g. "Wakes up at 6:00 AM", "Prefers strength training over cardio", "Studies after dinner").
+  This executes automatically without interrupting the user for approval.
+
+DAILY BRAIN DUMP PARSING:
+Users frequently recount their entire day in a single unstructured message or voice note (e.g., "النهاردة شربت لترين ماء، وقريت ١٠ دقايق، ولعبت رياضة نص ساعة بس ملحقتش أذاكر" or "Today I drank 2L water, read 15 mins, worked out 30 mins, but skipped gym and ran 3km").
+When parsing a Brain Dump:
+1. Identify all mentioned habits and goals against the \`CURRENT USER CONTEXT\`.
+2. In the EXACT SAME turn, emit ALL corresponding tool calls in a single unified batch:
+   - For completed boolean habits: \`log_habit(habitName, "done")\`
+   - For skipped/missed habits: \`log_habit(habitName, "skipped")\`
+   - For numeric/duration habits: \`log_habit_progress(habitName, amount, mode="increment"|"set")\` with accurate unit conversions applied!
+   - For goals: adjust or update values.
+3. Provide an encouraging recap celebrating everything logged.
 
 DEEP REASONING MODE (Chain-of-Thought):
 For ANY complex request — especially unit conversions, analytics interpretation, multi-step plans, or habit coaching advice — you MUST think step-by-step BEFORE formulating your answer or tool arguments.
 Wrap your internal reasoning inside <think>...</think> tags at the very start of your response.
 Only the final, clean answer comes after the </think> closing tag.
-Example format:
-<think>
-1. The user wants to build a morning routine with 3 habits: drinking 500ml water, 10 min stretch, 15 min reading.
-2. I should correct any typos and normalize units: "Drink Water" (target: 2, unit: L -> 500ml is 0.5L), "Stretching" (10 mins), "Reading" (15 mins).
-3. I will propose create_habit for any new habits, and create_routine for "Morning Routine" grouping them.
-4. I will emit all tool calls in this turn without asking for text confirmation.
-</think>
-I've put together your morning routine plan! Review and approve the changes below to apply them to Cadence.
 
 CRITICAL UNIT CONVERSION RULE:
 ALWAYS inspect the target habit's \`unit\` and \`target\` in the context BEFORE calling \`log_habit_progress\`.
@@ -862,6 +1766,9 @@ ${goalsContext}
 Quit Trackers (Bad Habits):
 ${badHabitsContext}
 
+User Memories:
+${userMemoriesContext}
+
 Analytics & Consistency:
 ${analyticsContext}
 
@@ -871,31 +1778,43 @@ If the user wants to start doing something positive (e.g., read, workout, study)
 AVAILABLE ACTIONS (FUNCTION CALLS):
 1. create_habit: Propose creating a new positive habit routine.
    - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", req), color (string, opt), icon (string, opt), goalId (string, opt).
-2. delete_habit: Propose deleting an existing habit.
+2. update_habit: Propose modifying an existing habit in-place without deleting it. Preserves historical logs and streaks!
+   - Args: habitId (string, opt), habitName (string, opt), name (string, opt), schedule ("everyday" | "weekdays" | "weekends", opt), targetValue (number, opt), unit (string, opt), color (string, opt), icon (string, opt).
+3. delete_habit: Propose deleting an existing habit.
    - Args: habitId (string, opt), habitName (string, opt).
-3. create_routine: Propose creating a new routine (e.g., Morning Routine, Evening Routine) grouping habits.
+4. create_routine: Propose creating a new routine (e.g., Morning Routine, Evening Routine) grouping habits.
    - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", opt), timeOfDay ("morning" | "afternoon" | "evening" | "anytime", opt), habitNames (string[], opt), steps (array of { title, habitName }, opt).
-4. delete_routine: Propose deleting an existing routine.
+5. update_routine: Propose updating an existing routine in-place.
+   - Args: routineId (string, opt), routineName (string, opt), name (string, opt), schedule (string, opt), color (string, opt), icon (string, opt), habitNames (string[], opt), steps (array, opt).
+6. delete_routine: Propose deleting an existing routine.
    - Args: routineId (string, opt), routineName (string, opt).
-5. create_bad_habit: Propose creating a quit tracker entry.
+7. create_bad_habit: Propose creating a quit tracker entry.
    - Args: name (string, req), triggerCategory (string, opt), limit (number, opt).
-6. delete_bad_habit: Propose deleting a quit tracker / bad habit.
+8. update_bad_habit: Propose modifying an existing quit tracker in-place (e.g. adjust limit, rename).
+   - Args: badHabitId (string, opt), badHabitName (string, opt), name (string, opt), triggerCategory (string, opt), limit (number, opt), color (string, opt), icon (string, opt).
+9. delete_bad_habit: Propose deleting a quit tracker / bad habit.
    - Args: badHabitId (string, opt), badHabitName (string, opt).
-7. create_goal: Propose creating a target milestone goal.
-   - Args: name (string, req), targetValue (number, req), unit (string, opt).
-8. delete_goal: Propose deleting an existing goal.
-   - Args: goalId (string, opt), goalName (string, opt).
-9. clear_all_data: Propose clearing/wiping all data or specific sections.
-   - Args: sections (array of "habits" | "bad_habits" | "goals" | "routines" | "all", req).
-10. batch_operations: Propose executing multiple actions in one batch plan.
+10. create_goal: Propose creating a target milestone goal.
+    - Args: name (string, req), targetValue (number, req), unit (string, opt).
+11. update_goal: Propose updating an existing goal in-place (e.g. adjust target, unit, name).
+    - Args: goalId (string, opt), goalName (string, opt), name (string, opt), targetValue (number, opt), unit (string, opt), color (string, opt), icon (string, opt).
+12. delete_goal: Propose deleting an existing goal.
+    - Args: goalId (string, opt), goalName (string, opt).
+13. clear_all_data: Propose clearing/wiping all data or specific sections.
+    - Args: sections (array of "habits" | "bad_habits" | "goals" | "routines" | "all", req).
+14. batch_operations: Propose executing multiple actions in one batch plan.
     - Args: operations (array of { actionType: string, payload: object }, req).
-11. log_habit: Mark a boolean habit as 'done' or 'skipped' for today.
+15. log_habit: Mark a boolean habit as 'done' or 'skipped' for today.
     - Args: habitName (string, req), status ("done" | "skipped", req).
-12. log_habit_progress: Log partial/quantitative progress for a numeric habit. Use INSTEAD of log_habit for numeric habits.
+16. log_habit_progress: Log partial/quantitative progress for a numeric habit. Use INSTEAD of log_habit for numeric habits.
     - Args: habitId (string, opt), habitName (string, opt), amount (number, req — already converted to base unit), mode ("increment" | "set", req).
-13. get_analytics: Retrieve deep streaks, completion rates, and consistency statistics.
+17. save_user_memory: Safely store a personal fact/preference about the user into persistent memory. Executes automatically.
+    - Args: fact (string, req).
+18. manage_user_memory: Add or remove a personal memory fact. Executes automatically.
+    - Args: action ("add" | "remove", opt), fact (string, req).
+19. get_analytics: Retrieve deep streaks, completion rates, and consistency statistics.
     - Args: habitName (string, opt), timeRangeDays (number, opt).
-14. get_app_summary: Retrieve an overview summary of current habits and goals.
+20. get_app_summary: Retrieve an overview summary of current habits and goals.
     - Args: query (string, opt).
 
 When you execute or propose a tool call, accompany it with a short, encouraging, and helpful explanation of your rationale.`;
@@ -1165,7 +2084,7 @@ async function callGroq(
         // Extract chain-of-thought reasoning from <think>...</think> tags before stripping
         const thinkMatch = /<think>([\s\S]*?)<\/think>/i.exec(rawContent);
         const reasoning = thinkMatch ? thinkMatch[1]!.trim() : undefined;
-        let text = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+        const text = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
         const toolCalls: ToolCallPayload[] = [];
         if (choice.message.tool_calls) {
