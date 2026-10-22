@@ -37,16 +37,9 @@ export function UserAvatar({
     ) {
       return (
         <Avatar className={className}>
-          <AvatarImage
-            src={avatar}
-            alt={name?.trim() || "User"}
-            className="object-cover"
-          />
+          <AvatarImage src={avatar} alt={name?.trim() || "User"} className="object-cover" />
           <AvatarFallback
-            className={cn(
-              "bg-primary/10 text-primary font-medium text-xs",
-              fallbackClassName,
-            )}
+            className={cn("bg-primary/10 text-primary font-medium text-xs", fallbackClassName)}
           >
             {initials || fallbackIcon || <User className={iconClassName} />}
           </AvatarFallback>
@@ -73,14 +66,10 @@ export function UserAvatar({
   return (
     <Avatar className={className}>
       <AvatarFallback
-        className={cn(
-          "bg-primary/10 text-primary font-medium text-xs",
-          fallbackClassName,
-        )}
+        className={cn("bg-primary/10 text-primary font-medium text-xs", fallbackClassName)}
       >
         {initials || fallbackIcon || <User className={iconClassName} />}
       </AvatarFallback>
     </Avatar>
   );
 }
-

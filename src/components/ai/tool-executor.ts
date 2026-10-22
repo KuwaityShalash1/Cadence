@@ -2,10 +2,13 @@ import { hasLucideIcon, resolveIconName } from "@/components/icon-map";
 import { addDays, todayKey } from "@/services/dates";
 import { buildLogMap, consistencyScore, habitStats, streaks } from "@/services/stats";
 import { saveAiMemory, removeAiMemory } from "@/services/ai-memory";
+import { calculateSmartDefaultStep } from "@/services/quick-steps";
 import type { AppActions, Goal, Habit, Routine } from "@/stores/app-store";
 import { uid } from "@/stores/app-store";
-import type { BadHabit, HabitLog, RoutineStep, Schedule } from "@/types";
+import type { BadHabit, HabitLog, HabitType, RoutineStep, Schedule } from "@/types";
 import type { ToolCallPayload, ToolExecutionResult } from "@/types/ai";
+
+export { calculateSmartDefaultStep };
 
 export interface ToolExecutorContext {
   actions: AppActions;
@@ -38,9 +41,17 @@ export function describeAction(
           ? "أيام العمل"
           : "عطلة نهاية الأسبوع"
       : schedule;
+    const targetVal = args["targetValue"] ?? args["target"];
+    const unit = args["unit"] ? String(args["unit"]).trim() : "";
+    const targetSuffix =
+      targetVal !== undefined && !isNaN(Number(targetVal)) && Number(targetVal) > 0
+        ? isAr
+          ? `، الهدف: ${targetVal} ${unit}`.trim()
+          : `, Target: ${targetVal} ${unit}`.trim()
+        : "";
     return isAr
-      ? `إنشاء عادة: "${habitName}" (${scheduleLabel})`
-      : `Create Habit: "${habitName}" (${scheduleLabel})`;
+      ? `إنشاء عادة: "${habitName}" (${scheduleLabel}${targetSuffix})`
+      : `Create Habit: "${habitName}" (${scheduleLabel}${targetSuffix})`;
   }
 
   if (name === "delete_habit") {
@@ -435,12 +446,109 @@ export async function executeAiToolCalls(
           );
         }
 
+        const targetRaw = tc.args["targetValue"] ?? tc.args["target"];
+        const target =
+          targetRaw !== undefined && !isNaN(Number(targetRaw)) && Number(targetRaw) > 0
+            ? Number(targetRaw)
+            : 1;
+
+        const unit = typeof tc.args["unit"] === "string" ? tc.args["unit"].trim() : "";
+
+        // Infer habit type (counter, duration, numeric) — never leave as boolean so quick +/- controls render
+        let habitType: HabitType = "counter";
+        const typeRaw = tc.args["type"];
+        if (typeRaw === "counter" || typeRaw === "numeric" || typeRaw === "duration") {
+          habitType = typeRaw as HabitType;
+        } else {
+          const lowerUnit = unit.toLowerCase();
+          const lowerName = name.toLowerCase();
+          if (
+            lowerUnit === "min" ||
+            lowerUnit === "mins" ||
+            lowerUnit === "minute" ||
+            lowerUnit === "minutes" ||
+            lowerUnit === "دقيقة" ||
+            lowerUnit === "دقائق" ||
+            lowerUnit === "hr" ||
+            lowerUnit === "hours" ||
+            lowerUnit === "ساعة" ||
+            lowerUnit === "ساعات" ||
+            lowerName.includes("دقيقة") ||
+            lowerName.includes("min")
+          ) {
+            habitType = "duration";
+          } else if (
+            lowerUnit === "l" ||
+            lowerUnit === "ml" ||
+            lowerUnit === "liter" ||
+            lowerUnit === "liters" ||
+            lowerUnit === "لتر" ||
+            lowerUnit === "لترات" ||
+            lowerUnit === "km" ||
+            lowerUnit === "pages" ||
+            lowerUnit === "صفحة" ||
+            lowerUnit === "صفحات"
+          ) {
+            habitType = "numeric";
+          } else {
+            habitType = "counter";
+          }
+        }
+
+        // Resolve quick increments / decrements
+        const stepRaw = tc.args["step"] ?? tc.args["increment"];
+        let quickIncrements: number[] = [];
+        let quickDecrement: number[] = [];
+
+        if (Array.isArray(tc.args["quickIncrements"])) {
+          quickIncrements = (tc.args["quickIncrements"] as unknown[])
+            .map(Number)
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .slice(0, 2);
+        }
+        if (Array.isArray(tc.args["quickDecrements"])) {
+          quickDecrement = (tc.args["quickDecrements"] as unknown[])
+            .map(Number)
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .slice(0, 2);
+        } else if (Array.isArray(tc.args["quickDecrement"])) {
+          quickDecrement = (tc.args["quickDecrement"] as unknown[])
+            .map(Number)
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .slice(0, 2);
+        }
+
+        if (stepRaw !== undefined && !isNaN(Number(stepRaw)) && Number(stepRaw) > 0) {
+          const stepVal = Number(stepRaw);
+          if (!quickIncrements.includes(stepVal)) {
+            quickIncrements.push(stepVal);
+          }
+          if (!quickDecrement.includes(stepVal)) {
+            quickDecrement.push(stepVal);
+          }
+        }
+
+        // Bulletproof fallback: If AI ever omits the increment/step property, calculate smart default step based on targetValue
+        if (quickIncrements.length === 0) {
+          const smartStep = calculateSmartDefaultStep(target, unit);
+          quickIncrements = [smartStep];
+        }
+        if (quickDecrement.length === 0) {
+          const smartStep = calculateSmartDefaultStep(target, unit);
+          quickDecrement = [smartStep];
+        }
+
         const habit = context.actions.addHabit({
           name,
           schedule,
           color,
           icon: resolvedIcon,
           goalId: matchedGoal ? matchedGoal.id : goalIdRaw || undefined,
+          target,
+          unit,
+          type: habitType,
+          quickIncrements,
+          quickDecrement,
         });
 
         // Register in newly created map for routine linking
@@ -1257,15 +1365,70 @@ export async function executeAiToolCalls(
           }
         }
 
+        const stepRaw = tc.args["step"] ?? tc.args["increment"];
+        let resolvedQuickIncrements = targetHabit.quickIncrements;
+        let resolvedQuickDecrements = targetHabit.quickDecrement;
+
+        if (Array.isArray(tc.args["quickIncrements"])) {
+          resolvedQuickIncrements = (tc.args["quickIncrements"] as unknown[])
+            .map(Number)
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .slice(0, 2);
+        }
+        if (Array.isArray(tc.args["quickDecrements"])) {
+          resolvedQuickDecrements = (tc.args["quickDecrements"] as unknown[])
+            .map(Number)
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .slice(0, 2);
+        } else if (Array.isArray(tc.args["quickDecrement"])) {
+          resolvedQuickDecrements = (tc.args["quickDecrement"] as unknown[])
+            .map(Number)
+            .filter((n) => Number.isFinite(n) && n > 0)
+            .slice(0, 2);
+        }
+
+        if (stepRaw !== undefined && !isNaN(Number(stepRaw)) && Number(stepRaw) > 0) {
+          const stepVal = Number(stepRaw);
+          resolvedQuickIncrements = [stepVal];
+          resolvedQuickDecrements = [stepVal];
+        }
+
+        const newTarget =
+          targetValue !== undefined && !isNaN(targetValue) && targetValue > 0
+            ? targetValue
+            : targetHabit.target;
+        const newUnit = unit !== undefined ? unit : targetHabit.unit;
+
+        // If increments/decrements are empty or unconfigured, calculate smart defaults
+        if (!resolvedQuickIncrements || resolvedQuickIncrements.length === 0) {
+          const smartStep = calculateSmartDefaultStep(newTarget, newUnit);
+          resolvedQuickIncrements = [smartStep];
+        }
+        if (!resolvedQuickDecrements || resolvedQuickDecrements.length === 0) {
+          const smartStep = calculateSmartDefaultStep(newTarget, newUnit);
+          resolvedQuickDecrements = [smartStep];
+        }
+
+        // Ensure type is interactive (counter, duration, numeric) so quick controls render
+        let resolvedType = targetHabit.type;
+        if (tc.args["type"] && typeof tc.args["type"] === "string") {
+          resolvedType = tc.args["type"] as HabitType;
+        }
+        if (resolvedType === "boolean") {
+          resolvedType = "counter";
+        }
+
         const updatedHabit: Habit = {
           ...targetHabit,
           name: newName || targetHabit.name,
           schedule: newSchedule,
-          target:
-            targetValue !== undefined && !isNaN(targetValue) ? targetValue : targetHabit.target,
-          unit: unit !== undefined ? unit : targetHabit.unit,
+          type: resolvedType,
+          target: newTarget,
+          unit: newUnit,
           color: color || targetHabit.color,
           icon: resolvedIcon,
+          quickIncrements: resolvedQuickIncrements,
+          quickDecrement: resolvedQuickDecrements,
         };
 
         context.actions.updateHabit(updatedHabit);

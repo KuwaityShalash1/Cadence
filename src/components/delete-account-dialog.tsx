@@ -55,7 +55,9 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
       const result = await deleteUserAccount(user);
 
       if (!result.success) {
-        toast.error(result.error || t("deleteAccount.failed", "Failed to delete account. Please try again."));
+        toast.error(
+          result.error || t("deleteAccount.failed", "Failed to delete account. Please try again."),
+        );
         setIsDeleting(false);
         return;
       }
@@ -74,7 +76,9 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
       }
     } catch (err) {
       console.error("Error executing account deletion:", err);
-      toast.error(t("deleteAccount.unexpectedError", "An unexpected error occurred during account deletion."));
+      toast.error(
+        t("deleteAccount.unexpectedError", "An unexpected error occurred during account deletion."),
+      );
       setIsDeleting(false);
     }
   };
@@ -110,11 +114,18 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground text-start">
             <span>
-              {t("deleteAccount.description", "This action is irreversible. All your synchronized cloud records, habit logs, completion streaks, and account settings will be permanently removed from the Supabase database.")}
+              {t(
+                "deleteAccount.description",
+                "This action is irreversible. All your synchronized cloud records, habit logs, completion streaks, and account settings will be permanently removed from the Supabase database.",
+              )}
             </span>
             <span className="block font-medium text-foreground pt-1">
-              {t("deleteAccount.confirmPrompt", "To proceed, please type {phrase} below:", { phrase: CONFIRMATION_PHRASE })}{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-destructive font-bold">{CONFIRMATION_PHRASE}</code>
+              {t("deleteAccount.confirmPrompt", "To proceed, please type {phrase} below:", {
+                phrase: CONFIRMATION_PHRASE,
+              })}{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-destructive font-bold">
+                {CONFIRMATION_PHRASE}
+              </code>
             </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -125,7 +136,11 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
           </Label>
           <Input
             id="delete-account-confirm"
-            placeholder={t("deleteAccount.inputPlaceholder", `Type "${CONFIRMATION_PHRASE}" to confirm`, { phrase: CONFIRMATION_PHRASE })}
+            placeholder={t(
+              "deleteAccount.inputPlaceholder",
+              `Type "${CONFIRMATION_PHRASE}" to confirm`,
+              { phrase: CONFIRMATION_PHRASE },
+            )}
             value={confirmInput}
             onChange={(e) => setConfirmInput(e.target.value)}
             disabled={isDeleting}
@@ -162,4 +177,3 @@ export function DeleteAccountDialog({ trigger, onDeleted }: DeleteAccountDialogP
     </AlertDialog>
   );
 }
-

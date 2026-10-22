@@ -103,7 +103,9 @@ export function QuitTrackerPage() {
   const activeHabit = sortedHabits.find((habit) => habit.id === activeId);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
+    return (
+      <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
+    );
   }
 
   // Unified layout shell: no max-width, margins, or horizontal padding here on
@@ -122,10 +124,10 @@ export function QuitTrackerPage() {
             <ShieldAlert className="h-4 w-4" />
             {t("quitTracker.badge")}
           </div>
-          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("nav.quitTracker")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("quitTracker.subtitle")}
-          </p>
+          <h1 className="font-display text-3xl tracking-tight sm:text-4xl">
+            {t("nav.quitTracker")}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("quitTracker.subtitle")}</p>
         </div>
         <Button className="hidden md:inline-flex" onClick={() => setEditorOpen(true)}>
           <Plus className="me-1 h-4 w-4" /> {t("quitTracker.addTracker")}

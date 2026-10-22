@@ -37,11 +37,7 @@ export function HabitEditorProvider({ children }: { children: ReactNode }) {
         open={isOpen}
         onOpenChange={setIsOpen}
         title={habit ? t("habit.editHabit") : t("habit.newHabit")}
-        description={
-          habit
-            ? t("habit.editHabitDesc")
-            : t("habit.newHabitDesc")
-        }
+        description={habit ? t("habit.editHabitDesc") : t("habit.newHabitDesc")}
       >
         <HabitForm
           key={habit?.id ?? "new"}

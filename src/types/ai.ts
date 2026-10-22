@@ -56,6 +56,8 @@ export interface AiHabitContext {
   last7DaysCompleted?: number | undefined;
   /** 7-day completion rate (0-1). */
   completionRate7d?: number | undefined;
+  quickIncrements?: number[] | undefined;
+  quickDecrement?: number[] | undefined;
 }
 
 export interface AiGoalContext {
@@ -141,6 +143,15 @@ export interface CreateHabitArgs {
   color?: string | undefined;
   icon?: string | undefined;
   goalId?: string | undefined;
+  type?: "counter" | "numeric" | "duration" | "boolean" | undefined;
+  target?: number | undefined;
+  targetValue?: number | undefined;
+  unit?: string | undefined;
+  step?: number | undefined;
+  increment?: number | undefined;
+  quickIncrements?: number[] | undefined;
+  quickDecrement?: number[] | undefined;
+  quickDecrements?: number[] | undefined;
 }
 
 export interface CreateBadHabitArgs {
@@ -225,10 +236,17 @@ export interface UpdateHabitArgs {
   habitName?: string | undefined;
   name?: string | undefined;
   schedule?: "everyday" | "weekdays" | "weekends" | undefined;
+  type?: "counter" | "numeric" | "duration" | "boolean" | undefined;
+  target?: number | undefined;
   targetValue?: number | undefined;
   unit?: string | undefined;
   color?: string | undefined;
   icon?: string | undefined;
+  step?: number | undefined;
+  increment?: number | undefined;
+  quickIncrements?: number[] | undefined;
+  quickDecrement?: number[] | undefined;
+  quickDecrements?: number[] | undefined;
 }
 
 export interface UpdateBadHabitArgs {

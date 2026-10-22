@@ -29,14 +29,22 @@ let migrationInFlight: Promise<MigrationResult> | null = null;
  * Safely inspects whether an entity was previously synced with cloud.
  */
 function isSyncedRecord(item: unknown): boolean {
-  return typeof item === "object" && item !== null && (item as Record<string, unknown>)["synced"] === true;
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    (item as Record<string, unknown>)["synced"] === true
+  );
 }
 
 /**
  * Safely inspects whether an entity has pending un-pushed mutations.
  */
 function isPendingSyncRecord(item: unknown): boolean {
-  return typeof item === "object" && item !== null && Boolean((item as Record<string, unknown>)["pending_sync"]);
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    Boolean((item as Record<string, unknown>)["pending_sync"])
+  );
 }
 
 /**
@@ -600,11 +608,7 @@ export async function mergeLocalDataToCloud(
         // No match:
         // If remote has active entities and this local habit was previously synced with cloud,
         // it was deleted on another device/cloud. Delete locally to reconcile!
-        if (
-          hasRemoteEntities &&
-          isSyncedRecord(localHabit) &&
-          !isPendingSyncRecord(localHabit)
-        ) {
+        if (hasRemoteEntities && isSyncedRecord(localHabit) && !isPendingSyncRecord(localHabit)) {
           localHabitsToDelete.push(localHabit.id);
           stats.habitsResolved++;
           continue;
@@ -690,11 +694,7 @@ export async function mergeLocalDataToCloud(
           stats.logsResolved++;
         } else {
           // If remote has data and this log was previously synced, it was deleted remotely
-          if (
-            hasRemoteEntities &&
-            isSyncedRecord(localLog) &&
-            !isPendingSyncRecord(localLog)
-          ) {
+          if (hasRemoteEntities && isSyncedRecord(localLog) && !isPendingSyncRecord(localLog)) {
             localLogsToDelete.push(canonicalLogId);
             stats.logsResolved++;
             continue;

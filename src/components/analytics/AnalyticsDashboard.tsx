@@ -21,7 +21,16 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/context";
-import { addDays, todayKey, rangeKeys, diffDays, formatDay, formatLongDay, fromDateKey, toDateKey } from "@/services/dates";
+import {
+  addDays,
+  todayKey,
+  rangeKeys,
+  diffDays,
+  formatDay,
+  formatLongDay,
+  fromDateKey,
+  toDateKey,
+} from "@/services/dates";
 import { isScheduledOn } from "@/services/schedule";
 import {
   isCompleteOn,
@@ -206,11 +215,7 @@ function EmptyState({ children }: { children: React.ReactNode }) {
 }
 
 /** Adaptive trend chart: bars for short ranges, smooth area for dense ranges. */
-function CompletionBarChart({
-  data,
-}: {
-  data: DayCompletionData[];
-}) {
+function CompletionBarChart({ data }: { data: DayCompletionData[] }) {
   const { t, language } = useTranslation();
   // Dense ranges (90 days, 1 year, wide custom) contain too many points for
   // sub-pixel bars on a ~340px mobile viewport, so render an area chart.
@@ -382,10 +387,7 @@ function ModerationPieChart({ data }: { data: ModerationSlice[] }) {
             ))}
           </Pie>
           <Tooltip content={<ChartTooltipContent />} />
-          <Legend
-            content={<ChartLegendContent nameKey="name" />}
-            verticalAlign="bottom"
-          />
+          <Legend content={<ChartLegendContent nameKey="name" />} verticalAlign="bottom" />
         </PieChart>
       </ChartContainer>
     </div>
@@ -397,7 +399,6 @@ function ModerationPieChart({ data }: { data: ModerationSlice[] }) {
 // ---------------------------------------------------------------------------
 
 function TimeRangeSelector({
-
   value,
   onChange,
   onCustomRangeChange,
@@ -542,7 +543,8 @@ function HabitBreakdownCard({
             className="text-xs text-muted-foreground truncate"
             title={`${stats.scheduledDays} ${t("analytics.scheduled")} • ${stats.totalCompletions} ${t("analytics.completions")}`}
           >
-            {stats.scheduledDays} {t("analytics.scheduled")} · {stats.totalCompletions} {t("analytics.completions")}
+            {stats.scheduledDays} {t("analytics.scheduled")} · {stats.totalCompletions}{" "}
+            {t("analytics.completions")}
           </p>
         </div>
         <div className="text-end shrink-0">
@@ -615,8 +617,7 @@ export function AnalyticsDashboard() {
   // This keeps every downstream `useMemo` from invalidating on each render.
   const { startKey, endKey } = useMemo(() => {
     const resolvedEnd = timeRange.endKey ?? todayKey();
-    const resolvedStart =
-      timeRange.startKey ?? addDays(resolvedEnd, -(timeRange.days! - 1));
+    const resolvedStart = timeRange.startKey ?? addDays(resolvedEnd, -(timeRange.days! - 1));
     return { startKey: resolvedStart, endKey: resolvedEnd };
   }, [timeRange]);
 
@@ -710,8 +711,7 @@ export function AnalyticsDashboard() {
       badHabits.some(
         (bh) =>
           bh.strategy === "limit" &&
-          (bh.usageLogs?.some((log) => log.date >= startKey && log.date <= endKey) ??
-            false),
+          (bh.usageLogs?.some((log) => log.date >= startKey && log.date <= endKey) ?? false),
       ),
     [badHabits, startKey, endKey],
   );
@@ -729,7 +729,9 @@ export function AnalyticsDashboard() {
 
   if (!ready) {
     return (
-      <div className="py-20 text-center text-sm text-muted-foreground">{t("analytics.loading")}</div>
+      <div className="py-20 text-center text-sm text-muted-foreground">
+        {t("analytics.loading")}
+      </div>
     );
   }
 
@@ -743,7 +745,9 @@ export function AnalyticsDashboard() {
 
       {/* Time Range Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="font-display text-lg">{t("analytics.completionRate")} — {rangeLabel}</h2>
+        <h2 className="font-display text-lg">
+          {t("analytics.completionRate")} — {rangeLabel}
+        </h2>
         <TimeRangeSelector
           value={timeRange}
           onChange={setTimeRange}
@@ -757,7 +761,10 @@ export function AnalyticsDashboard() {
           icon={<Target className="h-4 w-4" />}
           label={t("analytics.completion")}
           value={`${Math.round(overallCompletion)}%`}
-          hint={t("analytics.scheduledOf", { completed: totalCompleted, scheduled: totalScheduled })}
+          hint={t("analytics.scheduledOf", {
+            completed: totalCompleted,
+            scheduled: totalScheduled,
+          })}
         />
         <StatCard
           icon={<TrendingUp className="h-4 w-4" />}
@@ -801,7 +808,9 @@ export function AnalyticsDashboard() {
       {/* Moderation Donut Chart */}
       <section className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <h2 className="font-display text-lg">{t("analytics.moderationAdherence")}</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">{t("analytics.moderationAdherenceDesc")}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {t("analytics.moderationAdherenceDesc")}
+        </p>
         <div className="mt-4">
           {hasModerationData ? (
             <ModerationPieChart data={moderationData} />
@@ -815,7 +824,9 @@ export function AnalyticsDashboard() {
       <section className="space-y-3">
         <h2 className="font-display text-lg">{t("analytics.perHabitBreakdown")}</h2>
         {activeHabits.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{t("analytics.noActiveHabits")}</p>
+          <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            {t("analytics.noActiveHabits")}
+          </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {habitBreakdownData.map(({ habit, stats }) => (

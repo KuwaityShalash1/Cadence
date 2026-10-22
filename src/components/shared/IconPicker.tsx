@@ -283,9 +283,7 @@ export function IconPicker({
                   <Code className="h-6 w-6" aria-hidden="true" />
                 </div>
                 <DialogTitle>{t("iconPicker.modalTitle")}</DialogTitle>
-                <DialogDescription>
-                  {t("iconPicker.modalDesc")}
-                </DialogDescription>
+                <DialogDescription>{t("iconPicker.modalDesc")}</DialogDescription>
               </DialogHeader>
 
               <button
@@ -407,7 +405,9 @@ export function IconPicker({
               onClick={() => setIcon(n)}
               className={cn(
                 "grid h-11 w-11 place-items-center rounded-xl border transition-colors",
-                icon === n ? selectedTileClass : "border-border text-muted-foreground hover:bg-muted",
+                icon === n
+                  ? selectedTileClass
+                  : "border-border text-muted-foreground hover:bg-muted",
               )}
               style={icon === n ? activeTileStyle : undefined}
             >

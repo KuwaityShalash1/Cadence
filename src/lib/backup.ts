@@ -222,4 +222,3 @@ export function downloadJsonBackup(json: string, fileName?: string): void {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }
-

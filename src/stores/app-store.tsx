@@ -14,6 +14,7 @@ import * as repo from "@/database/repository";
 import type { Snapshot } from "@/database/repository";
 import { diffDays, toDateKey, todayKey } from "@/services/dates";
 import { buildLogMap, logKey, type LogMap } from "@/services/stats";
+import { calculateSmartDefaultStep } from "@/services/quick-steps";
 import { playCompleteHabitSound, setSoundEnabled } from "@/lib/sound";
 import { useAuth } from "@/auth/auth-context";
 import { useTranslation } from "@/i18n/context";
@@ -248,10 +249,16 @@ export interface AppActions {
     color?: string | undefined;
     type?: HabitType | undefined;
     target?: number | undefined;
+    targetValue?: number | undefined;
     unit?: string | undefined;
     icon?: string | undefined;
     goalId?: string | undefined;
     description?: string | undefined;
+    step?: number | undefined;
+    increment?: number | undefined;
+    quickIncrements?: number[] | undefined;
+    quickDecrement?: number[] | undefined;
+    quickDecrements?: number[] | undefined;
   }) => Habit;
   /** High-level helper for adding a goal (supports AI tools and UI shortcuts). */
   addGoal: (input: {
@@ -1170,7 +1177,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
       incrementHabit(habitId, date, delta) {
         writeLog(habitId, date, (existing, habit) =>
-          makeLog(habit, date, Math.max(0, (existing?.value ?? 0) + delta), existing),
+          makeLog(
+            habit,
+            date,
+            Math.round(Math.max(0, (existing?.value ?? 0) + delta) * 100) / 100,
+            existing,
+          ),
         );
       },
       toggleHabit(habitId, date) {
@@ -2149,16 +2161,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
           scheduleObj = input.schedule;
         }
 
+        const target = input.target ?? input.targetValue ?? 1;
+        const unit = (input.unit ?? "").trim();
+
+        // Ensure habit type is interactive (counter, duration, numeric) so quick +/- buttons render
+        let resolvedType: HabitType = input.type || "counter";
+        if (resolvedType === "boolean") {
+          resolvedType = "counter";
+        }
+
+        // Resolve quick increments / decrements
+        let quickIncrements = input.quickIncrements;
+        let quickDecrement = input.quickDecrement ?? input.quickDecrements;
+        const singleStep = input.step ?? input.increment;
+
+        if (singleStep !== undefined && !isNaN(Number(singleStep)) && Number(singleStep) > 0) {
+          const stepVal = Number(singleStep);
+          if (!quickIncrements || quickIncrements.length === 0) {
+            quickIncrements = [stepVal];
+          }
+          if (!quickDecrement || quickDecrement.length === 0) {
+            quickDecrement = [stepVal];
+          }
+        }
+
+        // Smart fallback step calculation if omitted
+        if (!quickIncrements || quickIncrements.length === 0) {
+          const smartStep = calculateSmartDefaultStep(target, unit);
+          quickIncrements = [smartStep];
+        }
+        if (!quickDecrement || quickDecrement.length === 0) {
+          const smartStep = calculateSmartDefaultStep(target, unit);
+          quickDecrement = [smartStep];
+        }
+
         return actionsObj.createHabit({
           name: input.name,
           schedule: scheduleObj,
           color: input.color || "emerald",
           icon: input.icon || "Sparkles",
           goalId: input.goalId,
-          type: input.type || "boolean",
-          target: input.target ?? 1,
-          unit: input.unit || "",
+          type: resolvedType,
+          target,
+          unit,
           description: input.description,
+          quickIncrements,
+          quickDecrement,
           startDate: todayKey(),
           reminderTimes: [],
           reminderEnabled: false,

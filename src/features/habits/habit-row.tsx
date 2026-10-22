@@ -203,10 +203,10 @@ export const HabitRow = memo(
      * persisted in the config (e.g. [5, 5]) can never render its button twice.
      */
     const increments = Array.from(new Set(habit.quickIncrements ?? []))
-      .filter((inc) => inc > 1)
+      .filter((inc) => inc > 0 && inc !== 1)
       .slice(0, 2);
     const decrements = Array.from(new Set(normalizeQuickDecrements(habit.quickDecrement)))
-      .filter((dec) => dec > 1)
+      .filter((dec) => dec > 0 && dec !== 1)
       .slice(0, 2);
     const currentStreak = useMemo(() => streaks(habit, logMap ?? {}).current, [habit, logMap]);
     /** The timer CTA is strictly reserved for timed / time-based habits. */
@@ -279,7 +279,8 @@ export const HabitRow = memo(
      * dragged keep native text selection, because their long press opens the
      * action list instead of a drag.
      */
-    const dragSurfaceClass = draggable && !isOverlay ? "select-none no-callout touch-pan-y" : undefined;
+    const dragSurfaceClass =
+      draggable && !isOverlay ? "select-none no-callout touch-pan-y" : undefined;
     /**
      * Elevated glass surface (Linear / Things 3 inspired) — crisp white with a
      * soft shadow in light mode; a translucent, blurred slate panel with a

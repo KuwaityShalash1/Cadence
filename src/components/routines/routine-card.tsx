@@ -45,11 +45,10 @@ export function RoutineCard({
             <HabitIcon name={routine.icon} customIcons={customIcons} className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-lg font-semibold text-foreground">
-              {routine.name}
-            </h3>
+            <h3 className="truncate text-lg font-semibold text-foreground">{routine.name}</h3>
             <p className="truncate text-xs text-muted-foreground">
-              {describeSchedule(routine.schedule, t)} · {routine.steps.length} {t("routine.stepsCount")} · {pct}% {t("routine.doneToday")}
+              {describeSchedule(routine.schedule, t)} · {routine.steps.length}{" "}
+              {t("routine.stepsCount")} · {pct}% {t("routine.doneToday")}
             </p>
           </div>
         </div>
@@ -83,7 +82,10 @@ export function RoutineCard({
               const routineToRestore = structuredClone(routine);
               removeRoutine(routine.id);
               toast.success(t("routine.deleted"), {
-                action: { label: t("common.undo"), onClick: () => restoreRoutine(routineToRestore) },
+                action: {
+                  label: t("common.undo"),
+                  onClick: () => restoreRoutine(routineToRestore),
+                },
                 duration: 5000,
               });
             }}

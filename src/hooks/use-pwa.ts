@@ -53,8 +53,7 @@ declare global {
 }
 
 const SHARE_TITLE = "Cadence - Offline Habit Tracker";
-const SHARE_TEXT =
-  "Plan your routines, track your streaks, and break bad habits — 100% offline.";
+const SHARE_TEXT = "Plan your routines, track your streaks, and break bad habits — 100% offline.";
 
 /** Used when the page has no usable origin (e.g. `file://` previews). */
 const FALLBACK_SHARE_URL = "https://cadencepwa.vercel.app/";
@@ -117,7 +116,7 @@ export function usePWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
-   useEffect(() => {
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     // Hydration-safe: the first client render mirrors the server markup and the
@@ -159,9 +158,13 @@ export function usePWA() {
       .persist()
       .then((granted) => {
         if (granted) {
-          console.log("[Cadence] Storage persistence granted — IndexedDB will not be cleared under storage pressure.");
+          console.log(
+            "[Cadence] Storage persistence granted — IndexedDB will not be cleared under storage pressure.",
+          );
         } else {
-          console.warn("[Cadence] Storage persistence denied — IndexedDB may be cleared if the device runs low on storage.");
+          console.warn(
+            "[Cadence] Storage persistence denied — IndexedDB may be cleared if the device runs low on storage.",
+          );
         }
       })
       .catch((err) => {

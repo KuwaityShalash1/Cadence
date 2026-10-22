@@ -17,8 +17,7 @@ export const Route = createFileRoute("/stats")({
       { property: "og:title", content: "Analytics — Cadence Habit Tracker" },
       {
         property: "og:description",
-        content:
-          "Visual breakdown of your habit completion and moderation adherence.",
+        content: "Visual breakdown of your habit completion and moderation adherence.",
       },
       { property: "og:url", content: "https://cadencepwa.vercel.app/stats" },
     ],

@@ -14,10 +14,7 @@ import { AboutPage } from "@/features/about/about-page";
  */
 export const Route = createFileRoute("/about-us")({
   head: () => ({
-    meta: [
-      { title: "About — Cadence" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "About — Cadence" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AboutUsRoute,
 });

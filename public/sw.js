@@ -333,7 +333,9 @@ async function cacheFirst(event, cacheName) {
         caches
           .open(cacheName)
           .then((cache) => cache.put(event.request, copy))
-          .then(() => caches.open(cacheName).then((cache) => pruneSupersededAssets(cache, requestUrl)))
+          .then(() =>
+            caches.open(cacheName).then((cache) => pruneSupersededAssets(cache, requestUrl)),
+          )
           .catch(() => undefined),
       );
     }

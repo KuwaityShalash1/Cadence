@@ -131,7 +131,9 @@ export function RoutinesPage() {
   const activeRoutine = sortedRoutines.find((routine) => routine.id === activeId);
 
   if (!ready) {
-    return <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>;
+    return (
+      <div className="py-20 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
+    );
   }
 
   return (
@@ -139,9 +141,7 @@ export function RoutinesPage() {
       <header className="flex items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("nav.routines")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("routine.subtitle")}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("routine.subtitle")}</p>
         </div>
         <Button className="hidden md:inline-flex" onClick={openNew}>
           <Plus className="me-1 h-4 w-4" /> {t("routine.new")}
@@ -151,7 +151,9 @@ export function RoutinesPage() {
       {sortedRoutines.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <h2 className="font-display text-xl">{t("routine.emptyTitle")}</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">{t("routine.emptyDesc")}</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            {t("routine.emptyDesc")}
+          </p>
           <Button className="mt-5" onClick={openNew}>
             <Plus className="me-1 h-4 w-4" /> {t("routine.createFirst")}
           </Button>
@@ -195,7 +197,11 @@ export function RoutinesPage() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
-                  {mode === "all" ? t("routine.filterAll") : mode === "active" ? t("routine.filterActive") : t("routine.filterCompleted")}
+                  {mode === "all"
+                    ? t("routine.filterAll")
+                    : mode === "active"
+                      ? t("routine.filterActive")
+                      : t("routine.filterCompleted")}
                 </button>
               ))}
             </div>

@@ -164,4 +164,3 @@ export function triggerBadgeUnlockCelebration(rarity: BadgeRarity): void {
       break;
   }
 }
-

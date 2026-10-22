@@ -93,8 +93,9 @@ function Shell({ children }: { children: ReactNode }) {
   // The persisted collapsed state is applied after mount via useEffect.
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const userAvatarUrl = extractUserAvatarUrl(user, settings.avatar);
-  const effectiveDisplayName = settings.displayName?.trim()
-    || (session ? extractUserDisplayName(user) : t("common.guest", "Guest"));
+  const effectiveDisplayName =
+    settings.displayName?.trim() ||
+    (session ? extractUserDisplayName(user) : t("common.guest", "Guest"));
 
   const handleSignOut = async () => {
     try {
@@ -401,9 +402,7 @@ function Shell({ children }: { children: ReactNode }) {
                     {effectiveDisplayName}
                   </p>
                   {session && user?.email ? (
-                    <p className="text-xs text-muted-foreground mt-1.5 truncate">
-                      {user.email}
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-1.5 truncate">{user.email}</p>
                   ) : (
                     <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />

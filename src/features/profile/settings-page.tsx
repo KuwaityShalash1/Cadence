@@ -103,9 +103,9 @@ export function SettingsPage() {
   const activeAvatar = extractUserAvatarUrl(user, settings.avatar);
   const hasCustomAvatar = Boolean(
     (settings.avatar && settings.avatar.trim().length > 0) ||
-      (user?.user_metadata &&
-        typeof user.user_metadata["custom_avatar"] === "string" &&
-        user.user_metadata["custom_avatar"].trim().length > 0),
+    (user?.user_metadata &&
+      typeof user.user_metadata["custom_avatar"] === "string" &&
+      user.user_metadata["custom_avatar"].trim().length > 0),
   );
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>("unsupported");
@@ -125,11 +125,7 @@ export function SettingsPage() {
   // Hydrate custom avatar from cloud user metadata if local settings don't have it yet
   useEffect(() => {
     const cloudAvatar = user?.user_metadata?.["custom_avatar"];
-    if (
-      !settings.avatar &&
-      typeof cloudAvatar === "string" &&
-      cloudAvatar.trim().length > 0
-    ) {
+    if (!settings.avatar && typeof cloudAvatar === "string" && cloudAvatar.trim().length > 0) {
       updateSettings({ avatar: cloudAvatar.trim() });
     }
   }, [user, settings.avatar, updateSettings]);

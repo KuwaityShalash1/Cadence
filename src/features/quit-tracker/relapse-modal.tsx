@@ -68,15 +68,11 @@ export function RelapseModal({ open, onOpenChange, habitId, habitTitle }: Relaps
       <form onSubmit={handleSubmit} className="space-y-6 py-2">
         <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p>
-            {t("relapseModal.banner")}
-          </p>
+          <p>{t("relapseModal.banner")}</p>
         </div>
 
         <div className="space-y-3">
-          <Label className="text-base font-semibold">
-            {t("relapseModal.triggerPrompt")}
-          </Label>
+          <Label className="text-base font-semibold">{t("relapseModal.triggerPrompt")}</Label>
           <div className="grid gap-2.5">
             {TRIGGER_OPTIONS.map((opt) => {
               const active = selectedTrigger === opt.id;

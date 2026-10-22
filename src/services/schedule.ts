@@ -50,7 +50,11 @@ export function scheduledDaysIn(habit: Habit, startKey: string, endKey: string):
 
 export function describeSchedule(
   schedule: Schedule,
-  t?: (key: string, fallbackOrParams?: string | Record<string, string | number | undefined | null>, params?: Record<string, string | number | undefined | null>) => string,
+  t?: (
+    key: string,
+    fallbackOrParams?: string | Record<string, string | number | undefined | null>,
+    params?: Record<string, string | number | undefined | null>,
+  ) => string,
 ): string {
   switch (schedule.type) {
     case "daily":
@@ -83,7 +87,9 @@ export function describeSchedule(
         return t ? t("habit.everyDay", "Every day") : "Every day";
       }
       return t
-        ? t("schedule.everyNDays", `Every ${schedule.everyNDays} days`, { count: schedule.everyNDays })
+        ? t("schedule.everyNDays", `Every ${schedule.everyNDays} days`, {
+            count: schedule.everyNDays,
+          })
         : `Every ${schedule.everyNDays} days`;
     default:
       return t ? t("schedule.custom", "Custom") : "Custom";

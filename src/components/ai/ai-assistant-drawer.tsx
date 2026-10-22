@@ -1082,6 +1082,8 @@ export function AiAssistantDrawer() {
             completionRate7d,
             icon: h.icon,
             goalId: h.goalId,
+            quickIncrements: h.quickIncrements,
+            quickDecrement: h.quickDecrement,
           };
         }),
         routines: liveRoutines.map((r) => ({

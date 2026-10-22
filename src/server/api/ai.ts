@@ -21,20 +21,53 @@ const GEMINI_TOOLS = [
       {
         name: "create_habit",
         description:
-          "Create a new habit in Cadence with name, recurrence schedule, dynamic icon from lucide-react, optional color theme, and optional linked goal ID.",
+          "Create a new habit in Cadence with name, recurrence schedule, tracking type, target value, unit, quick increment/decrement step, dynamic icon from lucide-react, optional color theme, and optional linked goal ID.",
         parameters: {
           type: "OBJECT",
           properties: {
             name: {
               type: "STRING",
               description:
-                "The title or name of the habit (e.g., 'Drink 2L Water', 'Morning Meditation').",
+                "The title or name of the habit (e.g., 'Drink 3L Water', 'الصلوات الخمس بالجامع', 'Morning Meditation').",
             },
             schedule: {
               type: "STRING",
               enum: ["everyday", "weekdays", "weekends"],
               description:
                 "Recurrence frequency: 'everyday' for all 7 days, 'weekdays' for Mon-Fri, 'weekends' for Sat-Sun.",
+            },
+            type: {
+              type: "STRING",
+              enum: ["counter", "numeric", "duration", "boolean"],
+              description:
+                "Tracking type: 'counter' for countable reps/actions/daily habits (enables quick +/- buttons), 'duration' for time-based habits (e.g., mins/hours), 'numeric' for measurable habits (e.g. liters/pages), or 'boolean' for simple binary checkboxes.",
+            },
+            targetValue: {
+              type: "NUMBER",
+              description:
+                "Daily target goal value (e.g., 5 for 5 prayers, 20 for 20 mins reading, 3 for 3L water, 1 for single daily habit). Must ALWAYS be populated.",
+            },
+            unit: {
+              type: "STRING",
+              description:
+                "Unit of measurement (e.g., 'دقيقة', 'min', 'L', 'glasses', 'pages', 'reps', 'prayers').",
+            },
+            step: {
+              type: "NUMBER",
+              description:
+                "Quick increment / decrement step button value (e.g., 1 for single prayers/habits, 5 for 20min reading, 250 for ml water, 0.5 for L water). Populates quick +/- controls.",
+            },
+            quickIncrements: {
+              type: "ARRAY",
+              items: { type: "NUMBER" },
+              description:
+                "Optional array of up to 2 quick increment button step sizes (e.g. [5, 10] or [1]).",
+            },
+            quickDecrements: {
+              type: "ARRAY",
+              items: { type: "NUMBER" },
+              description:
+                "Optional array of up to 2 quick decrement button step sizes (e.g. [5, 10] or [1]).",
             },
             color: {
               type: "STRING",
@@ -354,7 +387,7 @@ const GEMINI_TOOLS = [
       {
         name: "update_habit",
         description:
-          "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
+          "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, type, step, quickIncrements, quickDecrements, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -375,13 +408,32 @@ const GEMINI_TOOLS = [
               enum: ["everyday", "weekdays", "weekends"],
               description: "New schedule recurrence frequency.",
             },
+            type: {
+              type: "STRING",
+              enum: ["counter", "numeric", "duration", "boolean"],
+              description: "New tracking type: 'counter', 'duration', 'numeric', or 'boolean'.",
+            },
             targetValue: {
               type: "NUMBER",
-              description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
+              description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L, 20 for 20 mins).",
             },
             unit: {
               type: "STRING",
-              description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
+              description: "New unit of measurement (e.g. 'pages', 'L', 'mins', 'دقيقة').",
+            },
+            step: {
+              type: "NUMBER",
+              description: "New quick increment/decrement step button value.",
+            },
+            quickIncrements: {
+              type: "ARRAY",
+              items: { type: "NUMBER" },
+              description: "Array of up to 2 quick increment values.",
+            },
+            quickDecrements: {
+              type: "ARRAY",
+              items: { type: "NUMBER" },
+              description: "Array of up to 2 quick decrement values.",
             },
             color: {
               type: "STRING",
@@ -561,213 +613,6 @@ const GEMINI_TOOLS = [
           required: ["fact"],
         },
       },
-      {
-        name: "update_habit",
-        description:
-          "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            habitId: {
-              type: "STRING",
-              description: "Optional exact ID of the habit to update.",
-            },
-            habitName: {
-              type: "STRING",
-              description: "The name of the habit to update if ID is unknown.",
-            },
-            name: {
-              type: "STRING",
-              description: "New title or name for the habit.",
-            },
-            schedule: {
-              type: "STRING",
-              enum: ["everyday", "weekdays", "weekends"],
-              description: "New schedule recurrence frequency.",
-            },
-            targetValue: {
-              type: "NUMBER",
-              description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
-            },
-            unit: {
-              type: "STRING",
-              description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
-            },
-            color: {
-              type: "STRING",
-              description: "New color token for the habit.",
-            },
-            icon: {
-              type: "STRING",
-              description: "New Lucide icon PascalCase name.",
-            },
-          },
-        },
-      },
-      {
-        name: "update_bad_habit",
-        description:
-          "Update an existing bad habit / quit tracker in-place (name/title, triggerCategory, daily limit, color, icon) by ID or name without deleting, preserving historical logs.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            badHabitId: {
-              type: "STRING",
-              description: "Optional exact ID of the bad habit to update.",
-            },
-            badHabitName: {
-              type: "STRING",
-              description: "The name of the bad habit to update if ID is unknown.",
-            },
-            name: {
-              type: "STRING",
-              description: "New title for the bad habit.",
-            },
-            triggerCategory: {
-              type: "STRING",
-              description: "Updated primary trigger category.",
-            },
-            limit: {
-              type: "NUMBER",
-              description: "Updated daily limit for moderation/reduction.",
-            },
-            color: {
-              type: "STRING",
-              description: "New color token.",
-            },
-            icon: {
-              type: "STRING",
-              description: "New Lucide icon name.",
-            },
-          },
-        },
-      },
-      {
-        name: "update_goal",
-        description:
-          "Update an existing target goal in-place (name, targetValue, unit, color, icon) by ID or name, preserving historical progress.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            goalId: {
-              type: "STRING",
-              description: "Optional exact ID of the goal to update.",
-            },
-            goalName: {
-              type: "STRING",
-              description: "The name of the goal to update if ID is unknown.",
-            },
-            name: {
-              type: "STRING",
-              description: "New name for the goal.",
-            },
-            targetValue: {
-              type: "NUMBER",
-              description: "New target value.",
-            },
-            unit: {
-              type: "STRING",
-              description: "New unit of measurement.",
-            },
-            color: {
-              type: "STRING",
-              description: "New color token.",
-            },
-            icon: {
-              type: "STRING",
-              description: "New Lucide icon name.",
-            },
-          },
-        },
-      },
-      {
-        name: "update_routine",
-        description:
-          "Update an existing routine in-place (name, schedule, steps, habit associations) by ID or name.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            routineId: {
-              type: "STRING",
-              description: "Optional exact ID of the routine to update.",
-            },
-            routineName: {
-              type: "STRING",
-              description: "The name of the routine to update if ID is unknown.",
-            },
-            name: {
-              type: "STRING",
-              description: "New routine name.",
-            },
-            schedule: {
-              type: "STRING",
-              enum: ["everyday", "weekdays", "weekends"],
-              description: "New recurrence schedule.",
-            },
-            color: {
-              type: "STRING",
-              description: "New color token.",
-            },
-            icon: {
-              type: "STRING",
-              description: "New Lucide icon name.",
-            },
-            habitNames: {
-              type: "ARRAY",
-              items: { type: "STRING" },
-              description: "List of habit names to link as steps.",
-            },
-            steps: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  title: { type: "STRING", description: "Title of the step." },
-                  habitName: { type: "STRING", description: "Optional habit name linked to this step." },
-                },
-                required: ["title"],
-              },
-              description: "Updated detailed steps.",
-            },
-          },
-        },
-      },
-      {
-        name: "save_user_memory",
-        description:
-          "Safely store a concise personal fact about the user (e.g. study schedule, wake-up time, fitness preferences, personal struggles, constraints) into persistent memory. Executes automatically in the background.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            fact: {
-              type: "STRING",
-              description:
-                "Concise personal fact to remember (e.g., 'Wakes up at 6:00 AM', 'Prefers calisthenics workouts', 'Studying for exam in evenings').",
-            },
-          },
-          required: ["fact"],
-        },
-      },
-      {
-        name: "manage_user_memory",
-        description:
-          "Manage persistent user memories: add a new fact or remove an obsolete fact. Executes automatically in the background.",
-        parameters: {
-          type: "OBJECT",
-          properties: {
-            action: {
-              type: "STRING",
-              enum: ["add", "remove"],
-              description: "Whether to add or remove the fact.",
-            },
-            fact: {
-              type: "STRING",
-              description: "The personal fact to add or remove.",
-            },
-          },
-          required: ["fact"],
-        },
-      },
     ],
   },
 ];
@@ -781,20 +626,53 @@ const GROQ_TOOLS = [
     function: {
       name: "create_habit",
       description:
-        "Create a new habit in Cadence with name, recurrence schedule, dynamic icon from lucide-react, optional color theme, and optional linked goal ID.",
+        "Create a new habit in Cadence with name, recurrence schedule, tracking type, target value, unit, quick increment/decrement step, dynamic icon from lucide-react, optional color theme, and optional linked goal ID.",
       parameters: {
         type: "object",
         properties: {
           name: {
             type: "string",
             description:
-              "The title or name of the habit (e.g., 'Drink 2L Water', 'Morning Meditation').",
+              "The title or name of the habit (e.g., 'Drink 3L Water', 'الصلوات الخمس بالجامع', 'Morning Meditation').",
           },
           schedule: {
             type: "string",
             enum: ["everyday", "weekdays", "weekends"],
             description:
               "Recurrence frequency: 'everyday' for all 7 days, 'weekdays' for Mon-Fri, 'weekends' for Sat-Sun.",
+          },
+          type: {
+            type: "string",
+            enum: ["counter", "numeric", "duration", "boolean"],
+            description:
+              "Tracking type: 'counter' for countable reps/actions/daily habits (enables quick +/- buttons), 'duration' for time-based habits (e.g., mins/hours), 'numeric' for measurable habits (e.g. liters/pages), or 'boolean' for simple binary checkboxes.",
+          },
+          targetValue: {
+            type: "number",
+            description:
+              "Daily target goal value (e.g., 5 for 5 prayers, 20 for 20 mins reading, 3 for 3L water, 1 for single daily habit). Must ALWAYS be populated.",
+          },
+          unit: {
+            type: "string",
+            description:
+              "Unit of measurement (e.g., 'دقيقة', 'min', 'L', 'glasses', 'pages', 'reps', 'prayers').",
+          },
+          step: {
+            type: "number",
+            description:
+              "Quick increment / decrement step button value (e.g., 1 for single prayers/habits, 5 for 20min reading, 250 for ml water, 0.5 for L water). Populates quick +/- controls.",
+          },
+          quickIncrements: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "Optional array of up to 2 quick increment button step sizes (e.g. [5, 10] or [1]).",
+          },
+          quickDecrements: {
+            type: "array",
+            items: { type: "number" },
+            description:
+              "Optional array of up to 2 quick decrement button step sizes (e.g. [5, 10] or [1]).",
           },
           color: {
             type: "string",
@@ -1155,7 +1033,7 @@ const GROQ_TOOLS = [
     function: {
       name: "update_habit",
       description:
-        "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
+        "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, type, step, quickIncrements, quickDecrements, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
       parameters: {
         type: "object",
         properties: {
@@ -1176,13 +1054,32 @@ const GROQ_TOOLS = [
             enum: ["everyday", "weekdays", "weekends"],
             description: "New schedule recurrence frequency.",
           },
+          type: {
+            type: "string",
+            enum: ["counter", "numeric", "duration", "boolean"],
+            description: "New tracking type: 'counter', 'duration', 'numeric', or 'boolean'.",
+          },
           targetValue: {
             type: "number",
-            description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
+            description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L, 20 for 20 mins).",
           },
           unit: {
             type: "string",
-            description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
+            description: "New unit of measurement (e.g. 'pages', 'L', 'mins', 'دقيقة').",
+          },
+          step: {
+            type: "number",
+            description: "New quick increment/decrement step button value.",
+          },
+          quickIncrements: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of up to 2 quick increment values.",
+          },
+          quickDecrements: {
+            type: "array",
+            items: { type: "number" },
+            description: "Array of up to 2 quick decrement values.",
           },
           color: {
             type: "string",
@@ -1378,231 +1275,6 @@ const GROQ_TOOLS = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "update_habit",
-      description:
-        "Update an existing habit's parameters in-place (name, schedule, targetValue, unit, color, icon) by ID or name WITHOUT deleting and recreating the item. Historical logs and streaks remain 100% intact.",
-      parameters: {
-        type: "object",
-        properties: {
-          habitId: {
-            type: "string",
-            description: "Optional exact ID of the habit to update.",
-          },
-          habitName: {
-            type: "string",
-            description: "The name of the habit to update if ID is unknown.",
-          },
-          name: {
-            type: "string",
-            description: "New title or name for the habit.",
-          },
-          schedule: {
-            type: "string",
-            enum: ["everyday", "weekdays", "weekends"],
-            description: "New schedule recurrence frequency.",
-          },
-          targetValue: {
-            type: "number",
-            description: "New numerical target (e.g. 5 for 5 pages, 2 for 2L).",
-          },
-          unit: {
-            type: "string",
-            description: "New unit of measurement (e.g. 'pages', 'L', 'mins').",
-          },
-          color: {
-            type: "string",
-            description: "New color token for the habit.",
-          },
-          icon: {
-            type: "string",
-            description: "New Lucide icon PascalCase name.",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "update_bad_habit",
-      description:
-        "Update an existing bad habit / quit tracker in-place (name/title, triggerCategory, daily limit, color, icon) by ID or name without deleting, preserving historical logs.",
-      parameters: {
-        type: "object",
-        properties: {
-          badHabitId: {
-            type: "string",
-            description: "Optional exact ID of the bad habit to update.",
-          },
-          badHabitName: {
-            type: "string",
-            description: "The name of the bad habit to update if ID is unknown.",
-          },
-          name: {
-            type: "string",
-            description: "New title for the bad habit.",
-          },
-          triggerCategory: {
-            type: "string",
-            description: "Updated primary trigger category.",
-          },
-          limit: {
-            type: "number",
-            description: "Updated daily limit for moderation/reduction.",
-          },
-          color: {
-            type: "string",
-            description: "New color token.",
-          },
-          icon: {
-            type: "string",
-            description: "New Lucide icon name.",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "update_goal",
-      description:
-        "Update an existing target goal in-place (name, targetValue, unit, color, icon) by ID or name, preserving historical progress.",
-      parameters: {
-        type: "object",
-        properties: {
-          goalId: {
-            type: "string",
-            description: "Optional exact ID of the goal to update.",
-          },
-          goalName: {
-            type: "string",
-            description: "The name of the goal to update if ID is unknown.",
-          },
-          name: {
-            type: "string",
-            description: "New name for the goal.",
-          },
-          targetValue: {
-            type: "number",
-            description: "New target value.",
-          },
-          unit: {
-            type: "string",
-            description: "New unit of measurement.",
-          },
-          color: {
-            type: "string",
-            description: "New color token.",
-          },
-          icon: {
-            type: "string",
-            description: "New Lucide icon name.",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "update_routine",
-      description:
-        "Update an existing routine in-place (name, schedule, steps, habit associations) by ID or name.",
-      parameters: {
-        type: "object",
-        properties: {
-          routineId: {
-            type: "string",
-            description: "Optional exact ID of the routine to update.",
-          },
-          routineName: {
-            type: "string",
-            description: "The name of the routine to update if ID is unknown.",
-          },
-          name: {
-            type: "string",
-            description: "New routine name.",
-          },
-          schedule: {
-            type: "string",
-            enum: ["everyday", "weekdays", "weekends"],
-            description: "New recurrence schedule.",
-          },
-          color: {
-            type: "string",
-            description: "New color token.",
-          },
-          icon: {
-            type: "string",
-            description: "New Lucide icon name.",
-          },
-          habitNames: {
-            type: "array",
-            items: { type: "string" },
-            description: "List of habit names to link as steps.",
-          },
-          steps: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string", description: "Title of the step." },
-                habitName: { type: "string", description: "Optional habit name linked to this step." },
-              },
-              required: ["title"],
-            },
-            description: "Updated detailed steps.",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "save_user_memory",
-      description:
-        "Safely store a concise personal fact about the user (e.g. study schedule, wake-up time, fitness preferences, personal struggles, constraints) into persistent memory. Executes automatically in the background.",
-      parameters: {
-        type: "object",
-        properties: {
-          fact: {
-            type: "string",
-            description:
-              "Concise personal fact to remember (e.g., 'Wakes up at 6:00 AM', 'Prefers calisthenics workouts', 'Studying for exam in evenings').",
-          },
-        },
-        required: ["fact"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "manage_user_memory",
-      description:
-        "Manage persistent user memories: add a new fact or remove an obsolete fact. Executes automatically in the background.",
-      parameters: {
-        type: "object",
-        properties: {
-          action: {
-            type: "string",
-            enum: ["add", "remove"],
-            description: "Whether to add or remove the fact.",
-          },
-          fact: {
-            type: "string",
-            description: "The personal fact to add or remove.",
-          },
-        },
-        required: ["fact"],
-      },
-    },
-  },
 ];
 
 /**
@@ -1745,6 +1417,21 @@ For ANY complex request — especially unit conversions, analytics interpretatio
 Wrap your internal reasoning inside <think>...</think> tags at the very start of your response.
 Only the final, clean answer comes after the </think> closing tag.
 
+CRITICAL RULE — MANDATORY SMART TARGET & QUICK INCREMENT/DECREMENT INFERENCE:
+When creating or updating habits via 'create_habit' or 'update_habit', NEVER create bare habits with missing target/increment controls! You MUST ALWAYS automatically populate targetValue, unit, type, and step (or quickIncrements / quickDecrements) without waiting for the user to ask:
+1. Countable multi-step habits:
+   - e.g., "الصلوات الخمس بالجامع" or "5 Daily Prayers" -> set type: "counter", targetValue: 5, unit: "prayers" (or "صلوات"), step: 1 (or quickIncrements: [1], quickDecrements: [1]).
+   - e.g., "10 pushups" -> set type: "counter", targetValue: 10, unit: "reps", step: 5 (or quickIncrements: [5], quickDecrements: [5]).
+2. Duration habits:
+   - e.g., "قراءة 20 دقيقة" or "Read 20 mins" -> set type: "duration", targetValue: 20, unit: "دقيقة" (or "min"), step: 5 (or quickIncrements: [5], quickDecrements: [5]).
+   - e.g., "Workout 45 mins" -> set type: "duration", targetValue: 45, unit: "mins", step: 15.
+3. Hydration / Volume habits:
+   - e.g., "شرب 3 لتر ماء" or "Drink 3L Water" -> set type: "numeric", targetValue: 3, unit: "L", step: 0.5 (or if in ml: targetValue: 3000, unit: "ml", step: 250).
+   - e.g., "Drink 8 glasses of water" -> set type: "counter", targetValue: 8, unit: "glasses", step: 1.
+4. Standard / Single habits:
+   - e.g., "Morning Workout" or "أذكار الصباح" or "Take Vitamins" -> set type: "counter", targetValue: 1, unit: "times", step: 1 (or quickIncrements: [1]).
+Matching the manual habit creation form, setting type: "counter" and targetValue: 1 ensures the quick '+ / -' stepper controls are ALWAYS enabled and rendered properly on the habit card.
+
 CRITICAL UNIT CONVERSION RULE:
 ALWAYS inspect the target habit's \`unit\` and \`target\` in the context BEFORE calling \`log_habit_progress\`.
 - If the habit is tracked in Liters ('L', target: 3) and the user says 'I drank 500ml', you MUST convert 500ml -> 0.5L and pass amount: 0.5.
@@ -1776,10 +1463,10 @@ IMPORTANT HABIT VS QUIT TRACKER RULE:
 If the user wants to start doing something positive (e.g., read, workout, study), use the \`create_habit\` tool. However, if the user wants to STOP, QUIT, REDUCE, or BREAK a negative behavior (e.g., smoking, gossiping, biting nails, doomscrolling), you MUST use the \`create_bad_habit\` tool instead.
 
 AVAILABLE ACTIONS (FUNCTION CALLS):
-1. create_habit: Propose creating a new positive habit routine.
-   - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", req), color (string, opt), icon (string, opt), goalId (string, opt).
+1. create_habit: Propose creating a new positive habit routine. ALWAYS populate targetValue, unit, type, and step!
+   - Args: name (string, req), schedule ("everyday" | "weekdays" | "weekends", req), type ("counter" | "numeric" | "duration", opt), targetValue (number, opt), unit (string, opt), step (number, opt), quickIncrements (number[], opt), quickDecrements (number[], opt), color (string, opt), icon (string, opt), goalId (string, opt).
 2. update_habit: Propose modifying an existing habit in-place without deleting it. Preserves historical logs and streaks!
-   - Args: habitId (string, opt), habitName (string, opt), name (string, opt), schedule ("everyday" | "weekdays" | "weekends", opt), targetValue (number, opt), unit (string, opt), color (string, opt), icon (string, opt).
+   - Args: habitId (string, opt), habitName (string, opt), name (string, opt), schedule ("everyday" | "weekdays" | "weekends", opt), type ("counter" | "numeric" | "duration", opt), targetValue (number, opt), unit (string, opt), step (number, opt), quickIncrements (number[], opt), quickDecrements (number[], opt), color (string, opt), icon (string, opt).
 3. delete_habit: Propose deleting an existing habit.
    - Args: habitId (string, opt), habitName (string, opt).
 4. create_routine: Propose creating a new routine (e.g., Morning Routine, Evening Routine) grouping habits.

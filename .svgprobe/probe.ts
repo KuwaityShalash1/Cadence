@@ -50,7 +50,10 @@ function sanitizeSvgIcon(raw: string): string {
   // icon uploaded that way would keep painting itself black. `[^\s"'>]+` stops
   // at whitespace / quote / bracket so only the value is consumed, and the
   // leading `\s` still keeps `stroke-width`/`fill-rule` out of scope.
-  svg = svg.replace(/\s(fill|stroke)\s*=\s*(?![="'`])(?!(?:none)\b)[^\s"'>]+/gi, ' $1="currentColor"');
+  svg = svg.replace(
+    /\s(fill|stroke)\s*=\s*(?![="'`])(?!(?:none)\b)[^\s"'>]+/gi,
+    ' $1="currentColor"',
+  );
 
   // 3. Inline `style="fill:#000"` declarations outrank presentation attributes,
   // so they must be rewritten too or those icons would stay black regardless.
@@ -139,17 +142,26 @@ function check(name, actual, expectations) {
 }
 const has = (s) => (out) => out.includes(s);
 const not = (s) => (out) => !out.includes(s);
-const count = (s) => (out) => (out.match(new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length;
+const count = (s) => (out) =>
+  (out.match(new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length;
 
 // ---- NEW: unquoted attribute values (the last black escape hatch) --------
-check("unquoted fill hex", sanitizeSvgIcon('<svg viewBox="0 0 24 24"><path fill=#000 d="M1"/></svg>'), [
-  ["no #000", not("#000")],
-  ["inherited", has('fill="currentColor"')],
-]);
-check("unquoted stroke name", sanitizeSvgIcon('<svg viewBox="0 0 24 24"><path stroke=red d="M1"/></svg>'), [
-  ["no red", not("red")],
-  ["inherited", has('stroke="currentColor"')],
-]);
+check(
+  "unquoted fill hex",
+  sanitizeSvgIcon('<svg viewBox="0 0 24 24"><path fill=#000 d="M1"/></svg>'),
+  [
+    ["no #000", not("#000")],
+    ["inherited", has('fill="currentColor"')],
+  ],
+);
+check(
+  "unquoted stroke name",
+  sanitizeSvgIcon('<svg viewBox="0 0 24 24"><path stroke=red d="M1"/></svg>'),
+  [
+    ["no red", not("red")],
+    ["inherited", has('stroke="currentColor"')],
+  ],
+);
 check(
   "unquoted fill=none preserved",
   sanitizeSvgIcon('<svg viewBox="0 0 24 24"><path fill=none stroke=blue d="M1"/></svg>'),
@@ -170,7 +182,9 @@ check(
 // ---- REGRESSION: quoted behaviour from the previous verified build ------
 check(
   "quoted fill/stroke still inherited (regression)",
-  sanitizeSvgIcon('<svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><path fill="#f00"/></svg>'),
+  sanitizeSvgIcon(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><path fill="#f00"/></svg>',
+  ),
   [
     ["root fill none kept", has('fill="none"')],
     ["stroke inherited", has('stroke="currentColor"')],
@@ -206,14 +220,14 @@ check(
     ["no hardcoded", (out) => !/#000|#fff|#123456/.test(out)],
   ],
 );
-check("idempotent", sanitizeSvgIcon(sanitizeSvgIcon('<svg width="512px" fill="#000"><path fill=#111 d="M1"/></svg>')), [
+check(
+  "idempotent",
+  sanitizeSvgIcon(sanitizeSvgIcon('<svg width="512px" fill="#000"><path fill=#111 d="M1"/></svg>')),
   [
-    "stable",
-    (out) => out === sanitizeSvgIcon(out),
+    ["stable", (out) => out === sanitizeSvgIcon(out)],
+    ["one root fill", count('fill="currentColor"') === 2],
   ],
-  ["one root fill", count('fill="currentColor"') === 2],
-]);
+);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
-

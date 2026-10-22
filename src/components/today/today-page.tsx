@@ -26,11 +26,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useSortableSensors } from "@/hooks/use-sortable-sensors";
-import {
-  SortableContext,
-  arrayMove,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 import { HabitRow, SortableHabitRow } from "@/features/habits/habit-row";
 import { useHabitEditor } from "@/features/habits/habit-editor";

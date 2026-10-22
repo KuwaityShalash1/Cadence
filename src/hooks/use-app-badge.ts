@@ -83,4 +83,3 @@ export function useAppBadge(): void {
     };
   }, [habits, logMap, ready]);
 }
-

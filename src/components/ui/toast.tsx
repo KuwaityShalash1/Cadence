@@ -58,10 +58,7 @@ export function FreezeToastContent({
                 used: String(used),
                 max: String(max),
                 days: String(daysUntilReset),
-                unit:
-                  daysUntilReset === 1
-                    ? t("habitRow.day", "day")
-                    : t("habitRow.days", "days"),
+                unit: daysUntilReset === 1 ? t("habitRow.day", "day") : t("habitRow.days", "days"),
               },
             )}
           </p>

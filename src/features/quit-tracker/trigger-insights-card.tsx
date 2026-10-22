@@ -53,9 +53,7 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
           </span>
           <div>
             <h3 className="font-display text-lg font-bold">{t("quitTracker.triggerInsights")}</h3>
-            <p className="text-xs text-muted-foreground">
-              {t("quitTracker.triggerInsightsDesc")}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("quitTracker.triggerInsightsDesc")}</p>
           </div>
         </div>
       </div>
@@ -64,7 +62,9 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
 
   const topTrigger = insights.items[0];
   const topTriggerName = topTrigger
-    ? (t(`trigger.${topTrigger.id}` as any) || topTrigger.label).split("/")[0]?.trim()
+    ? (t(`trigger.${topTrigger.id}` as Parameters<typeof t>[0]) || topTrigger.label)
+        .split("/")[0]
+        ?.trim()
     : "";
 
   return (
@@ -75,7 +75,9 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
             <BarChart2 className="h-5 w-5" />
           </span>
           <div>
-            <h3 className="font-display text-lg font-bold">{t("quitTracker.relapseTriggerInsights")}</h3>
+            <h3 className="font-display text-lg font-bold">
+              {t("quitTracker.relapseTriggerInsights")}
+            </h3>
             <p className="text-xs text-muted-foreground">
               {t("quitTracker.basedOnRelapses", { count: insights.totalRelapses })}
             </p>
@@ -97,7 +99,7 @@ export function TriggerInsightsCard({ badHabits }: TriggerInsightsCardProps) {
 
       <div className="space-y-4 pt-1">
         {insights.items.map((item) => {
-          const itemLabel = t(`trigger.${item.id}` as any) || item.label;
+          const itemLabel = t(`trigger.${item.id}` as Parameters<typeof t>[0]) || item.label;
           return (
             <div key={item.id} className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">

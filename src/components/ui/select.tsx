@@ -6,10 +6,7 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Select = ({
-  dir,
-  ...props
-}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => {
+const Select = ({ dir, ...props }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => {
   const [resolvedDir, setResolvedDir] = React.useState<"ltr" | "rtl">(dir || "ltr");
 
   React.useEffect(() => {

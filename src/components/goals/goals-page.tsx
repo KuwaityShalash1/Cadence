@@ -103,9 +103,7 @@ export function GoalsPage() {
         continue;
       }
       const rawProgress = goal.targetValue > 0 ? currentValue / goal.targetValue : 0;
-      const safeProgress = Number.isFinite(rawProgress)
-        ? Math.min(1, Math.max(0, rawProgress))
-        : 0;
+      const safeProgress = Number.isFinite(rawProgress) ? Math.min(1, Math.max(0, rawProgress)) : 0;
       progress.set(goal.id, safeProgress);
     }
     return { progress, currentValues };

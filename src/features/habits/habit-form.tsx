@@ -785,7 +785,10 @@ export function HabitForm({ habit, onDone }: Props) {
             <span className="text-base select-none" aria-hidden="true">
               🏛️
             </span>
-            <Label htmlFor="habit-is-pillar" className="text-sm font-semibold cursor-pointer text-foreground">
+            <Label
+              htmlFor="habit-is-pillar"
+              className="text-sm font-semibold cursor-pointer text-foreground"
+            >
               {t("habit.isPillarTitle", "Set as Daily Pillar 🏛️")}
             </Label>
             {isPillar && (

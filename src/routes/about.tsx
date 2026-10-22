@@ -22,4 +22,3 @@ export const Route = createFileRoute("/about")({
 function AboutRoute() {
   return <AboutPage />;
 }
-
